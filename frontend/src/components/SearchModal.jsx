@@ -35,7 +35,7 @@ export default function SearchModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-md">
-      <div className="w-full max-w-2xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-2xl text-[var(--text-main)]">
+      <div className="w-full max-w-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-2xl text-[var(--text-main)]">
         
         {/* Search Bar Input */}
         <div className="p-4 border-b border-[var(--border-subtle)] flex items-center gap-3">

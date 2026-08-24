@@ -43,7 +43,7 @@ export default function CartDrawer({
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-[var(--bg-card-solid)] border-l border-[var(--border-subtle)] text-[var(--text-main)] shadow-2xl flex flex-col">
+        <div className="w-screen max-w-md bg-[var(--bg-main)] border-l border-[var(--border-subtle)] text-[var(--text-main)] shadow-2xl flex flex-col">
           
           {/* Header */}
           <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between">
@@ -103,7 +103,7 @@ export default function CartDrawer({
                     imageLight={item.imageLight}
                     type={item.imageType}
                     theme={theme}
-                    className="w-16 h-16 rounded-lg shrink-0 border border-[var(--border-subtle)] bg-[var(--bg-card-solid)] bg-[var(--bg-card-solid)]"
+                    className="w-16 h-16 rounded-lg shrink-0 border border-[var(--border-subtle)] bg-[var(--bg-main)] bg-[var(--bg-main)]"
                   />
                   
                   <div className="flex-1 min-w-0 text-left space-y-1">

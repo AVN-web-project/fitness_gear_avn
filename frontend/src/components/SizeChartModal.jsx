@@ -6,7 +6,7 @@ export default function SizeChartModal({ isOpen, onClose, category }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-lg bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-2xl text-[var(--text-main)] p-6 space-y-6">
+      <div className="relative w-full max-w-lg bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-2xl text-[var(--text-main)] p-6 space-y-6">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">

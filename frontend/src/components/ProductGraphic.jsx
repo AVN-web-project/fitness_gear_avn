@@ -15,7 +15,7 @@ export default function ProductGraphic({ image, imageLight, type, theme, classNa
   }, [activeSrc]);
 
   return (
-    <div className={`relative flex items-center justify-center bg-[var(--bg-card-solid)] overflow-hidden group ${className}`}>
+    <div className={`relative flex items-center justify-center bg-[var(--bg-main)] overflow-hidden group ${className}`}>
       {activeSrc && !hasError ? (
         <img
           src={activeSrc}

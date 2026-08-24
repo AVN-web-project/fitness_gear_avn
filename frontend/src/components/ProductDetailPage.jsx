@@ -297,7 +297,7 @@ export default function ProductDetailPage({
         <div className="lg:col-span-6 space-y-4 sticky top-24">
           
           {/* Main Visual Frame */}
-          <div className="relative w-full aspect-square rounded-3xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] p-6 sm:p-10 flex items-center justify-center overflow-hidden shadow-2xl group">
+          <div className="relative w-full aspect-square rounded-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-6 sm:p-10 flex items-center justify-center overflow-hidden shadow-2xl group">
             
             {/* Badge Overlay */}
             <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
@@ -342,7 +342,7 @@ export default function ProductDetailPage({
                 role="tab"
                 aria-selected={activeGalleryIndex === idx}
                 aria-label={`View ${item.label}`}
-                className={`relative flex-shrink-0 w-20 h-20 rounded-xl border-2 transition-all p-2 bg-[var(--bg-card)] flex flex-col items-center justify-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF1E27] ${
+                className={`relative flex-shrink-0 w-20 h-20 rounded-xl border-2 transition-all p-2 bg-[var(--bg-main)] flex flex-col items-center justify-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF1E27] ${
                   activeGalleryIndex === idx
                     ? 'border-[#FF1E27] shadow-[0_0_15px_rgba(255,30,39,0.4)] scale-105'
                     : 'border-[var(--border-subtle)] opacity-70 hover:opacity-100'
@@ -364,15 +364,15 @@ export default function ProductDetailPage({
 
           {/* Quick Security Badges */}
           <div className="grid grid-cols-3 gap-3 pt-2">
-            <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center gap-2 text-[11px] text-[var(--text-sub)]">
+            <div className="p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-subtle)] flex items-center gap-2 text-[11px] text-[var(--text-sub)]">
               <ShieldCheck className="w-4 h-4 text-[#FF1E27] shrink-0" />
               <span>1 Year Warranty</span>
             </div>
-            <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center gap-2 text-[11px] text-[var(--text-sub)]">
+            <div className="p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-subtle)] flex items-center gap-2 text-[11px] text-[var(--text-sub)]">
               <Truck className="w-4 h-4 text-[#FF1E27] shrink-0" />
               <span>Express Delivery</span>
             </div>
-            <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center gap-2 text-[11px] text-[var(--text-sub)]">
+            <div className="p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-subtle)] flex items-center gap-2 text-[11px] text-[var(--text-sub)]">
               <RefreshCw className="w-4 h-4 text-[#FF1E27] shrink-0" />
               <span>Easy 7-Day Return</span>
             </div>
@@ -424,7 +424,7 @@ export default function ProductDetailPage({
           </div>
 
           {/* Pricing Block */}
-          <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-1">
+          <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-1">
             <div className="flex items-baseline gap-3">
               <span className="text-3xl sm:text-4xl font-extrabold font-heading text-[var(--text-main)]">
                 ₹{product.price}
@@ -452,7 +452,7 @@ export default function ProductDetailPage({
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold font-heading">
+            <div className="flex items-center gap-2 p-3.5 rounded-xl bg-[#FF1E27]/10 border border-[#FF1E27]/30 text-[#FF1E27] text-xs font-bold font-heading">
               <Zap className="w-4 h-4 fill-current animate-pulse shrink-0" />
               <span>
                 ⚡ Hurry! Only {maxStock} units left in stock — order soon for fast dispatch.
@@ -682,7 +682,7 @@ export default function ProductDetailPage({
           </div>
 
           {/* Delivery Pincode Checker */}
-          <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-3">
+          <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-3">
             <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider flex items-center gap-2">
               <MapPin className="w-4 h-4 text-[#FF1E27]" />
               <span>CHECK DELIVERY ESTIMATE:</span>
@@ -732,7 +732,7 @@ export default function ProductDetailPage({
 
       {/* Frequently Bought Together Bundle Builder */}
       {companionProduct && (
-        <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-4 text-left">
+        <div className="p-6 rounded-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-4 text-left">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-[#FF1E27]" />
             <h3 className="text-lg font-sans font-black italic uppercase tracking-wide">
@@ -847,7 +847,7 @@ export default function ProductDetailPage({
         </div>
 
         {/* Tab Content Panels */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-left min-h-[250px]">
+        <div className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] text-left min-h-[250px]">
           
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
@@ -1019,7 +1019,7 @@ export default function ProductDetailPage({
                         placeholder="e.g. Vikram Sharma"
                         value={newReview.author}
                         onChange={(e) => setNewReview({ ...newReview, author: e.target.value })}
-                        className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs p-2.5 rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
+                        className="w-full bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs p-2.5 rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
                       />
                     </div>
 
@@ -1028,7 +1028,7 @@ export default function ProductDetailPage({
                       <select
                         value={newReview.rating}
                         onChange={(e) => setNewReview({ ...newReview, rating: e.target.value })}
-                        className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs p-2.5 rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
+                        className="w-full bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs p-2.5 rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
                       >
                         <option value={5}>5 Stars - Excellent</option>
                         <option value={4}>4 Stars - Very Good</option>
@@ -1046,7 +1046,7 @@ export default function ProductDetailPage({
                       placeholder="e.g. Amazing wrist support for heavy benching!"
                       value={newReview.title}
                       onChange={(e) => setNewReview({ ...newReview, title: e.target.value })}
-                      className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs p-2.5 rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
+                      className="w-full bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs p-2.5 rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
                     />
                   </div>
 
@@ -1058,7 +1058,7 @@ export default function ProductDetailPage({
                       placeholder="Share details about performance, durability, comfort..."
                       value={newReview.comment}
                       onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                      className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs p-2.5 rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
+                      className="w-full bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs p-2.5 rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
                     />
                   </div>
 
@@ -1140,7 +1140,7 @@ export default function ProductDetailPage({
               <div
                 key={item.id}
                 onClick={() => onSelectProduct(item)}
-                className="group relative rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] p-5 flex flex-col justify-between hover:border-[#FF1E27] transition-all cursor-pointer shadow-md"
+                className="group relative rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-5 flex flex-col justify-between hover:border-[#FF1E27] transition-all cursor-pointer shadow-md"
               >
                 <div className="aspect-square bg-[var(--bg-main)] rounded-xl p-4 flex items-center justify-center overflow-hidden mb-4">
                   <ProductGraphic

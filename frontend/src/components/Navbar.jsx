@@ -11,6 +11,7 @@ export default function Navbar({
   theme = 'dark',
   onToggleTheme,
   onNavigateHome,
+  onOpenAccount,
   activeView = 'home'
 }) {
   const [activeNav, setActiveNav] = useState('HOME');
@@ -113,7 +114,7 @@ export default function Navbar({
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {theme === 'dark' ? (
-                <Sun className="w-5 h-5 text-amber-400 hover:text-amber-300 transition-colors" />
+                <Sun className="w-5 h-5 text-slate-400 hover:text-[#FF1E27] transition-colors" />
               ) : (
                 <Moon className="w-5 h-5 text-slate-700 hover:text-slate-900 transition-colors" />
               )}
@@ -141,7 +142,7 @@ export default function Navbar({
 
             {/* Shopping Cart Icon with Badge (Mobile & Desktop) */}
             <button
-              onClick={onOpenCart}
+              onClick={onOpenAccount || (() => {})}
               className="relative p-2 text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors hover:scale-110 transform cursor-pointer"
               aria-label="Shopping Cart"
             >
@@ -168,7 +169,7 @@ export default function Navbar({
           />
 
           {/* Slide-Over Drawer Content */}
-          <div className="relative w-80 max-w-[85vw] bg-[var(--bg-card-solid)] border-r border-[var(--border-subtle)] h-full p-6 flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-300">
+          <div className="relative w-80 max-w-[85vw] bg-[var(--bg-main)] border-r border-[var(--border-subtle)] h-full p-6 flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-300">
             <div>
               {/* Sidebar Header: Logo & Close Button */}
               <div className="flex items-center justify-between pb-6 border-b border-[var(--border-subtle)]">
@@ -261,18 +262,13 @@ export default function Navbar({
             <span className="text-[10px] tracking-wider uppercase font-heading">Home</span>
           </button>
 
-          {/* Cart Icon Tab */}
+          {/* Profile Tab */}
           <button
-            onClick={onOpenCart}
+            onClick={onOpenAccount || (() => {})}
             className="flex flex-col items-center justify-center space-y-1 relative text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium cursor-pointer transition-colors"
           >
-            <ShoppingBag className="w-5 h-5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 right-2 w-3.5 h-3.5 bg-[#FF1E27] text-white text-[9px] font-extrabold rounded-full flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-            <span className="text-[10px] tracking-wider uppercase font-heading">Cart</span>
+            <User className="w-5 h-5" />
+            <span className="text-[10px] tracking-wider uppercase font-heading">Profile</span>
           </button>
 
           {/* Search Tab */}
@@ -285,15 +281,6 @@ export default function Navbar({
           >
             <Search className="w-5 h-5" />
             <span className="text-[10px] tracking-wider uppercase font-heading">Search</span>
-          </button>
-
-          {/* Menu Sidebar Tab */}
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="flex flex-col items-center justify-center space-y-1 text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium cursor-pointer transition-colors"
-          >
-            <Menu className="w-5 h-5" />
-            <span className="text-[10px] tracking-wider uppercase font-heading">Menu</span>
           </button>
         </div>
       </div>

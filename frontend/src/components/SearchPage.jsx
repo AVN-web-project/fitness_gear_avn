@@ -254,7 +254,7 @@ export default function SearchPage({
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300">
       
       {/* Search Header Banner */}
-      <div className="relative border-b border-[var(--border-subtle)] bg-[var(--bg-card-solid)] py-10 px-6 sm:px-10 lg:px-16 overflow-hidden">
+      <div className="relative border-b border-[var(--border-subtle)] bg-[var(--bg-main)] py-10 px-6 sm:px-10 lg:px-16 overflow-hidden">
         {/* Glow ambient background elements */}
         <div className="absolute -top-24 left-1/4 w-96 h-96 bg-[#FF1E27]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 right-1/4 w-96 h-96 bg-[#FF1E27]/5 rounded-full blur-3xl pointer-events-none" />
@@ -361,28 +361,28 @@ export default function SearchPage({
 
             {/* Filter Chips */}
             {selectedCategory && selectedCategory !== 'ALL PRODUCTS' && selectedCategory !== 'ALL' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-card-solid)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
                 Category: {selectedCategory}
                 <X className="w-3.5 h-3.5 cursor-pointer hover:opacity-80" onClick={() => setSelectedCategory('ALL PRODUCTS')} />
               </span>
             )}
 
             {selectedAgeGroup && selectedAgeGroup !== 'ALL' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-card-solid)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
                 Age: {selectedAgeGroup}
                 <X className="w-3.5 h-3.5 cursor-pointer hover:opacity-80" onClick={() => setSelectedAgeGroup('ALL')} />
               </span>
             )}
 
             {selectedGender && selectedGender !== 'ALL' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-card-solid)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
                 Gender: {selectedGender}
                 <X className="w-3.5 h-3.5 cursor-pointer hover:opacity-80" onClick={() => setSelectedGender('ALL')} />
               </span>
             )}
 
             {(minPrice !== '' || maxPrice !== '') && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-card-solid)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
                 Price: ₹{minPrice || 0} - ₹{maxPrice || 'Max'}
                 <X className="w-3.5 h-3.5 cursor-pointer hover:opacity-80" onClick={() => { setMinPrice(''); setMaxPrice(''); }} />
               </span>
@@ -417,7 +417,7 @@ export default function SearchPage({
                   setSortMode(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-xs font-bold font-heading rounded-xl px-3 py-2 focus:outline-none focus:border-[#FF1E27] cursor-pointer"
+                className="bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-main)] text-xs font-bold font-heading rounded-xl px-3 py-2 focus:outline-none focus:border-[#FF1E27] cursor-pointer"
               >
                 <option value="reviews">⭐ Customer Reviews (Highest)</option>
                 <option value="price_asc">🏷️ Price: Low to High</option>
@@ -427,7 +427,7 @@ export default function SearchPage({
             </div>
 
             {/* View Layout Switcher (Grid vs List) */}
-            <div className="flex items-center bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] rounded-xl p-1">
+            <div className="flex items-center bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl p-1">
               <button
                 onClick={() => setViewLayout('grid')}
                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
@@ -657,8 +657,8 @@ export default function SearchPage({
                             <p className="text-xs text-[var(--text-sub)] line-clamp-1">{product.tagline}</p>
                             
                             {/* Rating */}
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 pt-1">
-                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-[#FF1E27] pt-1">
+                              <Star className="w-3.5 h-3.5 fill-[#FF1E27] text-[#FF1E27]" />
                               <span>{product.rating}</span>
                               <span className="text-[10px] text-[var(--text-sub)]">({product.reviewsCount} reviews)</span>
                             </div>
@@ -762,8 +762,8 @@ export default function SearchPage({
                           </h3>
 
                           {/* Rating Summary */}
-                          <div className="flex items-center gap-1 text-xs font-bold text-amber-400">
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <div className="flex items-center gap-1 text-xs font-bold text-[#FF1E27]">
+                            <Star className="w-3.5 h-3.5 fill-[#FF1E27] text-[#FF1E27]" />
                             <span>{product.rating}</span>
                             <span className="text-[10px] text-[var(--text-sub)] font-medium">({product.reviewsCount})</span>
                           </div>
@@ -828,7 +828,7 @@ export default function SearchPage({
                         className={`w-9 h-9 rounded-xl text-xs font-extrabold font-heading transition-all cursor-pointer ${
                           currentPage === pageNum
                             ? 'bg-[#FF1E27] text-white shadow-[0_0_10px_rgba(255,30,39,0.4)]'
-                            : 'bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
+                            : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
                         }`}
                       >
                         {pageNum}
@@ -861,7 +861,7 @@ export default function SearchPage({
             onClick={() => setMobileFilterOpen(false)}
           />
           
-          <div className="relative w-80 max-w-[85vw] bg-[var(--bg-card-solid)] border-r border-[var(--border-subtle)] h-full p-6 overflow-y-auto flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-300 text-[var(--text-main)]">
+          <div className="relative w-80 max-w-[85vw] bg-[var(--bg-main)] border-r border-[var(--border-subtle)] h-full p-6 overflow-y-auto flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-300 text-[var(--text-main)]">
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
                 <h3 className="text-sm font-sans font-black italic tracking-wider uppercase text-[var(--text-main)] flex items-center gap-2">

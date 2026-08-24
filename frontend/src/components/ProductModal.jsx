@@ -22,7 +22,7 @@ export default function ProductModal({ product, onClose, onAddToCart, onOpenFull
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md">
-      <div className="relative w-full max-w-3xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-2xl text-[var(--text-main)] grid grid-cols-1 md:grid-cols-2">
+      <div className="relative w-full max-w-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-2xl text-[var(--text-main)] grid grid-cols-1 md:grid-cols-2">
         
         {/* Close Button */}
         <button

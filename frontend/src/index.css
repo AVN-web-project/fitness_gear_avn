@@ -22,8 +22,8 @@
   html.light {
     /* Premium Off-White Light Theme */
     --bg-main: #f4f5f7;
-    --bg-card: #ffffff;
-    --bg-card-solid: #ffffff;
+    --bg-card: #f4f5f7;
+    --bg-card-solid: #f4f5f7;
     --bg-navbar: rgba(244, 245, 247, 0.58);
     --text-main: #0f172a;
     --text-sub: #475569;
@@ -93,7 +93,7 @@
 }
 
 html.light .btn-outline-dark {
-  background: #ffffff;
+  background: var(--bg-main);
   border: 1px solid #cbd5e1;
   color: #0f172a;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -122,7 +122,7 @@ html.light .btn-outline-dark:hover {
 }
 
 html.light .glass-panel {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-main);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid #e2e8f0;
@@ -140,7 +140,7 @@ html.light .glass-panel {
 }
 
 html.light .red-corner-border {
-  background: #ffffff;
+  background: var(--bg-main);
   border: none;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.02);
 }
@@ -172,7 +172,7 @@ html.light .red-corner-border::before {
 }
 
 html.light .red-highlight-btn {
-  background: #ffffff;
+  background: var(--bg-main);
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
@@ -207,7 +207,7 @@ html.light .red-highlight-btn {
 }
 
 html.light .btn-cart-inward-glow {
-  background-color: #ffffff;
+  background-color: var(--bg-main);
   border: 1.5px solid #FF1E27;
   border-radius: 0.75rem;
   box-shadow: 0 2px 8px rgba(255, 30, 39, 0.15);

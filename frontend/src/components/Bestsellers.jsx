@@ -71,7 +71,7 @@ const filteredProducts = activeCategory === 'ALL PRODUCTS'
         {/* Left Arrow Button - Placed Outside Margin */}
         <button
           aria-label="Previous" onClick={() => handleScroll("left")}
-          className="absolute -left-5 md:-left-7 lg:-left-10 xl:-left-12 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:border-[#FF1E27] hover:bg-[#FF1E27] flex items-center justify-center backdrop-blur-md transition-all shadow-xl hidden md:flex cursor-pointer"
+          className="absolute -left-5 md:-left-7 lg:-left-10 xl:-left-12 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:border-[#FF1E27] hover:bg-[#FF1E27] flex items-center justify-center backdrop-blur-md transition-all shadow-xl hidden md:flex cursor-pointer"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -79,7 +79,7 @@ const filteredProducts = activeCategory === 'ALL PRODUCTS'
         {/* Right Arrow Button - Placed Outside Margin */}
         <button
           aria-label="Next" onClick={() => handleScroll("right")}
-          className="absolute -right-5 md:-right-7 lg:-right-10 xl:-right-12 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:border-[#FF1E27] hover:bg-[#FF1E27] flex items-center justify-center backdrop-blur-md transition-all shadow-xl hidden md:flex cursor-pointer"
+          className="absolute -right-5 md:-right-7 lg:-right-10 xl:-right-12 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:border-[#FF1E27] hover:bg-[#FF1E27] flex items-center justify-center backdrop-blur-md transition-all shadow-xl hidden md:flex cursor-pointer"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
@@ -89,7 +89,7 @@ const filteredProducts = activeCategory === 'ALL PRODUCTS'
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className="red-corner-border bg-[var(--bg-card-solid)] rounded-2xl p-4 flex flex-col justify-between space-y-4 group cursor-pointer hover:shadow-[0_10px_30px_-10px_rgba(255,30,39,0.45)] transition-all duration-300 transform hover:-translate-y-1 overflow-hidden shrink-0 w-[calc(85%-12px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)] snap-start"
+              className="red-corner-border bg-[var(--bg-main)] rounded-2xl p-4 flex flex-col justify-between space-y-4 group cursor-pointer hover:shadow-[0_10px_30px_-10px_rgba(255,30,39,0.45)] transition-all duration-300 transform hover:-translate-y-1 overflow-hidden shrink-0 w-[calc(85%-12px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)] snap-start"
               onClick={() => onSelectProduct(product)}
             >
               {/* Product Visual */}
