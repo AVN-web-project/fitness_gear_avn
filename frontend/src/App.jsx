@@ -198,11 +198,11 @@ function AppContent() {
 
       {/* Toast Notification */}
       {cart.toastMessage && (
-        <div className="fixed bottom-[#4.5rem] md:bottom-6 right-6 z-50 bg-[#12121a] border border-[#FF1E27] text-white px-5 py-3 rounded-xl shadow-[0_0_20px_rgba(255,30,39,0.5)] font-bold text-xs font-heading flex items-center gap-2 animate-bounce">
+        <div className="fixed bottom-[#4.5rem] md:bottom-6 right-6 z-50 bg-[var(--bg-card-solid)] border border-[#FF1E27]/50 text-white px-5 py-3 rounded-xl shadow-lg font-bold text-xs font-heading flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#FF1E27]" />
           <span>{cart.toastMessage}</span>
           {(isBackendConnected || cart.isBackendConnected) && (
-            <span className="text-[10px] text-red-400 font-mono bg-red-950/80 px-1.5 py-0.5 rounded ml-2">
+            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-1.5 py-0.5 rounded ml-2">
               API SYNC
             </span>
           )}

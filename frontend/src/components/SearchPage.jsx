@@ -255,10 +255,6 @@ export default function SearchPage({
       
       {/* Search Header Banner */}
       <div className="relative border-b border-[var(--border-subtle)] bg-[var(--bg-main)] py-10 px-6 sm:px-10 lg:px-16 overflow-hidden">
-        {/* Glow ambient background elements */}
-        <div className="absolute -top-24 left-1/4 w-96 h-96 bg-[#FF1E27]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 right-1/4 w-96 h-96 bg-[#FF1E27]/5 rounded-full blur-3xl pointer-events-none" />
-
         <div className="max-w-[1536px] mx-auto relative z-10 space-y-6">
           
           {/* Breadcrumb Navigation */}
@@ -281,8 +277,8 @@ export default function SearchPage({
 
             {/* Total Results Counter Badge */}
             <div className="flex items-center gap-3">
-              <div className="glass-panel px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] flex items-center gap-3 shadow-md">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FF1E27] animate-ping" />
+              <div className="glass-panel px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] flex items-center gap-3 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-[#FF1E27]" />
                 <div>
                   <div className="text-[10px] uppercase font-bold text-[var(--text-sub)] tracking-wider">Catalog Matches</div>
                   <div className="text-lg font-black font-heading text-[#FF1E27]">
@@ -353,7 +349,7 @@ export default function SearchPage({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setMobileFilterOpen(true)}
-              className="lg:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF1E27] text-white font-extrabold text-xs font-heading cursor-pointer shadow-[0_0_15px_rgba(255,30,39,0.3)]"
+              className="lg:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF1E27] text-white font-extrabold text-xs font-heading cursor-pointer shadow-sm"
             >
               <SlidersHorizontal className="w-4 h-4" />
               <span>FILTERS</span>
@@ -608,7 +604,7 @@ export default function SearchPage({
                 </div>
                 <button
                   onClick={handleResetFilters}
-                  className="btn-glow-red px-6 py-3 rounded-xl text-xs font-extrabold uppercase font-heading text-white inline-flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(255,30,39,0.4)]"
+                  className="btn-glow-red px-6 py-3 rounded-xl text-xs font-extrabold uppercase font-heading text-white inline-flex items-center gap-2 cursor-pointer shadow-sm"
                 >
                   <RotateCcw className="w-4 h-4" />
                   <span>Reset All Filters</span>
@@ -734,7 +730,7 @@ export default function SearchPage({
                               </span>
                             ) : (
                               <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-800/80 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-heading">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> In Stock ({product.stockQuantity || 10})
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> In Stock ({product.stockQuantity || 10})
                               </span>
                             )}
                           </div>
@@ -827,7 +823,7 @@ export default function SearchPage({
                         onClick={() => setCurrentPage(pageNum)}
                         className={`w-9 h-9 rounded-xl text-xs font-extrabold font-heading transition-all cursor-pointer ${
                           currentPage === pageNum
-                            ? 'bg-[#FF1E27] text-white shadow-[0_0_10px_rgba(255,30,39,0.4)]'
+                            ? 'bg-[#FF1E27] text-white shadow-sm'
                             : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
                         }`}
                       >

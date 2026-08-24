@@ -21,10 +21,10 @@
 
   html.light {
     /* Premium Off-White Light Theme */
-    --bg-main: #f4f5f7;
-    --bg-card: #f4f5f7;
-    --bg-card-solid: #f4f5f7;
-    --bg-navbar: rgba(244, 245, 247, 0.58);
+    --bg-main: #ffffff;
+    --bg-card: #ffffff;
+    --bg-card-solid: #ffffff;
+    --bg-navbar: rgba(255, 255, 255, 0.75);
     --text-main: #0f172a;
     --text-sub: #475569;
     --text-muted: #64748b;
