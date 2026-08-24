@@ -9,9 +9,9 @@
 
     /* Base theme colors - Dark Mode Default */
     --bg-main: #000000;
-    --bg-card: rgba(20, 20, 26, 0.7);
-    --bg-card-solid: #12121a;
-    --bg-navbar: rgba(0, 0, 0, 0.6);
+    --bg-card: #000000;
+    --bg-card-solid: #000000;
+    --bg-navbar: rgba(0, 0, 0, 0.35);
     --text-main: #ffffff;
     --text-sub: #94a3b8;
     --text-muted: #64748b;
@@ -20,17 +20,18 @@
   }
 
   html.light {
-    /* Base theme colors - Light Mode matched to reference image */
-    --bg-main: #ffffff;
-    --bg-card: rgba(255, 255, 255, 0.95);
+    /* Premium Off-White Light Theme */
+    --bg-main: #f4f5f7;
+    --bg-card: #ffffff;
     --bg-card-solid: #ffffff;
-    --bg-navbar: rgba(255, 255, 255, 0.85);
+    --bg-navbar: rgba(244, 245, 247, 0.58);
     --text-main: #0f172a;
     --text-sub: #475569;
     --text-muted: #64748b;
-    --border-subtle: rgba(226, 232, 240, 0.9);
-    --shadow-main: rgba(0, 0, 0, 0.08);
+    --border-subtle: #e2e8f0;
+    --shadow-main: rgba(15, 23, 42, 0.06);
   }
+  
 
   body {
     background-color: var(--bg-main);
@@ -131,16 +132,16 @@ html.light .glass-panel {
 /* Specialized Red Corner Neon Border Highlight matching Reference Image */
 .red-corner-border {
   position: relative;
-  background: linear-gradient(180deg, rgba(20, 20, 26, 0.56) 0%, rgba(10, 10, 14, 0.62) 100%);
+  background: #000000;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: none;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 html.light .red-corner-border {
   background: #ffffff;
-  border: 1px solid #f1f5f9;
+  border: none;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
@@ -149,8 +150,9 @@ html.light .red-corner-border {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  padding: 1.5px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, transparent 35%, transparent 60%, rgba(255, 30, 39, 0.9) 100%);
+  padding: 3.5px;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.3) 30%, #FF1E27 60%, #FF1E27 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -158,7 +160,7 @@ html.light .red-corner-border {
 }
 
 html.light .red-corner-border::before {
-  background: linear-gradient(135deg, rgba(226, 232, 240, 0.8) 0%, transparent 35%, transparent 60%, rgba(255, 30, 39, 0.6) 100%);
+  background: linear-gradient(135deg, #475569 0%, #94a3b8 30%, #FF1E27 60%, #FF1E27 100%);
 }
 
 .red-highlight-btn {

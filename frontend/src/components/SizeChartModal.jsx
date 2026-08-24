@@ -15,7 +15,7 @@ export default function SizeChartModal({ isOpen, onClose, category }) {
               <Ruler className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold font-heading uppercase tracking-wide">
+              <h3 className="text-lg font-sans font-black italic uppercase tracking-wide">
                 SIZE & FIT GUIDE
               </h3>
               <p className="text-xs text-[var(--text-sub)]">
@@ -45,12 +45,12 @@ export default function SizeChartModal({ isOpen, onClose, category }) {
               <tbody className="divide-y divide-[var(--border-subtle)] font-medium text-[var(--text-sub)]">
                 {category?.includes('KNEE') || category?.includes('ELBOW') ? (
                   <>
-                    <tr className="hover:bg-white/5 transition-colors">
+                    <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
                       <td className="p-3 font-bold text-[var(--text-main)]">Standard (79") / Medium</td>
                       <td className="p-3">Knee: 79" | Elbow: 10"-12"</td>
                       <td className="p-3">Daily heavy training & hyper-mobility</td>
                     </tr>
-                    <tr className="hover:bg-white/5 transition-colors">
+                    <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
                       <td className="p-3 font-bold text-[var(--text-main)]">XL Heavy (90") / Large</td>
                       <td className="p-3">Knee: 90" | Elbow: 12"-14"</td>
                       <td className="p-3">Powerlifting competitions & maximum rebound</td>
@@ -58,12 +58,12 @@ export default function SizeChartModal({ isOpen, onClose, category }) {
                   </>
                 ) : (
                   <>
-                    <tr className="hover:bg-white/5 transition-colors">
+                    <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
                       <td className="p-3 font-bold text-[var(--text-main)]">18-Inch Competition</td>
                       <td className="p-3">45 cm (18 Inches)</td>
                       <td className="p-3 font-semibold text-[#FF1E27]">IPF Legal Competition Grade</td>
                     </tr>
-                    <tr className="hover:bg-white/5 transition-colors">
+                    <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
                       <td className="p-3 font-bold text-[var(--text-main)]">24-Inch Heavy Duty</td>
                       <td className="p-3">60 cm (24 Inches)</td>
                       <td className="p-3">Maximum wrist locking for 200kg+ Bench</td>

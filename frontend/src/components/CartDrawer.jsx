@@ -49,7 +49,7 @@ export default function CartDrawer({
           <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-[#FF1E27]" />
-              <h3 className="text-lg font-bold font-heading uppercase tracking-wider text-[var(--text-main)]">YOUR CART</h3>
+              <h3 className="text-lg font-sans font-black italic uppercase tracking-wider text-[var(--text-main)]">YOUR CART</h3>
               <span className="text-xs bg-[#FF1E27] text-white px-2 py-0.5 rounded-full font-bold">
                 {cartItems.reduce((a, b) => a + b.quantity, 0)}
               </span>
@@ -66,7 +66,7 @@ export default function CartDrawer({
           <div className="px-6 py-3 bg-[var(--bg-main)] border-b border-[var(--border-subtle)] space-y-1.5 text-left">
             <p className="text-xs text-[var(--text-sub)]">
               {subtotal >= freeShippingThreshold ? (
-                <span className="text-emerald-400 font-bold">🎉 Congratulations! You unlocked FREE Express Shipping!</span>
+                <span className="text-[#FF1E27] font-bold">🎉 Congratulations! You unlocked FREE Express Shipping!</span>
               ) : (
                 <>Add <span className="font-bold text-[var(--text-main)]">₹{freeShippingThreshold - subtotal}</span> more to unlock <span className="text-[#FF1E27] font-bold">FREE Shipping</span></>
               )}
@@ -103,11 +103,11 @@ export default function CartDrawer({
                     imageLight={item.imageLight}
                     type={item.imageType}
                     theme={theme}
-                    className="w-16 h-16 rounded-lg shrink-0 border border-[var(--border-subtle)]"
+                    className="w-16 h-16 rounded-lg shrink-0 border border-[var(--border-subtle)] bg-[var(--bg-card-solid)] bg-[var(--bg-card-solid)]"
                   />
                   
                   <div className="flex-1 min-w-0 text-left space-y-1">
-                    <h4 className="text-xs font-extrabold tracking-wider font-heading uppercase text-[var(--text-main)] truncate">
+                    <h4 className="text-xs font-extrabold tracking-wider font-sans font-black italic uppercase text-[var(--text-main)] truncate">
                       {item.name}
                     </h4>
                     
@@ -185,7 +185,7 @@ export default function CartDrawer({
               </button>
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-[var(--text-sub)] font-mono">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <ShieldCheck className="w-3.5 h-3.5 text-[#FF1E27]" />
                 <span>Synchronized with Global Cart State & API</span>
               </div>
             </div>

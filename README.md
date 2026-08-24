@@ -77,6 +77,7 @@ FITNESS GEAR/
 │       │   └── logo-red-black.png    # Black/Red brand logo (Light Mode)
 │       │
 │       ├── components/          # Modular React UI components
+│       │   ├── Button.jsx       # Universal brand button component (glow, outline, ghost)
 │       │   ├── Bestsellers.jsx  # Product catalog grid with category filter tabs
 │       │   ├── CartDrawer.jsx   # Slide-over shopping cart drawer
 │       │   ├── CartPage.jsx     # Dedicated full shopping cart page

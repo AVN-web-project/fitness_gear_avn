@@ -202,7 +202,7 @@ function AppContent() {
           <span className="w-2 h-2 rounded-full bg-[#FF1E27]" />
           <span>{cart.toastMessage}</span>
           {(isBackendConnected || cart.isBackendConnected) && (
-            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-1.5 py-0.5 rounded ml-2">
+            <span className="text-[10px] text-red-400 font-mono bg-red-950/80 px-1.5 py-0.5 rounded ml-2">
               API SYNC
             </span>
           )}

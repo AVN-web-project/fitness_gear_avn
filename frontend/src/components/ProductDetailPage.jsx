@@ -297,7 +297,7 @@ export default function ProductDetailPage({
         <div className="lg:col-span-6 space-y-4 sticky top-24">
           
           {/* Main Visual Frame */}
-          <div className="relative w-full aspect-square rounded-3xl bg-gradient-to-b from-[var(--bg-card)] to-[var(--bg-main)] border border-[var(--border-subtle)] p-6 sm:p-10 flex items-center justify-center overflow-hidden shadow-2xl group">
+          <div className="relative w-full aspect-square rounded-3xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] p-6 sm:p-10 flex items-center justify-center overflow-hidden shadow-2xl group">
             
             {/* Badge Overlay */}
             <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
@@ -399,7 +399,7 @@ export default function ProductDetailPage({
               )}
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-extrabold font-heading tracking-wider uppercase text-[var(--text-main)]">
+            <h1 className="text-3xl sm:text-4xl font-sans font-black italic tracking-wider uppercase text-[var(--text-main)]">
               {product.name}
             </h1>
 
@@ -563,7 +563,7 @@ export default function ProductDetailPage({
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={isPurchasingDisabled}
-                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
+                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
                 aria-label="Decrease quantity"
               >
                 -
@@ -574,7 +574,7 @@ export default function ProductDetailPage({
               <button
                 onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
                 disabled={isPurchasingDisabled || quantity >= maxStock}
-                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
+                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
                 aria-label="Increase quantity"
               >
                 +
@@ -735,7 +735,7 @@ export default function ProductDetailPage({
         <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-4 text-left">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-[#FF1E27]" />
-            <h3 className="text-lg font-extrabold font-heading uppercase tracking-wide">
+            <h3 className="text-lg font-sans font-black italic uppercase tracking-wide">
               FREQUENTLY BOUGHT TOGETHER
             </h3>
             <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30 ml-auto">
@@ -757,7 +757,7 @@ export default function ProductDetailPage({
                   className="w-14 h-14 object-contain"
                 />
                 <div>
-                  <h4 className="text-xs font-bold font-heading uppercase">{product.name}</h4>
+                  <h4 className="text-xs font-sans font-black italic uppercase">{product.name}</h4>
                   <p className="text-xs font-extrabold text-[#FF1E27]">₹{product.price}</p>
                 </div>
               </div>
@@ -774,7 +774,7 @@ export default function ProductDetailPage({
                   className="w-14 h-14 object-contain"
                 />
                 <div>
-                  <h4 className="text-xs font-bold font-heading uppercase">{companionProduct.name}</h4>
+                  <h4 className="text-xs font-sans font-black italic uppercase">{companionProduct.name}</h4>
                   <p className="text-xs font-extrabold text-[#FF1E27]">₹{companionProduct.price}</p>
                 </div>
               </div>
@@ -838,7 +838,7 @@ export default function ProductDetailPage({
               className={`px-5 py-3 rounded-t-xl font-extrabold font-heading text-xs sm:text-sm tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-[#FF1E27] text-white border-b-2 border-white shadow-[0_-4px_12px_rgba(255,30,39,0.3)]'
-                  : 'text-[var(--text-sub)] hover:text-white hover:bg-white/5'
+                  : 'text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)]'
               }`}
             >
               {tab.label}
@@ -853,7 +853,7 @@ export default function ProductDetailPage({
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-fade-in">
               <div className="space-y-2">
-                <h3 className="text-xl font-extrabold font-heading uppercase text-[var(--text-main)]">
+                <h3 className="text-xl font-sans font-black italic uppercase text-[var(--text-main)]">
                   ENGINEERED FOR HEAVY ATHLETES
                 </h3>
                 <p className="text-sm text-[var(--text-sub)] leading-relaxed max-w-3xl">
@@ -883,7 +883,7 @@ export default function ProductDetailPage({
           {/* TAB 2: SPECS */}
           {activeTab === 'specs' && (
             <div className="space-y-6 animate-fade-in">
-              <h3 className="text-xl font-extrabold font-heading uppercase text-[var(--text-main)]">
+              <h3 className="text-xl font-sans font-black italic uppercase text-[var(--text-main)]">
                 DETAILED TECHNICAL SPECIFICATIONS
               </h3>
 
@@ -892,7 +892,7 @@ export default function ProductDetailPage({
                   <tbody className="divide-y divide-[var(--border-subtle)]">
                     {product.fullSpecs ? (
                       Object.entries(product.fullSpecs).map(([key, val]) => (
-                        <tr key={key} className="hover:bg-white/5 transition-colors">
+                        <tr key={key} className="hover:bg-[var(--border-subtle)]/40 transition-colors">
                           <td className="p-4 font-bold text-[#FF1E27] uppercase font-heading w-1/3 border-r border-[var(--border-subtle)]">
                             {key}
                           </td>
@@ -918,14 +918,14 @@ export default function ProductDetailPage({
           {/* TAB 3: USAGE & CARE */}
           {activeTab === 'usage' && (
             <div className="space-y-6 animate-fade-in">
-              <h3 className="text-xl font-extrabold font-heading uppercase text-[var(--text-main)]">
+              <h3 className="text-xl font-sans font-black italic uppercase text-[var(--text-main)]">
                 GEAR CARE & WRAPPING INSTRUCTIONS
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* How to use */}
                 <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-3">
-                  <h4 className="text-sm font-extrabold font-heading uppercase text-[#FF1E27] flex items-center gap-2">
+                  <h4 className="text-sm font-sans font-black italic uppercase text-[#FF1E27] flex items-center gap-2">
                     <Check className="w-4 h-4" />
                     <span>BEST WRAPPING PRACTICE</span>
                   </h4>
@@ -939,7 +939,7 @@ export default function ProductDetailPage({
 
                 {/* Washing Instructions */}
                 <div className="p-5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-3">
-                  <h4 className="text-sm font-extrabold font-heading uppercase text-[#FF1E27] flex items-center gap-2">
+                  <h4 className="text-sm font-sans font-black italic uppercase text-[#FF1E27] flex items-center gap-2">
                     <RefreshCw className="w-4 h-4" />
                     <span>WASHING & LONGEVITY</span>
                   </h4>
@@ -980,7 +980,7 @@ export default function ProductDetailPage({
 
                 <div className="md:col-span-8 space-y-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-extrabold font-heading uppercase">
+                    <h4 className="text-sm font-sans font-black italic uppercase">
                       VERIFIED ATHLETE REVIEWS
                     </h4>
                     <button
@@ -1006,7 +1006,7 @@ export default function ProductDetailPage({
                   onSubmit={handleSubmitReview}
                   className="p-6 rounded-2xl bg-[var(--bg-main)] border border-[#FF1E27]/40 space-y-4 animate-fade-in"
                 >
-                  <h4 className="text-sm font-extrabold font-heading uppercase text-[#FF1E27]">
+                  <h4 className="text-sm font-sans font-black italic uppercase text-[#FF1E27]">
                     WRITE A VERIFIED REVIEW
                   </h4>
 
@@ -1128,7 +1128,7 @@ export default function ProductDetailPage({
 
       {/* Related Products Grid */}
       <div className="space-y-6 pt-6 border-t border-[var(--border-subtle)] text-left">
-        <h3 className="text-xl font-extrabold font-heading uppercase text-[var(--text-main)]">
+        <h3 className="text-xl font-sans font-black italic uppercase text-[var(--text-main)]">
           YOU MIGHT ALSO LIKE
         </h3>
 
@@ -1156,7 +1156,7 @@ export default function ProductDetailPage({
                   <span className="text-[10px] font-extrabold text-[#FF1E27] uppercase tracking-wider">
                     {item.category}
                   </span>
-                  <h4 className="text-sm font-extrabold font-heading uppercase text-[var(--text-main)] truncate">
+                  <h4 className="text-sm font-sans font-black italic uppercase text-[var(--text-main)] truncate">
                     {item.name}
                   </h4>
                   <div className="flex items-center justify-between pt-1">
@@ -1186,7 +1186,7 @@ export default function ProductDetailPage({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fade-in" role="dialog" aria-modal="true">
           <button
             onClick={() => setIsLightboxOpen(false)}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-[#FF1E27] flex items-center justify-center transition-colors cursor-pointer"
+            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[var(--border-subtle)] text-[var(--text-main)] hover:bg-[#FF1E27] hover:text-white hover:bg-[#FF1E27] flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Close Lightbox"
           >
             <X className="w-6 h-6" />

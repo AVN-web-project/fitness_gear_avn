@@ -57,7 +57,7 @@ export default function ProductModal({ product, onClose, onAddToCart, onOpenFull
               )}
             </div>
 
-            <h3 className="text-2xl font-extrabold font-heading tracking-wider uppercase text-[var(--text-main)]">
+            <h3 className="text-2xl font-sans font-black italic tracking-wider uppercase text-[var(--text-main)]">
               {product.name}
             </h3>
 

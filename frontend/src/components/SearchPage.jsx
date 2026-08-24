@@ -254,7 +254,7 @@ export default function SearchPage({
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300">
       
       {/* Search Header Banner */}
-      <div className="relative border-b border-[var(--border-subtle)] bg-[var(--bg-card-solid)]/60 backdrop-blur-xl py-10 px-6 sm:px-10 lg:px-16 overflow-hidden">
+      <div className="relative border-b border-[var(--border-subtle)] bg-[var(--bg-card-solid)] py-10 px-6 sm:px-10 lg:px-16 overflow-hidden">
         {/* Glow ambient background elements */}
         <div className="absolute -top-24 left-1/4 w-96 h-96 bg-[#FF1E27]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 right-1/4 w-96 h-96 bg-[#FF1E27]/5 rounded-full blur-3xl pointer-events-none" />
@@ -270,7 +270,7 @@ export default function SearchPage({
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold font-heading tracking-tight uppercase flex items-center gap-3 text-[var(--text-main)]">
+              <h1 className="text-3xl sm:text-4xl font-sans font-black italic tracking-tight uppercase flex items-center gap-3 text-[var(--text-main)]">
                 <span>FIND ATHLETIC GEAR</span>
                 <Sparkles className="w-7 h-7 text-[#FF1E27] animate-pulse" />
               </h1>
@@ -463,7 +463,7 @@ export default function SearchPage({
             <div className="glass-panel p-6 rounded-2xl border border-[var(--border-subtle)] space-y-6 sticky top-28 shadow-xl">
               
               <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
-                <h3 className="text-sm font-extrabold font-heading tracking-wider uppercase text-[var(--text-main)] flex items-center gap-2">
+                <h3 className="text-sm font-sans font-black italic tracking-wider uppercase text-[var(--text-main)] flex items-center gap-2">
                   <Filter className="w-4 h-4 text-[#FF1E27]" />
                   <span>Compound Filters</span>
                 </h3>
@@ -477,7 +477,7 @@ export default function SearchPage({
 
               {/* 1. Category Filter */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-[var(--text-sub)] uppercase tracking-wider">Category</h4>
+                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">Category</h4>
                 <div className="space-y-1.5">
                   {LOCAL_CATEGORIES.map((cat) => {
                     const isSelected = selectedCategory.toUpperCase() === cat.toUpperCase();
@@ -504,7 +504,7 @@ export default function SearchPage({
 
               {/* 2. Target Age Group Filter */}
               <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
-                <h4 className="text-xs font-bold text-[var(--text-sub)] uppercase tracking-wider">Age Group</h4>
+                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">Age Group</h4>
                 <div className="grid grid-cols-2 gap-2">
                   {['ALL', 'Adults', 'Teens', 'All Ages'].map((age) => (
                     <button
@@ -524,7 +524,7 @@ export default function SearchPage({
 
               {/* 3. Target Gender Filter */}
               <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
-                <h4 className="text-xs font-bold text-[var(--text-sub)] uppercase tracking-wider">Gender</h4>
+                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">Gender</h4>
                 <div className="grid grid-cols-3 gap-1.5">
                   {['ALL', 'Unisex', 'Men', 'Women'].map((g) => (
                     <button
@@ -544,7 +544,7 @@ export default function SearchPage({
 
               {/* 4. Price Range Filter */}
               <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
-                <h4 className="text-xs font-bold text-[var(--text-sub)] uppercase tracking-wider">Price Range (₹)</h4>
+                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">Price Range (₹)</h4>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -599,7 +599,7 @@ export default function SearchPage({
                   <Search className="w-10 h-10 text-[#FF1E27]" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-extrabold font-heading tracking-wider uppercase text-[var(--text-main)]">
+                  <h3 className="text-xl font-sans font-black italic tracking-wider uppercase text-[var(--text-main)]">
                     No Matching Gear Found
                   </h3>
                   <p className="text-xs text-[var(--text-sub)] max-w-md mx-auto">
@@ -864,7 +864,7 @@ export default function SearchPage({
           <div className="relative w-80 max-w-[85vw] bg-[var(--bg-card-solid)] border-r border-[var(--border-subtle)] h-full p-6 overflow-y-auto flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-300 text-[var(--text-main)]">
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
-                <h3 className="text-sm font-extrabold font-heading tracking-wider uppercase text-[var(--text-main)] flex items-center gap-2">
+                <h3 className="text-sm font-sans font-black italic tracking-wider uppercase text-[var(--text-main)] flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4 text-[#FF1E27]" />
                   <span>Filters</span>
                 </h3>
@@ -878,7 +878,7 @@ export default function SearchPage({
 
               {/* Mobile Category List */}
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-[var(--text-sub)] uppercase">Category</h4>
+                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">Category</h4>
                 {LOCAL_CATEGORIES.map((cat) => (
                   <button
                     key={cat}
@@ -899,7 +899,7 @@ export default function SearchPage({
 
               {/* Mobile Age Group */}
               <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
-                <h4 className="text-xs font-bold text-[var(--text-sub)] uppercase">Age Group</h4>
+                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">Age Group</h4>
                 <div className="grid grid-cols-2 gap-2">
                   {['ALL', 'Adults', 'Teens', 'All Ages'].map((age) => (
                     <button
@@ -917,7 +917,7 @@ export default function SearchPage({
 
               {/* Mobile Gender */}
               <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
-                <h4 className="text-xs font-bold text-[var(--text-sub)] uppercase">Gender</h4>
+                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">Gender</h4>
                 <div className="grid grid-cols-3 gap-1">
                   {['ALL', 'Unisex', 'Men', 'Women'].map((g) => (
                     <button

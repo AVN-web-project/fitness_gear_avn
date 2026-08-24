@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react';
 import { PRODUCTS as DEFAULT_PRODUCTS, CATEGORIES } from '../data/products';
 import ProductGraphic from './ProductGraphic';
@@ -8,7 +8,16 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onAddToCart, 
 
   const productList = products && products.length > 0 ? products : DEFAULT_PRODUCTS;
 
-  const filteredProducts = activeCategory === 'ALL PRODUCTS'
+  
+  const scrollRef = useRef(null);
+
+  const handleScroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = direction === "left" ? -340 : 340;
+      scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
+const filteredProducts = activeCategory === 'ALL PRODUCTS'
     ? productList
     : productList.filter(p => p.category === activeCategory);
 
@@ -61,7 +70,7 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onAddToCart, 
 
         {/* Left Arrow Button - Placed Outside Margin */}
         <button
-          aria-label="Previous"
+          aria-label="Previous" onClick={() => handleScroll("left")}
           className="absolute -left-5 md:-left-7 lg:-left-10 xl:-left-12 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:border-[#FF1E27] hover:bg-[#FF1E27] flex items-center justify-center backdrop-blur-md transition-all shadow-xl hidden md:flex cursor-pointer"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -69,18 +78,18 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onAddToCart, 
 
         {/* Right Arrow Button - Placed Outside Margin */}
         <button
-          aria-label="Next"
+          aria-label="Next" onClick={() => handleScroll("right")}
           className="absolute -right-5 md:-right-7 lg:-right-10 xl:-right-12 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:border-[#FF1E27] hover:bg-[#FF1E27] flex items-center justify-center backdrop-blur-md transition-all shadow-xl hidden md:flex cursor-pointer"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
 
         {/* Product Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
+        <div ref={scrollRef} className="flex items-stretch gap-5 overflow-x-auto scroll-smooth scrollbar-none py-3 px-1 snap-x snap-mandatory">
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className="red-corner-border rounded-2xl p-4 flex flex-col justify-between space-y-4 group cursor-pointer hover:shadow-[0_10px_30px_-10px_rgba(255,30,39,0.45)] transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
+              className="red-corner-border bg-[var(--bg-card-solid)] rounded-2xl p-4 flex flex-col justify-between space-y-4 group cursor-pointer hover:shadow-[0_10px_30px_-10px_rgba(255,30,39,0.45)] transition-all duration-300 transform hover:-translate-y-1 overflow-hidden shrink-0 w-[calc(85%-12px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)] snap-start"
               onClick={() => onSelectProduct(product)}
             >
               {/* Product Visual */}
@@ -89,14 +98,14 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onAddToCart, 
                 imageLight={product.imageLight}
                 type={product.imageType}
                 theme={theme}
-                className="w-full h-48 rounded-xl"
+                className="w-full h-56 rounded-xl"
               />
 
               {/* Product Info & Action matching Reference Screenshot */}
               <div className="flex items-end justify-between pt-1 gap-2">
                 {/* Left Stacked Text: Title on Top, Price Below */}
                 <div className="space-y-1 text-left">
-                  <h3 className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-heading uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
+                  <h3 className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
                     {product.name}
                   </h3>
                   <p className="text-base sm:text-lg font-extrabold text-[var(--text-main)] font-heading tracking-tight leading-none">

@@ -76,7 +76,7 @@ export default function SearchModal({
                 <div className="flex items-center gap-3">
                   <ProductGraphic image={product.image} imageLight={product.imageLight} type={product.imageType} theme={theme} className="w-12 h-12 rounded-lg" />
                   <div className="text-left">
-                    <h4 className="text-xs font-extrabold font-heading tracking-wider uppercase text-[var(--text-main)]">
+                    <h4 className="text-xs font-sans font-black italic tracking-wider uppercase text-[var(--text-main)]">
                       {product.name}
                     </h4>
                     <p className="text-[10px] text-[var(--text-sub)]">{product.category}</p>

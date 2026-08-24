@@ -110,7 +110,7 @@ export default function Footer({ theme }) {
                   </div>
 
                   <div className="space-y-1">
-                    <h4 className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-heading uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
+                    <h4 className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
                       {badge.label}
                     </h4>
                     <p className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-heading uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
@@ -155,7 +155,7 @@ export default function Footer({ theme }) {
 
           {/* Quick Links Column */}
           <div className="md:col-span-2 space-y-4">
-            <h4 className="text-base sm:text-lg font-extrabold text-[var(--text-main)] uppercase tracking-wider font-heading">
+            <h4 className="text-base sm:text-lg font-extrabold text-[var(--text-main)] uppercase tracking-wider font-sans font-black italic">
               QUICK LINKS
             </h4>
             <ul className="space-y-3 text-sm sm:text-base text-[var(--text-sub)] font-normal">
@@ -169,7 +169,7 @@ export default function Footer({ theme }) {
 
           {/* Categories Column */}
           <div className="md:col-span-3 space-y-4">
-            <h4 className="text-base sm:text-lg font-extrabold text-[var(--text-main)] uppercase tracking-wider font-heading">
+            <h4 className="text-base sm:text-lg font-extrabold text-[var(--text-main)] uppercase tracking-wider font-sans font-black italic">
               CATEGORIES
             </h4>
             <ul className="space-y-3 text-sm sm:text-base text-[var(--text-sub)] font-normal">
@@ -182,7 +182,7 @@ export default function Footer({ theme }) {
 
           {/* Newsletter Column */}
           <div className="md:col-span-3 space-y-4">
-            <h4 className="text-base sm:text-lg font-extrabold text-[var(--text-main)] uppercase tracking-wider font-heading">
+            <h4 className="text-base sm:text-lg font-extrabold text-[var(--text-main)] uppercase tracking-wider font-sans font-black italic">
               JOIN THE AVN CLUB
             </h4>
             <p className="text-sm text-[var(--text-sub)] leading-relaxed">
