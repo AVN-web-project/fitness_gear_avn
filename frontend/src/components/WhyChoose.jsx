@@ -1,8 +1,32 @@
-import React, { useState } from 'react';
-import { ArrowRight, Play, X } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { ArrowRight } from 'lucide-react';
 
 export default function WhyChoose() {
-  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        });
+      },
+      { threshold: 0.1 } // Triggers video playback as soon as 10% of the video section is visible
+    );
+
+    observer.observe(video);
+
+    return () => {
+      if (video) observer.unobserve(video);
+    };
+  }, []);
 
   return (
     <section id="why-avn" className="py-6 px-6 sm:px-10 lg:px-16 xl:px-20 max-w-[1536px] mx-auto">
@@ -36,55 +60,29 @@ export default function WhyChoose() {
 
         </div>
 
-        {/* Right Video Preview Card */}
+        {/* Right Video Card with Athlete Squat Thumbnail & 10% Viewport Autoplay */}
         <div className="lg:col-span-6 glass-panel rounded-3xl overflow-hidden relative group min-h-[380px] lg:min-h-[440px] border border-white/5 flex items-center justify-center">
 
-          {/* Background Gym Athlete Photo */}
-          <img
-            src='/athelete-squat.png'
-            alt="AVN Athlete Heavy Barbell Squat"
-            className="absolute inset-0 w-full h-full object-cover object-center filter brightness-75 group-hover:scale-105 transition-transform duration-700"
-          />
-
-          {/* Dark & Red Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#070709] via-transparent to-black/40" />
-
-          {/* Central Glowing Red Play Button */}
-          <button
-            onClick={() => setIsVideoOpen(true)}
-            aria-label="Play Brand Video"
-            className="relative z-10 w-20 h-20 rounded-full bg-[#FF1E27] hover:bg-[#ff3b42] text-white flex items-center justify-center shadow-[0_0_40px_rgba(255,30,39,0.9)] hover:scale-110 transition-all duration-300 group-hover:shadow-[0_0_60px_rgba(255,30,39,1)]"
+          {/* Autoplay Video Stream with Athlete Squat Thumbnail Poster */}
+          <video
+            ref={videoRef}
+            poster="/athelete-squat.png"
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover object-center filter brightness-90 contrast-105 group-hover:scale-105 transition-transform duration-700"
           >
-            <Play className="w-8 h-8 fill-current ml-1" />
-            <span className="absolute -inset-2 rounded-full border-2 border-[#FF1E27]/50 animate-ping" />
-          </button>
+            <source src="/blazing-effect.mp4" type="video/mp4" />
+          </video>
+
+          {/* Dark & Red Ambient Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#070709]/80 via-transparent to-black/30 pointer-events-none" />
 
         </div>
 
       </div>
 
-      {/* Video Lightbox Modal */}
-      {isVideoOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
-          <div className="relative w-full max-w-4xl bg-[#0b0b0f] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-            <button
-              onClick={() => setIsVideoOpen(false)}
-              className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-[#FF1E27] flex items-center justify-center transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <div className="relative aspect-video w-full">
-              <iframe
-                className="w-full h-full"
-                src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1"
-                title="AVN Brand Film"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

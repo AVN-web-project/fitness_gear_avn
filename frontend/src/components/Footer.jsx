@@ -1,65 +1,119 @@
 import React from 'react';
-import { ArrowRight, Trophy, ShieldCheck, Flag, Truck, Lock } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
 
 export default function Footer({ theme }) {
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
-
   const trustBadges = [
     {
-      title: 'TRUSTED BY',
+      label: 'TRUSTED BY',
       sub: 'ATHLETES',
-      icon: <Trophy className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      renderIcon: () => (
+        /* Laurel Wreath around Center Monogram Trophy */
+        <svg className="w-12 h-12 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 36c-4-5-5-14 0-24M14 36c-2-3-2-8 1-12M14 24c-3-2-4-7-1-10" />
+          <path d="M34 36c4-5 5-14 0-24M34 36c2-3 2-8-1-12M34 24c3-2 4-7 1-10" />
+          <path d="M18 16h12v6c0 3.3-2.7 6-6 6s-6-2.7-6-6v-6z" />
+          <path d="M24 28v6M20 34h8" />
+          <circle cx="24" cy="11" r="1.8" fill="currentColor" />
+        </svg>
+      )
     },
     {
-      title: 'PREMIUM',
+      label: 'PREMIUM',
       sub: 'MATERIALS',
-      icon: <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      renderIcon: () => (
+        /* Layered Heraldic Shield with Center Monogram Crest */
+        <svg className="w-12 h-12 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M24 5L8 12v12c0 12 7.5 20 16 22 8.5-2 16-10 16-22V12L24 5z" />
+          <path d="M24 10L13 15v9c0 8.5 5.5 14 11 15.5 5.5-1.5 11-7 11-15.5v-9L24 10z" strokeWidth="1.5" />
+          <path d="M20 16h5c2.2 0 4 1.3 4 3s-1.8 3-4 3h-5v7" strokeWidth="2" />
+        </svg>
+      )
     },
     {
-      title: 'DESIGNED',
+      label: 'DESIGNED',
       sub: 'IN INDIA',
-      icon: <Flag className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      renderIcon: () => (
+        /* Shield Crest with Sun Rays over Waves */
+        <svg className="w-12 h-12 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M24 5L8 12v12c0 12 7.5 20 16 22 8.5-2 16-10 16-22V12L24 5z" />
+          <circle cx="24" cy="19" r="3.5" fill="currentColor" fillOpacity="0.25" />
+          <path d="M24 12v2M18 14l1.5 1.5M30 14l-1.5 1.5M16 19h2M30 19h2" strokeWidth="1.8" />
+          <path d="M13 28c3 1.5 6 1.5 9 0s6-1.5 9 0 6 1.5 9 0" />
+          <path d="M13 33c3 1.5 6 1.5 9 0s6-1.5 9 0 6 1.5 9 0" />
+        </svg>
+      )
     },
     {
-      title: 'EXPRESS',
+      label: 'WORLDWIDE',
       sub: 'SHIPPING',
-      icon: <Truck className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      renderIcon: () => (
+        /* Express Delivery Truck with Cargo Speed Lines */
+        <svg className="w-12 h-12 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="12" y="14" width="20" height="16" rx="2" />
+          <path d="M32 20h7l4 5v5h-11v-10z" />
+          <circle cx="19" cy="33" r="3.5" strokeWidth="2" />
+          <circle cx="37" cy="33" r="3.5" strokeWidth="2" />
+          <path d="M4 18h5M2 23h7M5 28h4" strokeWidth="2" />
+        </svg>
+      )
     },
     {
-      title: 'SECURE',
+      label: 'SECURE',
       sub: 'PAYMENTS',
-      icon: <Lock className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      renderIcon: () => (
+        /* Padlock with Keyhole */
+        <svg className="w-12 h-12 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="11" y="20" width="26" height="19" rx="4" fill="currentColor" fillOpacity="0.15" />
+          <path d="M17 20v-6c0-3.9 3.1-7 7-7s7 3.1 7 7v6" strokeWidth="2.5" />
+          <circle cx="24" cy="28" r="2.5" fill="currentColor" />
+          <line x1="24" y1="30.5" x2="24" y2="34" strokeWidth="2.5" />
+        </svg>
+      )
     }
   ];
 
   return (
     <footer className="w-full bg-[var(--bg-main)] pt-10 pb-8 transition-colors duration-300">
       
-      {/* Feature & Qualities Bar */}
-      <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 mb-14">
-        <div className="red-corner-border rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-8 relative overflow-hidden shadow-lg">
+      {/* Skeletal Trust Badges Container matching Qualities Box below Hero */}
+      <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 mb-12">
+        <div className="red-corner-border rounded-3xl p-6 sm:p-8 lg:p-10 relative overflow-hidden shadow-sm">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-4 items-center">
             {trustBadges.map((badge, idx) => {
               const isLastOdd = idx === trustBadges.length - 1;
               return (
                 <div
                   key={idx}
-                  className={`flex items-center gap-3.5 sm:gap-4 text-left w-full group transition-transform duration-300 hover:translate-y-[-2px] ${
+                  className={`flex items-center gap-3 sm:gap-4 group text-left p-2 rounded-xl transition-all duration-300 ${
                     isLastOdd
                       ? 'col-span-2 lg:col-span-1 justify-self-center sm:justify-self-center lg:justify-self-start'
                       : ''
                   }`}
                 >
-                  <div className="p-3 rounded-2xl bg-[#FF1E27]/10 border border-[#FF1E27]/25 group-hover:bg-[#FF1E27]/20 group-hover:border-[#FF1E27]/50 transition-all duration-300 shrink-0">
-                    {badge.icon}
+                  {/* Icon Container with Inverted Glass Floor Mirror Reflection */}
+                  <div className="relative shrink-0 flex flex-col items-center justify-center my-2">
+                    {/* Primary Icon */}
+                    <div className="relative z-10 text-[#FF1E27] transition-transform duration-300 group-hover:scale-110">
+                      {badge.renderIcon()}
+                    </div>
+
+                    {/* Inverted Glass Floor Mirror Reflection Effect */}
+                    <div 
+                      className="absolute top-[85%] pointer-events-none transform scale-y-[-0.55] opacity-35 blur-[1px] group-hover:opacity-65 transition-opacity duration-300 overflow-hidden [mask-image:linear-gradient(to_bottom,black_10%,transparent_90%)] text-[#FF1E27]"
+                      aria-hidden="true"
+                    >
+                      {badge.renderIcon()}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] sm:text-[11px] font-extrabold text-[var(--text-sub)] tracking-widest uppercase font-heading">
-                      {badge.title}
-                    </p>
-                    <p className="text-xs sm:text-sm font-black italic text-[var(--text-main)] tracking-wider uppercase font-sans">
+
+                  <div className="space-y-1">
+                    <h4 className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
+                      {badge.label}
+                    </h4>
+                    <p className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-heading uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
                       {badge.sub}
                     </p>
                   </div>

@@ -1,132 +1,135 @@
 import React, { useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react';
-import { PRODUCTS as DEFAULT_PRODUCTS, CATEGORIES } from '../data/products';
+import { ArrowRight } from 'lucide-react';
+import { PRODUCTS as DEFAULT_PRODUCTS } from '../data/products';
 import ProductGraphic from './ProductGraphic';
-export default function Bestsellers({ products = DEFAULT_PRODUCTS, onAddToCart, onSelectProduct, theme }) {
 
-  const [activeCategory, setActiveCategory] = useState('ALL PRODUCTS');
-
-  const productList = products && products.length > 0 ? products : DEFAULT_PRODUCTS;
-
-  
+export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSearch, theme }) {
+  const [hoveredCardId, setHoveredCardId] = useState(null);
   const scrollRef = useRef(null);
 
-  const handleScroll = (direction) => {
-    if (scrollRef.current) {
-      const scrollAmount = direction === "left" ? -340 : 340;
-      scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+  // Map representative categories with valid public image paths
+  const categoryCards = [
+    {
+      id: 'knee-support',
+      name: 'KNEE SUPPORT',
+      subtitle: 'Max Compression & Joint Stability',
+      categoryQuery: 'KNEE SUPPORT',
+      imageType: 'knee-wrap',
+      sampleImage: products?.find(p => p.category === 'KNEE SUPPORT')?.image || '/knee-wrap.png',
+      sampleImageLight: products?.find(p => p.category === 'KNEE SUPPORT')?.imageLight || products?.find(p => p.category === 'KNEE SUPPORT')?.image || '/knee-wrap.png',
+    },
+    {
+      id: 'wrist-support',
+      name: 'WRIST SUPPORT',
+      subtitle: 'Heavy Duty Joint Lock & Wraps',
+      categoryQuery: 'WRIST SUPPORT',
+      imageType: 'wrist-wrap',
+      sampleImage: products?.find(p => p.category === 'WRIST SUPPORT')?.image || '/wrist-wrap.png',
+      sampleImageLight: products?.find(p => p.category === 'WRIST SUPPORT')?.imageLight || products?.find(p => p.category === 'WRIST SUPPORT')?.image || '/wrist-wrap.png',
+    },
+    {
+      id: 'lifting-accessories',
+      name: 'LIFTING ACCESSORIES',
+      subtitle: 'Power Straps, Belts & Grip Gear',
+      categoryQuery: 'LIFTING ACCESSORIES',
+      imageType: 'lifting-straps',
+      sampleImage: products?.find(p => p.category === 'LIFTING ACCESSORIES')?.image || '/lifting-straps.png',
+      sampleImageLight: products?.find(p => p.category === 'LIFTING ACCESSORIES')?.imageLight || products?.find(p => p.category === 'LIFTING ACCESSORIES')?.image || '/lifting-straps.png',
+    },
+    {
+      id: 'yoga-accessories',
+      name: 'YOGA ACCESSORIES',
+      subtitle: 'Non-Slip Mats & Support Blocks',
+      categoryQuery: 'YOGA ACCESSORIES',
+      imageType: 'yoga-mat',
+      sampleImage: products?.find(p => p.category === 'YOGA ACCESSORIES')?.image || '/yoga-mat.png',
+      sampleImageLight: products?.find(p => p.category === 'YOGA ACCESSORIES')?.imageLight || products?.find(p => p.category === 'YOGA ACCESSORIES')?.image || '/yoga-mat.png',
+    }
+  ];
+
+  const handleCategoryClick = (categoryQuery) => {
+    if (onNavigateSearch) {
+      onNavigateSearch(categoryQuery);
+    } else if (typeof window !== 'undefined') {
+      window.location.href = `/search?category=${encodeURIComponent(categoryQuery)}`;
     }
   };
-const filteredProducts = activeCategory === 'ALL PRODUCTS'
-    ? productList
-    : productList.filter(p => p.category === activeCategory);
-
 
   return (
-    <section id="products" className="py-6 px-6 sm:px-10 lg:px-16 xl:px-20 max-w-[1536px] mx-auto space-y-6">
-
+    <section id="products" className="py-6 px-4 sm:px-8 lg:px-12 xl:px-16 max-w-[1536px] mx-auto space-y-4">
 
       {/* Section Header */}
       <div className="text-center space-y-2">
         <p className="text-sm sm:text-base md:text-lg font-sans font-extrabold tracking-widest text-[#FF1E27] uppercase">
-          OUR BESTSELLERS
+          EXPLORE CATEGORIES
         </p>
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-sans font-black italic tracking-tight uppercase text-[var(--text-main)]">
           GEAR THAT POWERS YOU
         </h2>
-        {/* Red Dash Under Heading (No Glow) */}
+        {/* Red Dash Under Heading */}
         <div className="w-12 h-[3px] bg-[#FF1E27] mx-auto rounded-full mt-3" />
       </div>
 
-      {/* Category Filter Navigation Bar */}
-      <div className="flex overflow-x-auto justify-start sm:justify-center gap-2 sm:gap-8 pb-2 pt-2 px-1 scrollbar-none">
-        {CATEGORIES.map((category) => {
-          const isActive = activeCategory === category;
-          return (
-            <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`relative shrink-0 px-3 sm:px-6 py-2.5 sm:py-3 transition-all duration-300 uppercase cursor-pointer ${isActive
-                ? 'text-[var(--text-main)] font-extrabold'
-                : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-bold'
+      {/* Product Category Cards Carousel Container */}
+      <div className="relative py-2">
+
+        {/* Category Cards Carousel Grid */}
+        <div
+          ref={scrollRef}
+          className="flex items-stretch gap-4 sm:gap-5 overflow-x-auto scroll-smooth scrollbar-none pt-8 pb-8 px-4 sm:px-6 snap-x snap-mandatory overflow-y-visible"
+        >
+          {categoryCards.map((category, index) => {
+            const isHovered = hoveredCardId === category.id;
+            const isFirst = index === 0;
+            const isLast = index === categoryCards.length - 1;
+
+            let hoverTransform = 'scale-[1.12] -translate-y-2 z-50 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-2 border-[#FF1E27]';
+            if (isFirst) {
+              hoverTransform = 'scale-[1.12] origin-left translate-x-1 -translate-y-2 z-50 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-2 border-[#FF1E27]';
+            } else if (isLast) {
+              hoverTransform = 'scale-[1.12] origin-right -translate-x-1 -translate-y-2 z-50 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-2 border-[#FF1E27]';
+            }
+
+            return (
+              <div
+                key={category.id}
+                onMouseEnter={() => setHoveredCardId(category.id)}
+                onMouseLeave={() => setHoveredCardId(null)}
+                onClick={() => handleCategoryClick(category.categoryQuery)}
+                className={`red-corner-border bg-[var(--bg-main)] rounded-3xl p-5 flex flex-col justify-between space-y-4 group cursor-pointer transition-all duration-500 ease-out transform-gpu shrink-0 w-[calc(85%-10px)] sm:w-[calc(50%-10px)] md:w-[calc(33.333%-12px)] lg:w-[calc(25%-12px)] snap-start ${
+                  isHovered
+                    ? hoverTransform
+                    : 'scale-100 z-10 opacity-100 shadow-md'
                 }`}
-            >
-              {/* Tab Title */}
-              <span className="relative z-10 text-xs sm:text-sm tracking-wider font-heading whitespace-nowrap">
-                {category}
-              </span>
+              >
+                {/* Category Product Visual */}
+                <ProductGraphic
+                  image={category.sampleImage}
+                  imageLight={category.sampleImageLight}
+                  type={category.imageType}
+                  theme={theme}
+                  className="w-full h-56 rounded-2xl overflow-hidden"
+                />
 
-              {/* Clean Red Dash Under Active Category Tab */}
-              {isActive && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 sm:w-14 h-[2.5px] bg-[#FF1E27] rounded-full z-10" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+                {/* Category Title & Red Explore Button */}
+                <div className="flex items-end justify-between pt-1 gap-2">
+                  <div className="space-y-1 text-left">
+                    <h3 className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
+                      {category.name}
+                    </h3>
+                    <p className="text-xs text-[var(--text-sub)] font-normal leading-tight">
+                      {category.subtitle}
+                    </p>
+                  </div>
 
-      {/* Products Carousel / Grid Layout with Arrow Controls */}
-      <div className="relative">
-
-        {/* Left Arrow Button - Placed Outside Margin */}
-        <button
-          aria-label="Previous" onClick={() => handleScroll("left")}
-          className="absolute -left-5 md:-left-7 lg:-left-10 xl:-left-12 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:border-[#FF1E27] hover:bg-[#FF1E27] flex items-center justify-center backdrop-blur-md transition-all shadow-xl hidden md:flex cursor-pointer"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
-        {/* Right Arrow Button - Placed Outside Margin */}
-        <button
-          aria-label="Next" onClick={() => handleScroll("right")}
-          className="absolute -right-5 md:-right-7 lg:-right-10 xl:-right-12 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:border-[#FF1E27] hover:bg-[#FF1E27] flex items-center justify-center backdrop-blur-md transition-all shadow-xl hidden md:flex cursor-pointer"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-
-        {/* Product Cards Grid */}
-        <div ref={scrollRef} className="flex items-stretch gap-5 overflow-x-auto scroll-smooth scrollbar-none py-3 px-1 snap-x snap-mandatory">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="red-corner-border bg-[var(--bg-main)] rounded-2xl p-4 flex flex-col justify-between space-y-4 group cursor-pointer hover:shadow-[0_10px_30px_-10px_rgba(255,30,39,0.45)] transition-all duration-300 transform hover:-translate-y-1 overflow-hidden shrink-0 w-[calc(85%-12px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)] snap-start"
-              onClick={() => onSelectProduct(product)}
-            >
-              {/* Product Visual */}
-              <ProductGraphic
-                image={product.image}
-                imageLight={product.imageLight}
-                type={product.imageType}
-                theme={theme}
-                className="w-full h-56 rounded-xl"
-              />
-
-              {/* Product Info & Action matching Reference Screenshot */}
-              <div className="flex items-end justify-between pt-1 gap-2">
-                {/* Left Stacked Text: Title on Top, Price Below */}
-                <div className="space-y-1 text-left">
-                  <h3 className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
-                    {product.name}
-                  </h3>
-                  <p className="text-base sm:text-lg font-extrabold text-[var(--text-main)] font-heading tracking-tight leading-none">
-                    ₹{product.price}
-                  </p>
+                  {/* Explore Category Arrow Button */}
+                  <div className="w-10 h-10 rounded-xl btn-cart-inward-glow flex items-center justify-center shrink-0 group-hover:bg-[#FF1E27] group-hover:text-white transition-all">
+                    <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
                 </div>
-
-                {/* Right Inward Glow Cart Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddToCart(product);
-                  }}
-                  aria-label={`Add ${product.name} to cart`}
-                  className="w-10 h-10 rounded-xl btn-cart-inward-glow flex items-center justify-center shrink-0 cursor-pointer"
-                >
-                  <ShoppingCart className="w-4.5 h-4.5 filter drop-shadow-[0_0_4px_rgba(255,30,39,0.4)]" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>
