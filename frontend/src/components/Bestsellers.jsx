@@ -5,6 +5,9 @@ import ProductGraphic from './ProductGraphic';
 
 export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSearch, theme }) {
   const [hoveredCardId, setHoveredCardId] = useState(null);
+  const [activeMobileIndex, setActiveMobileIndex] = useState(0);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
   const scrollRef = useRef(null);
 
   // Map representative categories with valid public image paths
@@ -47,6 +50,8 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
     }
   ];
 
+  const totalCategories = categoryCards.length;
+
   const handleCategoryClick = (categoryQuery) => {
     if (onNavigateSearch) {
       onNavigateSearch(categoryQuery);
@@ -55,25 +60,139 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
     }
   };
 
+  // Touch Swipe Handlers for Infinite 3D Mobile Cover Flow Carousel
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    if (distance > 30) {
+      // Infinite Next (wraps around to 0)
+      setActiveMobileIndex(prev => (prev + 1) % totalCategories);
+    } else if (distance < -30) {
+      // Infinite Prev (wraps around to totalCategories - 1)
+      setActiveMobileIndex(prev => (prev - 1 + totalCategories) % totalCategories);
+    }
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
   return (
     <section id="products" className="py-6 px-4 sm:px-8 lg:px-12 xl:px-16 max-w-[1536px] mx-auto space-y-4">
 
       {/* Section Header */}
       <div className="text-center space-y-2">
-        <p className="text-sm sm:text-base md:text-lg font-sans font-extrabold tracking-widest text-[#FF1E27] uppercase">
+        <p className="text-xs sm:text-base md:text-lg font-sans font-extrabold tracking-widest text-[#FF1E27] uppercase">
           EXPLORE CATEGORIES
         </p>
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-sans font-black italic tracking-tight uppercase text-[var(--text-main)]">
+        <h2 className="text-2xl sm:text-4xl md:text-5xl font-sans font-black italic tracking-tight uppercase text-[var(--text-main)]">
           GEAR THAT POWERS YOU
         </h2>
         {/* Red Dash Under Heading */}
         <div className="w-12 h-[3px] bg-[#FF1E27] mx-auto rounded-full mt-3" />
       </div>
 
-      {/* Product Category Cards Carousel Container */}
-      <div className="relative py-2">
+      {/* MOBILE ONLY (< 640px): Infinite 3D Cover Flow perspective Carousel with Floor Reflection (No Dots / Arrows) */}
+      <div className="block sm:hidden relative py-4 overflow-hidden">
+        <div
+          className="relative h-[360px] w-full flex items-center justify-center [perspective:1000px] overflow-hidden select-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {categoryCards.map((category, index) => {
+            // Shortest circular offset for seamless infinite loop from left and right
+            let diff = index - activeMobileIndex;
+            if (diff > totalCategories / 2) diff -= totalCategories;
+            if (diff < -totalCategories / 2) diff += totalCategories;
 
-        {/* Category Cards Carousel Grid */}
+            const isActive = diff === 0;
+
+            // 3D Perspective Transforms
+            let translateX = diff * 110;
+            let rotateY = diff < 0 ? 38 : diff > 0 ? -38 : 0;
+            let scale = isActive ? 1 : Math.max(0.72, 1 - Math.abs(diff) * 0.18);
+            let opacity = isActive ? 1 : Math.max(0.4, 1 - Math.abs(diff) * 0.35);
+            let zIndex = 30 - Math.abs(diff) * 10;
+
+            return (
+              <div
+                key={category.id}
+                onClick={() => {
+                  if (isActive) {
+                    handleCategoryClick(category.categoryQuery);
+                  } else {
+                    setActiveMobileIndex(index);
+                  }
+                }}
+                className="absolute top-2 w-[265px] transition-all duration-500 ease-out transform-gpu cursor-pointer"
+                style={{
+                  transform: `translate3d(${translateX}px, 0, ${isActive ? 0 : -90}px) rotateY(${rotateY}deg) scale(${scale})`,
+                  zIndex: zIndex,
+                  opacity: opacity,
+                }}
+              >
+                {/* Primary Card */}
+                <div
+                  className={`red-corner-border bg-[var(--bg-main)] rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-xl transition-all duration-300 ${
+                    isActive
+                      ? 'shadow-[0_15px_35px_rgba(255,30,39,0.35)] border-2 border-[#FF1E27]'
+                      : 'border border-[var(--border-subtle)]'
+                  }`}
+                >
+                  {/* Category Image */}
+                  <ProductGraphic
+                    image={category.sampleImage}
+                    imageLight={category.sampleImageLight}
+                    type={category.imageType}
+                    theme={theme}
+                    className="w-full h-44 rounded-xl overflow-hidden"
+                  />
+
+                  {/* Card Details */}
+                  <div className="flex items-end justify-between pt-1 gap-2">
+                    <div className="space-y-0.5 text-left">
+                      <h3 className="text-xs font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase text-[#FF1E27] leading-tight">
+                        {category.name}
+                      </h3>
+                      <p className="text-[10px] text-[var(--text-sub)] font-normal leading-tight">
+                        {category.subtitle}
+                      </p>
+                    </div>
+
+                    <div className="w-8 h-8 rounded-lg btn-glow-red flex items-center justify-center shrink-0 text-white">
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mirrored 3D Floor Reflection Effect */}
+                <div
+                  aria-hidden="true"
+                  className="w-full transform scale-y-[-1] opacity-30 filter blur-[1px] pointer-events-none mt-1 [mask-image:linear-gradient(to_bottom,black_0%,transparent_70%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_70%)]"
+                >
+                  <ProductGraphic
+                    image={category.sampleImage}
+                    imageLight={category.sampleImageLight}
+                    type={category.imageType}
+                    theme={theme}
+                    className="w-full h-20 rounded-xl overflow-hidden"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* DESKTOP ONLY (>= 640px): Standard Grid / Horizontal Carousel */}
+      <div className="hidden sm:block relative py-2">
         <div
           ref={scrollRef}
           className="flex items-stretch gap-4 sm:gap-5 overflow-x-auto scroll-smooth scrollbar-none pt-8 pb-8 px-4 sm:px-6 snap-x snap-mandatory overflow-y-visible"
@@ -96,7 +215,7 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
                 onMouseEnter={() => setHoveredCardId(category.id)}
                 onMouseLeave={() => setHoveredCardId(null)}
                 onClick={() => handleCategoryClick(category.categoryQuery)}
-                className={`red-corner-border bg-[var(--bg-main)] rounded-3xl p-5 flex flex-col justify-between space-y-4 group cursor-pointer transition-all duration-500 ease-out transform-gpu shrink-0 w-[calc(85%-10px)] sm:w-[calc(50%-10px)] md:w-[calc(33.333%-12px)] lg:w-[calc(25%-12px)] snap-start ${
+                className={`red-corner-border bg-[var(--bg-main)] rounded-3xl p-5 flex flex-col justify-between space-y-4 group cursor-pointer transition-all duration-500 ease-out transform-gpu shrink-0 sm:w-[calc(50%-10px)] md:w-[calc(33.333%-12px)] lg:w-[calc(25%-12px)] snap-start ${
                   isHovered
                     ? hoverTransform
                     : 'scale-100 z-10 opacity-100 shadow-md'
@@ -131,7 +250,6 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
             );
           })}
         </div>
-
       </div>
 
     </section>
