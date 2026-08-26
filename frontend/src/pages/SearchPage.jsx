@@ -16,7 +16,7 @@ import {
   ChevronLeft,
   Filter
 } from 'lucide-react';
-import ProductGraphic from './ProductGraphic';
+import ProductGraphic from '../components/ProductGraphic';
 import { fetchSearchProducts } from '../services/api';
 import { PRODUCTS as LOCAL_PRODUCTS, CATEGORIES as LOCAL_CATEGORIES } from '../data/products';
 

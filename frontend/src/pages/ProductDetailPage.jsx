@@ -22,8 +22,8 @@ import {
   ShoppingBag,
   ArrowRight
 } from 'lucide-react';
-import ProductGraphic from './ProductGraphic';
-import SizeChartModal from './SizeChartModal';
+import ProductGraphic from '../components/ProductGraphic';
+import SizeChartModal from '../components/SizeChartModal';
 
 export default function ProductDetailPage({
   product,

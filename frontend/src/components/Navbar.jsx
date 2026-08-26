@@ -12,6 +12,7 @@ export default function Navbar({
   onToggleTheme,
   onNavigateHome,
   onOpenAccount,
+  onNavigateCart,
   activeView = 'home'
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -52,9 +53,17 @@ export default function Navbar({
     }
   };
 
+  const handleCartClick = () => {
+    if (onNavigateCart) {
+      onNavigateCart();
+    } else if (onOpenCart) {
+      onOpenCart();
+    }
+  };
+
   return (
     <>
-      {/* Latest Committed Desktop Header (219b7cf): Transparent when at top, Translucent Blur on Scroll */}
+      {/* Latest Committed Desktop Header: Transparent when at top, Translucent Blur on Scroll */}
       <header className={`sticky top-0 z-40 w-full transition-all duration-300 isolate ${
         activeView === 'home' && !isScrolled
           ? 'bg-transparent border-b border-transparent backdrop-blur-none shadow-none'
@@ -89,36 +98,38 @@ export default function Navbar({
             </a>
           </div>
 
-          {/* Center Navigation Links (Desktop - Latest Committed 219b7cf Styling) */}
+          {/* Center Navigation Links (Desktop) */}
           <nav className="hidden lg:flex items-center space-x-8">
             {navItems.map((item) => {
-              const isActive = activeNav === item.label;
+              const isActive = activeNav === item.label && activeView === 'home';
               return (
                 <a
                   key={item.label}
                   href={item.href}
                   onClick={(e) => {
-                    e.preventDefault();
+                    if (item.label === 'HOME') e.preventDefault();
                     handleNavClick(item.label, item.href);
                   }}
-                  className={`text-sm font-extrabold uppercase font-heading tracking-wider transition-colors duration-200 cursor-pointer relative py-1 ${
+                  className={`relative px-4 py-2.5 transition-all duration-300 uppercase whitespace-nowrap ${
                     isActive
-                      ? 'text-[#FF1E27]'
-                      : 'text-[var(--text-main)] hover:text-[#FF1E27]'
+                      ? 'text-[var(--text-main)] font-extrabold'
+                      : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-bold'
                   }`}
                 >
-                  {item.label}
+                  <span className="relative z-10 text-xs sm:text-sm tracking-widest font-heading">
+                    {item.label}
+                  </span>
                   {isActive && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[#FF1E27] shadow-[0_0_8px_#FF1E27]" />
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-[#FF1E27] shadow-[0_0_8px_#FF1E27]" />
                   )}
                 </a>
               );
             })}
           </nav>
 
-          {/* Right Action Icons (Desktop - Latest Committed 219b7cf Layout) */}
+          {/* Right Action Icons (Desktop) */}
           <div className="flex items-center space-x-3 sm:space-x-5">
-            {/* Theme Switcher Toggle (Sun / Moon) */}
+            {/* Theme Switcher Toggle */}
             <button
               onClick={onToggleTheme}
               className="p-2 text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors hover:scale-110 transform cursor-pointer rounded-full"
@@ -153,13 +164,13 @@ export default function Navbar({
               <User className="w-5 h-5" />
             </button>
 
-            {/* Shopping Cart Icon with Badge (Mobile & Desktop) */}
+            {/* Shopping Cart Icon with Badge */}
             <button
-              onClick={onOpenCart}
-              className="relative p-2 text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors hover:scale-110 transform cursor-pointer"
+              onClick={handleCartClick}
+              className="relative p-2 text-[var(--text-main)] hover:text-[#FF1E27] transition-colors cursor-pointer rounded-full group"
               aria-label="Shopping Cart"
             >
-              <ShoppingBag className="w-5 h-5" />
+              <ShoppingBag className="w-6 h-6 transition-transform group-hover:scale-110" />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 bg-[#FF1E27] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
                   {cartCount}
@@ -171,84 +182,63 @@ export default function Navbar({
         </div>
       </header>
 
-      {/* Mobile Slide-Over Navigation Sidebar Drawer (Preserved from 2nd Commit) */}
+      {/* Mobile Slide-Over Navigation Sidebar Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
-          {/* Backdrop Blur Overlay */}
           <div
-            className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
 
-          {/* Slide-Over Drawer Content */}
-          <div className="relative w-80 max-w-[85vw] bg-[var(--bg-main)] border-r border-[var(--border-subtle)] h-full p-6 flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-300">
-            <div>
-              {/* Sidebar Header: Logo & Close Button */}
-              <div className="flex items-center justify-between pb-6 border-b border-[var(--border-subtle)]">
-                <button
-                  onClick={() => {
-                    if (onNavigateHome) onNavigateHome();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="border-none bg-transparent"
-                >
-                  <img
-                    src={currentLogo}
-                    alt="AVN Brand Logo"
-                    className="h-10 w-auto object-contain"
-                  />
-                </button>
+          <div className="relative flex-1 max-w-xs w-full bg-[var(--bg-main)] p-6 flex flex-col justify-between z-10 shadow-2xl border-r border-[var(--border-subtle)] animate-in slide-in-from-left duration-300">
+            <div className="space-y-8">
+              <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
+                <img src={currentLogo} alt="AVN Logo" className="h-10 w-auto object-contain" />
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] rounded-lg transition-colors cursor-pointer"
-                  aria-label="Close Sidebar"
+                  className="p-2 text-[var(--text-sub)] hover:text-[var(--text-main)] rounded-lg cursor-pointer"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
 
-              {/* Sidebar Navigation Items List */}
-              <nav className="py-6 space-y-2">
-                {navItems.map((item) => {
-                  const isActive = activeNav === item.label;
-                  return (
-                    <a
-                      key={item.label}
-                      href={item.href}
-                      onClick={(e) => {
-                        if (item.label === 'HOME') e.preventDefault();
-                        handleNavClick(item.label, item.href);
-                        setMobileMenuOpen(false);
-                      }}
-                      className={`flex items-center justify-between px-4 py-3.5 rounded-xl font-heading text-sm font-extrabold tracking-widest uppercase transition-all ${
-                        isActive
-                          ? 'bg-[#FF1E27] text-white shadow-[0_0_15px_rgba(255,30,39,0.4)]'
-                          : 'text-[var(--text-main)] hover:bg-[var(--border-subtle)] hover:text-[#FF1E27]'
-                      }`}
-                    >
-                      <span>{item.label}</span>
-                    </a>
-                  );
-                })}
+              <nav className="flex flex-col space-y-4">
+                {navItems.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={(e) => {
+                      if (item.label === 'HOME') e.preventDefault();
+                      setMobileMenuOpen(false);
+                      handleNavClick(item.label, item.href);
+                    }}
+                    className={`text-sm font-extrabold uppercase font-heading tracking-wider py-2 px-3 rounded-lg transition-colors ${
+                      activeNav === item.label
+                        ? 'bg-[#FF1E27] text-white shadow-[0_0_15px_rgba(255,30,39,0.4)]'
+                        : 'text-[var(--text-main)] hover:bg-[var(--border-subtle)] hover:text-[#FF1E27]'
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                ))}
               </nav>
             </div>
 
-            {/* Sidebar Footer: Quick Actions */}
-            <div className="pt-6 border-t border-[var(--border-subtle)] space-y-3">
-              <a
-                href="#products"
+            <div className="pt-6 border-t border-[var(--border-subtle)] space-y-4">
+              <button
                 onClick={() => {
-                  if (onNavigateHome) onNavigateHome();
                   setMobileMenuOpen(false);
+                  if (onNavigateSearch) onNavigateSearch();
                 }}
                 className="w-full btn-glow-red py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(255,30,39,0.4)]"
               >
-                <span>EXPLORE PRODUCTS</span>
-              </a>
+                <span>EXPLORE CATALOG</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
 
-              <div className="flex items-center justify-between text-xs text-[var(--text-sub)] pt-2 px-1">
-                <span>© {new Date().getFullYear()} AVN Athletics</span>
+              <div className="flex items-center justify-between text-xs text-[var(--text-sub)] pt-2">
+                <span>© {new Date().getFullYear()} AVN ATHLETICS</span>
                 <span className="text-[#FF1E27] font-bold">PREMIUM GEAR</span>
               </div>
             </div>
@@ -256,17 +246,17 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Mobile Bottom Navigation Bar (Preserved from 2nd Commit) */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[var(--bg-navbar)] backdrop-blur-xl border-t border-[var(--border-subtle)] px-6 py-2 transition-colors duration-300 shadow-lg">
+      {/* Mobile Bottom Navigation Bar (FOR MOBILE DESIGN ONLY: Home, Profile, Search) */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[var(--bg-main)]/95 backdrop-blur-2xl border-t border-[var(--border-subtle)] px-6 py-2 transition-colors duration-300 shadow-[0_-4px_25px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-around h-12">
-          {/* Home Tab */}
+          {/* 1. Home Button */}
           <button
             onClick={() => {
               if (onNavigateHome) onNavigateHome();
               setActiveNav('HOME');
             }}
-            className={`flex flex-col items-center justify-center space-y-1 transition-colors ${
-              activeNav === 'HOME'
+            className={`flex flex-col items-center justify-center space-y-1 transition-colors cursor-pointer ${
+              activeView === 'home'
                 ? 'text-[#FF1E27] font-extrabold'
                 : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
             }`}
@@ -275,7 +265,7 @@ export default function Navbar({
             <span className="text-[10px] tracking-wider uppercase font-heading">Home</span>
           </button>
 
-          {/* Profile Tab */}
+          {/* 2. Profile Button */}
           <button
             onClick={onOpenAccount || (() => {})}
             className="flex flex-col items-center justify-center space-y-1 relative text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium cursor-pointer transition-colors"
@@ -284,13 +274,17 @@ export default function Navbar({
             <span className="text-[10px] tracking-wider uppercase font-heading">Profile</span>
           </button>
 
-          {/* Search Tab */}
+          {/* 3. Search Button */}
           <button
             onClick={() => {
               if (onNavigateSearch) onNavigateSearch();
               else if (onOpenSearch) onOpenSearch();
             }}
-            className="flex flex-col items-center justify-center space-y-1 text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium cursor-pointer transition-colors"
+            className={`flex flex-col items-center justify-center space-y-1 transition-colors cursor-pointer ${
+              activeView === 'search'
+                ? 'text-[#FF1E27] font-extrabold'
+                : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
+            }`}
           >
             <Search className="w-5 h-5" />
             <span className="text-[10px] tracking-wider uppercase font-heading">Search</span>

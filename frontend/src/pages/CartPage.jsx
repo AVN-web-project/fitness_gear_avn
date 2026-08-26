@@ -23,7 +23,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import ProductGraphic from './ProductGraphic';
+import ProductGraphic from '../components/ProductGraphic';
 import { createCheckoutOrderApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 
