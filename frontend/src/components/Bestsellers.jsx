@@ -191,22 +191,23 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
         </div>
       </div>
 
-      {/* DESKTOP ONLY (>= 640px): Standard Grid / Horizontal Carousel */}
-      <div className="hidden sm:block relative py-2">
-        <div
-          ref={scrollRef}
-          className="flex items-stretch gap-4 sm:gap-5 overflow-x-auto scroll-smooth scrollbar-none pt-8 pb-8 px-4 sm:px-6 snap-x snap-mandatory overflow-y-visible"
-        >
-          {categoryCards.map((category, index) => {
+      {/* DESKTOP ONLY (>= 640px): 1-to-1 Match of Reference Design media_1787761038166.png */}
+      <div className="hidden sm:block relative py-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-6 max-w-[1380px] mx-auto px-4 select-none">
+          {categoryCards.map((category) => {
             const isHovered = hoveredCardId === category.id;
-            const isFirst = index === 0;
-            const isLast = index === categoryCards.length - 1;
+            const hasAnyHover = hoveredCardId !== null;
 
-            let hoverTransform = 'scale-[1.12] -translate-y-2 z-50 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-2 border-[#FF1E27]';
-            if (isFirst) {
-              hoverTransform = 'scale-[1.12] origin-left translate-x-1 -translate-y-2 z-50 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-2 border-[#FF1E27]';
-            } else if (isLast) {
-              hoverTransform = 'scale-[1.12] origin-right -translate-x-1 -translate-y-2 z-50 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-2 border-[#FF1E27]';
+            // When no card is hovered, all cards remain 100% normal & equal. Effect triggers ONLY on hover!
+            let cardStateClasses = 'scale-100 z-10 opacity-100 filter blur-none brightness-100';
+            if (hasAnyHover) {
+              if (isHovered) {
+                // Prominently enlarged active card with AVN red border highlight
+                cardStateClasses = 'scale-[1.08] -translate-y-3 z-30 opacity-100 border-2 border-[#FF1E27] shadow-[0_25px_60px_rgba(255,30,39,0.3)] filter blur-none';
+              } else {
+                // Inactive cards: Strictly 100% scale (no reduction, no position shift), blurred softly
+                cardStateClasses = 'scale-100 z-10 opacity-75 filter blur-[1.8px]';
+              }
             }
 
             return (
@@ -215,36 +216,37 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
                 onMouseEnter={() => setHoveredCardId(category.id)}
                 onMouseLeave={() => setHoveredCardId(null)}
                 onClick={() => handleCategoryClick(category.categoryQuery)}
-                className={`red-corner-border bg-[var(--bg-main)] rounded-3xl p-5 flex flex-col justify-between space-y-4 group cursor-pointer transition-all duration-500 ease-out transform-gpu shrink-0 sm:w-[calc(50%-10px)] md:w-[calc(33.333%-12px)] lg:w-[calc(25%-12px)] snap-start ${
-                  isHovered
-                    ? hoverTransform
-                    : 'scale-100 z-10 opacity-100 shadow-md'
-                }`}
+                className={`red-corner-border bg-[var(--bg-main)] rounded-3xl relative h-[380px] lg:h-[430px] overflow-hidden group cursor-pointer transition-all duration-500 ease-out transform-gpu flex flex-col justify-end p-6 shadow-xl ${cardStateClasses}`}
               >
-                {/* Category Product Visual */}
-                <ProductGraphic
-                  image={category.sampleImage}
-                  imageLight={category.sampleImageLight}
-                  type={category.imageType}
-                  theme={theme}
-                  className="w-full h-56 rounded-2xl overflow-hidden"
-                />
-
-                {/* Category Title & Red Explore Button */}
-                <div className="flex items-end justify-between pt-1 gap-2">
-                  <div className="space-y-1 text-left">
-                    <h3 className="text-xs sm:text-sm font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
-                      {category.name}
-                    </h3>
-                    <p className="text-xs text-[var(--text-sub)] font-normal leading-tight">
-                      {category.subtitle}
-                    </p>
+                {/* 100% Full-Bleed Product Graphic Background */}
+                <div className="absolute inset-[2px] rounded-[22px] overflow-hidden bg-[var(--bg-main)] flex flex-col justify-between">
+                  {/* Product Graphic Center Stage with Seamless Background Blending */}
+                  <div className="relative z-10 w-full h-[70%] pt-6 px-6 flex items-center justify-center transform-gpu group-hover:scale-105 transition-transform duration-700 ease-out">
+                    <ProductGraphic
+                      image={category.sampleImage}
+                      imageLight={category.sampleImageLight}
+                      type={category.imageType}
+                      theme={theme}
+                      className="max-w-full max-h-full object-contain filter contrast-105"
+                    />
                   </div>
 
-                  {/* Explore Category Arrow Button */}
-                  <div className="w-10 h-10 rounded-xl btn-cart-inward-glow flex items-center justify-center shrink-0 group-hover:bg-[#FF1E27] group-hover:text-white transition-all">
-                    <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
+                  {/* Soft Gradient Fade for Seamless Card Base Blending */}
+                  <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[var(--bg-main)] via-[var(--bg-main)]/75 to-transparent pointer-events-none z-0" />
+                </div>
+
+                {/* Bottom Left Overlay Typography matching reference image */}
+                <div className="relative z-10 space-y-1 text-left">
+                  <p className={`text-xs font-bold tracking-widest uppercase font-sans transition-colors duration-300 ${
+                    isHovered ? 'text-[#FF1E27]' : 'text-[var(--text-sub)]'
+                  }`}>
+                    {category.name}
+                  </p>
+                  <h3 className={`text-xl lg:text-2xl font-sans font-black italic uppercase tracking-wide leading-tight transition-all duration-300 text-[var(--text-main)] ${
+                    isHovered ? 'scale-105 origin-left text-[#FF1E27]' : ''
+                  }`}>
+                    {category.subtitle}
+                  </h3>
                 </div>
               </div>
             );

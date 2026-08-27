@@ -6,31 +6,68 @@ import logoRedBlack from '../assets/logo-red-black.png';
 export default function Footer({ theme }) {
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
 
-  const trustBadges = [
+    const trustBadges = [
     {
       title: 'TRUSTED BY ATHLETES',
-      sub: 'Tested by pro powerlifters & bodybuilders',
-      icon: <Award className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      sub: 'Over 50,000+ lifters & pros trust AVN',
+      icon: (
+        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 36c-4-5-5-14 0-24M14 36c-2-3-2-8 1-12M14 24c-3-2-4-7-1-10" />
+          <path d="M34 36c4-5 5-14 0-24M34 36c2-3 2-8-1-12M34 24c3-2 4-7 1-10" />
+          <path d="M18 16h12v6c0 3.3-2.7 6-6 6s-6-2.7-6-6v-6z" />
+          <path d="M24 28v6M20 34h8" />
+          <circle cx="24" cy="11" r="1.8" fill="currentColor" />
+        </svg>
+      )
     },
     {
       title: 'PREMIUM MATERIALS',
       sub: 'Reinforced stitching & heavy duty fabric',
-      icon: <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      icon: (
+        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M24 5L8 12v12c0 12 7.5 20 16 22 8.5-2 16-10 16-22V12L24 5z" />
+          <path d="M24 10L13 15v9c0 8.5 5.5 14 11 15.5 5.5-1.5 11-7 11-15.5v-9L24 10z" strokeWidth="1.5" />
+          <path d="M20 16h5c2.2 0 4 1.3 4 3s-1.8 3-4 3h-5v7" strokeWidth="2" />
+        </svg>
+      )
     },
     {
       title: 'DESIGNED IN INDIA',
       sub: 'Engineered for maximum stability',
-      icon: <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      icon: (
+        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M24 5L8 12v12c0 12 7.5 20 16 22 8.5-2 16-10 16-22V12L24 5z" />
+          <circle cx="24" cy="19" r="3.5" fill="currentColor" fillOpacity="0.25" />
+          <path d="M24 12v2M18 14l1.5 1.5M30 14l-1.5 1.5M16 19h2M30 19h2" strokeWidth="1.8" />
+          <path d="M13 28c3 1.5 6 1.5 9 0s6-1.5 9 0 6 1.5 9 0" />
+          <path d="M13 33c3 1.5 6 1.5 9 0s6-1.5 9 0 6 1.5 9 0" />
+        </svg>
+      )
     },
     {
       title: 'EXPRESS SHIPPING',
       sub: 'Fast nationwide doorstep delivery',
-      icon: <Truck className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      icon: (
+        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="12" y="14" width="20" height="16" rx="2" />
+          <path d="M32 20h7l4 5v5h-11v-10z" />
+          <circle cx="19" cy="33" r="3.5" strokeWidth="2" />
+          <circle cx="37" cy="33" r="3.5" strokeWidth="2" />
+          <path d="M4 18h5M2 23h7M5 28h4" strokeWidth="2" />
+        </svg>
+      )
     },
     {
       title: 'SECURE PAYMENTS',
       sub: '100% encrypted & safe checkout',
-      icon: <CreditCard className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" />
+      icon: (
+        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="11" y="20" width="26" height="19" rx="4" fill="currentColor" fillOpacity="0.15" />
+          <path d="M17 20v-6c0-3.9 3.1-7 7-7s7 3.1 7 7v6" strokeWidth="2.5" />
+          <circle cx="24" cy="28" r="2.5" fill="currentColor" />
+          <line x1="24" y1="30.5" x2="24" y2="34" strokeWidth="2.5" />
+        </svg>
+      )
     }
   ];
 
@@ -49,8 +86,16 @@ export default function Footer({ theme }) {
                   isLastOdd ? 'col-span-2 justify-self-center w-[calc(50%-0.75rem)] md:w-full md:col-span-1 md:justify-self-auto' : ''
                 }`}
               >
-              <div className="p-2.5 rounded-xl bg-[#FF1E27]/10 border border-[#FF1E27]/20 w-fit group-hover:bg-[#FF1E27] group-hover:text-white transition-all">
-                {badge.icon}
+              <div className="relative shrink-0 flex flex-col items-center justify-start my-1 w-fit">
+                <div className="relative z-10">
+                  {badge.icon}
+                </div>
+                <div 
+                  className="absolute top-[85%] pointer-events-none transform scale-y-[-0.55] opacity-35 blur-[1px] group-hover:opacity-65 transition-opacity duration-300 overflow-hidden [mask-image:linear-gradient(to_bottom,black_10%,transparent_90%)]"
+                  aria-hidden="true"
+                >
+                  {badge.icon}
+                </div>
               </div>
               <div className="space-y-1">
                 <h5 className="text-xs sm:text-sm font-extrabold text-[var(--text-main)] tracking-wider uppercase font-sans font-black italic group-hover:text-[#FF1E27] transition-colors leading-tight">

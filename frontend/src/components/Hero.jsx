@@ -55,7 +55,7 @@ export default function Hero({ onExploreClick, theme }) {
           <div className="relative w-full h-full">
 
             {/* Base Layer: 3D Stage & Athlete Overlay (Behind the Blazing Video Effect, with Soft Left Edge Mask) */}
-            <div className="absolute top-0 right-0 bottom-0 w-full lg:w-[58%] xl:w-[60%] flex items-center justify-end pointer-events-none overflow-hidden z-0 [mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_65%,transparent_98%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_65%,transparent_98%)] [mask-composite:intersect] [-webkit-mask-composite:source-in]">
+            <div className="absolute top-0 right-0 bottom-0 w-full lg:w-[58%] xl:w-[60%] flex items-center justify-end pointer-events-none overflow-hidden z-0 [mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_85%,transparent_99%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_65%,transparent_98%)] [mask-composite:intersect] [-webkit-mask-composite:source-in]">
               <img
                 src="/avn-hero-2.png"
                 alt="AVN Hero Stage & Logo"
@@ -89,7 +89,7 @@ export default function Hero({ onExploreClick, theme }) {
           />
 
           {/* Seamless Soft Gradient Fade at Bottom of Hero Section to Blend directly into FeatureBar */}
-          <div className="absolute bottom-0 inset-x-0 h-60 sm:h-48 bg-gradient-to-t from-[var(--bg-main)] via-[var(--bg-main)]/95 via-[var(--bg-main)]/60 to-transparent pointer-events-none z-20" />
+          <div className="absolute bottom-0 inset-x-0 h-60 sm:h-28 lg:h-20 bg-gradient-to-t from-[var(--bg-main)] via-[var(--bg-main)]/90 sm:via-[var(--bg-main)]/35 to-transparent pointer-events-none z-20" />
         </div>
       )}
 
