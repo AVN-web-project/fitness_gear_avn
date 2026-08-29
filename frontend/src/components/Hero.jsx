@@ -41,7 +41,7 @@ export default function Hero({ onExploreClick, theme }) {
             <img
               src="/avn-hero-light.png"
               alt="AVN Hero Light Stage & Logo"
-              className="max-h-full max-w-full object-contain object-right-center scale-100 translate-y-8 sm:translate-y-0 transform-gpu opacity-100 transition-all duration-700 pointer-events-none"
+              className="max-h-full max-w-full object-contain object-right-center scale-100 translate-y-4 sm:translate-y-0 transform-gpu opacity-100 transition-all duration-700 pointer-events-none"
 
             />
           </div>
@@ -59,7 +59,7 @@ export default function Hero({ onExploreClick, theme }) {
               <img
                 src="/avn-hero-2.png"
                 alt="AVN Hero Stage & Logo"
-                className="w-full h-full object-contain object-right-center scale-[1.12] lg:scale-[1.18] translate-y-12 sm:translate-y-3 lg:translate-y-4 transform-gpu opacity-100 filter brightness-[1.05] contrast-[1.08] saturate-[1.12] transition-all duration-700"
+                className="w-full h-full object-contain object-right-center scale-[1.12] lg:scale-[1.18] translate-y-6 sm:translate-y-3 lg:translate-y-4 transform-gpu opacity-100 filter brightness-[1.05] contrast-[1.08] saturate-[1.12] transition-all duration-700"
 
               />
             </div>

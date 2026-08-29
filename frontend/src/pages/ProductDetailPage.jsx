@@ -301,12 +301,10 @@ export default function ProductDetailPage({
             
             {/* Badge Overlay */}
             <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-              <span className="text-[10px] font-extrabold tracking-widest text-white uppercase bg-[#FF1E27] px-3 py-1 rounded-full shadow-[0_0_12px_rgba(255,30,39,0.5)]">
+              <span className="text-[10px] font-extrabold tracking-widest text-white uppercase bg-[#FF1E27] px-3 py-1 rounded-full shadow-md">
                 {product.badge || 'PREMIUM'}
               </span>
-              <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-0.5 rounded-md backdrop-blur-md">
-                100% GENUINE GEAR
-              </span>
+              
             </div>
 
             {/* Expand / Lightbox Button */}
@@ -344,7 +342,7 @@ export default function ProductDetailPage({
                 aria-label={`View ${item.label}`}
                 className={`relative flex-shrink-0 w-20 h-20 rounded-xl border-2 transition-all p-2 bg-[var(--bg-main)] flex flex-col items-center justify-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF1E27] ${
                   activeGalleryIndex === idx
-                    ? 'border-[#FF1E27] shadow-[0_0_15px_rgba(255,30,39,0.4)] scale-105'
+                    ? 'border-[#FF1E27] shadow-md scale-105'
                     : 'border-[var(--border-subtle)] opacity-70 hover:opacity-100'
                 }`}
               >
@@ -447,8 +445,8 @@ export default function ProductDetailPage({
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>
                 {product.status === 'Discontinued'
-                  ? '🚫 THIS ITEM HAS BEEN DISCONTINUED'
-                  : '⚠️ CURRENTLY OUT OF STOCK - ITEM UNAVAILABLE'}
+                  ? 'ðŸš« THIS ITEM HAS BEEN DISCONTINUED'
+                  : '⚠️ï¸ CURRENTLY OUT OF STOCK - ITEM UNAVAILABLE'}
               </span>
             </div>
           ) : (
@@ -476,7 +474,7 @@ export default function ProductDetailPage({
                     aria-selected={selectedColor.name === color.name}
                     className={`group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                       selectedColor.name === color.name
-                        ? 'border-[#FF1E27] bg-[#FF1E27]/10 text-[var(--text-main)] shadow-[0_0_12px_rgba(255,30,39,0.3)]'
+                        ? 'border-[#FF1E27] bg-[#FF1E27]/10 text-[var(--text-main)] shadow-md'
                         : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
                     }`}
                   >
@@ -516,7 +514,7 @@ export default function ProductDetailPage({
                     aria-selected={selectedSize === size}
                     className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-heading uppercase transition-all cursor-pointer ${
                       selectedSize === size
-                        ? 'border-[#FF1E27] bg-[#FF1E27] text-white shadow-[0_0_15px_rgba(255,30,39,0.4)]'
+                        ? 'border-[#FF1E27] bg-[#FF1E27] text-white shadow-md'
                         : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:border-gray-500'
                     }`}
                   >
@@ -543,7 +541,7 @@ export default function ProductDetailPage({
                     aria-selected={selectedPack === pack}
                     className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-heading transition-all cursor-pointer ${
                       selectedPack === pack
-                        ? 'border-[#FF1E27] bg-[#FF1E27]/15 text-[#FF1E27] font-extrabold shadow-[0_0_12px_rgba(255,30,39,0.3)]'
+                        ? 'border-[#FF1E27] bg-[#FF1E27]/15 text-[#FF1E27] font-extrabold shadow-md'
                         : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
                     }`}
                   >
@@ -837,7 +835,7 @@ export default function ProductDetailPage({
               aria-selected={activeTab === tab.id}
               className={`px-5 py-3 rounded-t-xl font-extrabold font-heading text-xs sm:text-sm tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-[#FF1E27] text-white border-b-2 border-white shadow-[0_-4px_12px_rgba(255,30,39,0.3)]'
+                  ? 'bg-[#FF1E27] text-white border-b-2 border-white shadow-md'
                   : 'text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)]'
               }`}
             >
@@ -1197,7 +1195,7 @@ export default function ProductDetailPage({
               imageLight={activeImageLight}
               type={currentGalleryItem?.type || product.imageType}
               theme={theme}
-              className="max-h-[75vh] w-auto object-contain filter drop-shadow-[0_20px_50px_rgba(255,30,39,0.3)]"
+              className="max-h-[75vh] w-auto object-contain filter drop-shadow-xl"
             />
           </div>
         </div>
@@ -1213,3 +1211,4 @@ export default function ProductDetailPage({
     </div>
   );
 }
+

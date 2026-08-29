@@ -1,17 +1,19 @@
-import React from 'react';
-import { ShieldCheck, Zap, Award, ArrowRight, Truck, CreditCard, HeartHandshake } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowRight } from 'lucide-react';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
 
-export default function Footer({ theme }) {
+export default function Footer({ theme, isMobileView = false, activeView = 'home' }) {
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
+  const [isPaused, setIsPaused] = useState(false);
+  const scrollRef = useRef(null);
 
-    const trustBadges = [
+  const trustBadges = [
     {
       title: 'TRUSTED BY ATHLETES',
       sub: 'Over 50,000+ lifters & pros trust AVN',
-      icon: (
-        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      renderIcon: () => (
+        <svg className="w-8 h-8 sm:w-9 sm:h-9 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 36c-4-5-5-14 0-24M14 36c-2-3-2-8 1-12M14 24c-3-2-4-7-1-10" />
           <path d="M34 36c4-5 5-14 0-24M34 36c2-3 2-8-1-12M34 24c3-2 4-7 1-10" />
           <path d="M18 16h12v6c0 3.3-2.7 6-6 6s-6-2.7-6-6v-6z" />
@@ -23,8 +25,8 @@ export default function Footer({ theme }) {
     {
       title: 'PREMIUM MATERIALS',
       sub: 'Reinforced stitching & heavy duty fabric',
-      icon: (
-        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      renderIcon: () => (
+        <svg className="w-8 h-8 sm:w-9 sm:h-9 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M24 5L8 12v12c0 12 7.5 20 16 22 8.5-2 16-10 16-22V12L24 5z" />
           <path d="M24 10L13 15v9c0 8.5 5.5 14 11 15.5 5.5-1.5 11-7 11-15.5v-9L24 10z" strokeWidth="1.5" />
           <path d="M20 16h5c2.2 0 4 1.3 4 3s-1.8 3-4 3h-5v7" strokeWidth="2" />
@@ -34,8 +36,8 @@ export default function Footer({ theme }) {
     {
       title: 'DESIGNED IN INDIA',
       sub: 'Engineered for maximum stability',
-      icon: (
-        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      renderIcon: () => (
+        <svg className="w-8 h-8 sm:w-9 sm:h-9 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M24 5L8 12v12c0 12 7.5 20 16 22 8.5-2 16-10 16-22V12L24 5z" />
           <circle cx="24" cy="19" r="3.5" fill="currentColor" fillOpacity="0.25" />
           <path d="M24 12v2M18 14l1.5 1.5M30 14l-1.5 1.5M16 19h2M30 19h2" strokeWidth="1.8" />
@@ -47,8 +49,8 @@ export default function Footer({ theme }) {
     {
       title: 'EXPRESS SHIPPING',
       sub: 'Fast nationwide doorstep delivery',
-      icon: (
-        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      renderIcon: () => (
+        <svg className="w-8 h-8 sm:w-9 sm:h-9 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="12" y="14" width="20" height="16" rx="2" />
           <path d="M32 20h7l4 5v5h-11v-10z" />
           <circle cx="19" cy="33" r="3.5" strokeWidth="2" />
@@ -60,8 +62,8 @@ export default function Footer({ theme }) {
     {
       title: 'SECURE PAYMENTS',
       sub: '100% encrypted & safe checkout',
-      icon: (
-        <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      renderIcon: () => (
+        <svg className="w-8 h-8 sm:w-9 sm:h-9 text-[#FF1E27] shrink-0" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="11" y="20" width="26" height="19" rx="4" fill="currentColor" fillOpacity="0.15" />
           <path d="M17 20v-6c0-3.9 3.1-7 7-7s7 3.1 7 7v6" strokeWidth="2.5" />
           <circle cx="24" cy="28" r="2.5" fill="currentColor" />
@@ -71,45 +73,92 @@ export default function Footer({ theme }) {
     }
   ];
 
+  // 3x Array for infinite scroll buffer in both left and right directions
+  const marqueeBadges = [...trustBadges, ...trustBadges, ...trustBadges];
+
+  // Initialize scroll position in center third buffer
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth / 3;
+    }
+  }, [activeView]);
+
+  // Continuous auto-scroll & boundary loop check for both left and right directions
+  useEffect(() => {
+    let animId;
+    const container = scrollRef.current;
+
+    const loop = () => {
+      if (container) {
+        if (!isPaused) {
+          container.scrollLeft += 1;
+        }
+
+        // Both sides infinite loop check
+        const oneThird = container.scrollWidth / 3;
+        if (container.scrollLeft >= oneThird * 2) {
+          container.scrollLeft = oneThird;
+        } else if (container.scrollLeft <= 10) {
+          container.scrollLeft = oneThird;
+        }
+      }
+      animId = requestAnimationFrame(loop);
+    };
+
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [isPaused]);
+
+  const handleCardClick = () => {
+    setIsPaused((prev) => !prev);
+  };
+
   return (
-    <footer id="footer" className="pt-16 pb-24 border-t border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300">
+    <footer className={`relative bg-[var(--bg-card-solid)] pb-12 transition-colors duration-300 overflow-hidden ${activeView === 'home' ? 'pt-0 border-t-0' : 'pt-12 sm:pt-16 border-t border-[var(--border-subtle)]'}`}>
       
-      {/* Top Value Proposition Badges */}
-      <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 mb-16 pb-14 border-b border-[var(--border-subtle)]">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8 items-stretch">
-          {trustBadges.map((badge, idx) => {
-            const isLastOdd = idx === trustBadges.length - 1;
-            return (
+      {/* Top Guarantee Badges Strip (Auto Scroll on Desktop / Auto + Manual Infinite Scroll on Mobile) */}
+      {activeView === 'home' && (
+        <div className="pb-6 mb-10 w-full overflow-hidden">
+          <div
+            ref={scrollRef}
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            className="flex items-center gap-5 sm:gap-6 px-4 py-4 overflow-x-auto sm:overflow-x-hidden no-scrollbar scroll-smooth cursor-default select-none"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {marqueeBadges.map((badge, idx) => (
               <div
                 key={idx}
-                className={`red-corner-border rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3 text-left group hover:scale-[1.03] transition-all duration-300 shadow-md ${
-                  isLastOdd ? 'col-span-2 justify-self-center w-[calc(50%-0.75rem)] md:w-full md:col-span-1 md:justify-self-auto' : ''
-                }`}
+                onClick={handleCardClick}
+                className="shrink-0 w-72 sm:w-80 red-corner-border rounded-2xl p-5 group text-left relative bg-[var(--bg-main)] border border-[var(--border-subtle)] hover:border-[#FF1E27] transition-all duration-300 transform hover:-translate-y-2 hover:shadow-xl cursor-pointer"
               >
-              <div className="relative shrink-0 flex flex-col items-center justify-start my-1 w-fit">
-                <div className="relative z-10">
-                  {badge.icon}
+                {/* Icon Container with Glass Floor Mirror Reflection */}
+                <div className="relative shrink-0 flex flex-col items-start mb-3">
+                  <div className="relative z-10 text-[#FF1E27] group-hover:scale-110 transition-transform duration-300">
+                    {badge.renderIcon()}
+                  </div>
+                  <div 
+                    className="absolute top-[85%] pointer-events-none transform scale-y-[-0.55] opacity-35 blur-[1px] group-hover:opacity-65 transition-opacity duration-300 overflow-hidden text-[#FF1E27] [mask-image:linear-gradient(to_bottom,black_10%,transparent_90%)]"
+                    aria-hidden="true"
+                  >
+                    {badge.renderIcon()}
+                  </div>
                 </div>
-                <div 
-                  className="absolute top-[85%] pointer-events-none transform scale-y-[-0.55] opacity-35 blur-[1px] group-hover:opacity-65 transition-opacity duration-300 overflow-hidden [mask-image:linear-gradient(to_bottom,black_10%,transparent_90%)]"
-                  aria-hidden="true"
-                >
-                  {badge.icon}
+
+                {/* Title & Subtext */}
+                <div className="space-y-1 mt-2">
+                  <h4 className="text-sm font-black tracking-wider text-[var(--text-main)] font-heading italic uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
+                    {badge.title}
+                  </h4>
+                  <p className="text-xs text-[var(--text-sub)] leading-relaxed font-normal">
+                    {badge.sub}
+                  </p>
                 </div>
               </div>
-              <div className="space-y-1">
-                <h5 className="text-xs sm:text-sm font-extrabold text-[var(--text-main)] tracking-wider uppercase font-sans font-black italic group-hover:text-[#FF1E27] transition-colors leading-tight">
-                  {badge.title}
-                </h5>
-                <p className="text-[11px] sm:text-xs text-[var(--text-sub)] leading-snug font-normal">
-                  {badge.sub}
-                </p>
-              </div>
-            </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20">
         {/* Main Footer Sitemap Grid */}
@@ -135,12 +184,12 @@ export default function Footer({ theme }) {
                 <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24"><path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.374 14.5 5 15.5 5H18V0h-3.808C10.592 0 9 1.583 9 4.615V8z"/></svg>
               </a>
               <a href="#" aria-label="YouTube" className="w-10 h-10 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-sub)] hover:text-white hover:bg-[#FF1E27] transition-all hover:scale-110">
-                <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
               </a>
             </div>
           </div>
 
-          {/* Quick Links & Categories Columns (Side-by-Side 2-Col Grid on Mobile, 5-Col on Desktop) */}
+          {/* Quick Links & Categories Columns */}
           <div className="col-span-full md:col-span-5 grid grid-cols-2 md:grid-cols-5 gap-6 sm:gap-8">
             {/* Quick Links Column */}
             <div className="md:col-span-2 space-y-4">
@@ -186,7 +235,7 @@ export default function Footer({ theme }) {
               />
               <button
                 type="submit"
-                className="w-full py-3 px-5 bg-[#FF1E27] hover:bg-[#ff3b42] text-white text-sm font-extrabold font-heading uppercase tracking-wider rounded-xl transition-all shadow-[0_0_15px_rgba(255,30,39,0.4)] flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 px-5 bg-[#FF1E27] hover:bg-[#ff3b42] text-white text-sm font-extrabold font-heading uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>SUBSCRIBE</span>
                 <ArrowRight className="w-4 h-4" />

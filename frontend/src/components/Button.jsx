@@ -33,8 +33,8 @@ export default function Button({
 
   // Style variants matching AVN brand aesthetic
   const variantClasses = {
-    primary: 'btn-glow-red text-white shadow-[0_0_20px_rgba(255,30,39,0.4)] hover:shadow-[0_0_25px_rgba(255,30,39,0.7)] active:scale-[0.98]',
-    'glow-red': 'btn-glow-red text-white shadow-[0_0_20px_rgba(255,30,39,0.4)] hover:shadow-[0_0_25px_rgba(255,30,39,0.7)] active:scale-[0.98]',
+    primary: 'btn-glow-red text-white shadow-md hover:shadow-md active:scale-[0.98]',
+    'glow-red': 'btn-glow-red text-white shadow-md hover:shadow-md active:scale-[0.98]',
     outline: 'border border-[var(--border-subtle)] text-[var(--text-main)] hover:border-[#FF1E27] hover:text-[#FF1E27] bg-transparent active:scale-[0.98]',
     'outline-red': 'border border-[#FF1E27] text-[#FF1E27] hover:bg-[#FF1E27] hover:text-white bg-transparent active:scale-[0.98]',
     dark: 'btn-outline-dark text-[var(--text-main)] active:scale-[0.98]',

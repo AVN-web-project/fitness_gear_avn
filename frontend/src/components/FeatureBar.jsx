@@ -76,7 +76,7 @@ export default function FeatureBar() {
             </div>
 
             <div className="space-y-1">
-              <h4 className="text-sm font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase group-hover:text-[#FF1E27] transition-colors leading-tight">
+              <h4 className="text-sm font-extrabold tracking-wider text-[var(--text-main)] font-sans font-black italic uppercase font-heading group-hover:text-[#FF1E27] transition-colors leading-tight">
                 {feature.title}
               </h4>
               <p className="text-xs text-[var(--text-sub)] leading-relaxed font-normal">

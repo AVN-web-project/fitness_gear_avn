@@ -1,6 +1,16 @@
 @import './styles/borders.css';
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Chakra Petch', 'Rajdhani', 'Kanit', sans-serif;
+  --font-display: 'Rajdhani', 'Chakra Petch', sans-serif;
+  --font-extended: 'Syne', 'Unbounded', 'Kanit', 'Montserrat', sans-serif;
+  --font-barlow: 'Barlow', sans-serif;
+  --font-barlow-condensed: 'Barlow Condensed', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 @layer base {
   :root {
     --font-heading: 'Chakra Petch', 'Rajdhani', sans-serif;
@@ -65,11 +75,11 @@
 
 /* Red Neon Glow Helpers */
 .text-glow-red {
-  text-shadow: 0 0 15px rgba(255, 30, 39, 0.7), 0 0 30px rgba(255, 0, 0, 0.4);
+  text-shadow: none;
 }
 
 .box-glow-red {
-  box-shadow: 0 0 25px rgba(255, 30, 39, 0.35), inset 0 0 15px rgba(255, 30, 39, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .btn-glow-red {
@@ -126,13 +136,13 @@ html.light .glass-panel-hover:hover {
   100% {
     opacity: 0.6;
     transform: scale(1);
-    filter: drop-shadow(0 0 25px rgba(255, 30, 39, 0.4));
+    filter: none;
   }
 
   50% {
     opacity: 0.95;
     transform: scale(1.05);
-    filter: drop-shadow(0 0 50px rgba(255, 30, 39, 0.8));
+    filter: none;
   }
 }
 
@@ -194,4 +204,54 @@ html.light ::-webkit-scrollbar-thumb {
 /* multiply removes black background on white background in light mode */
 html.light .dark-blend {
   mix-blend-mode: multiply;
+}
+/* Hardware Accelerated Infinite Horizontal Marquee Scroll */
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-scroll {
+  display: flex;
+  width: max-content;
+  animation: marqueeScroll 22s linear infinite;
+}
+
+.animate-marquee-scroll:hover,
+.animate-marquee-scroll:active,
+.animate-marquee-scroll:focus-within {
+  animation-play-state: paused;
+}
+
+/* Explicit Typography Utility Class Mappings */
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-extended {
+  font-family: var(--font-extended);
+}
+
+.font-barlow {
+  font-family: var(--font-barlow);
+}
+
+.font-barlow-condensed {
+  font-family: var(--font-barlow-condensed);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
 }

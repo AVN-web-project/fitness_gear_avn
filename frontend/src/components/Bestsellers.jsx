@@ -84,7 +84,7 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
   };
 
   return (
-    <section id="products" className="py-6 px-4 sm:px-8 lg:px-12 xl:px-16 max-w-[1536px] mx-auto space-y-4">
+    <section id="products" className="pt-6 pb-1 sm:pb-4 lg:py-6 px-4 sm:px-8 lg:px-12 xl:px-16 max-w-[1536px] mx-auto space-y-2 lg:space-y-4">
 
       {/* Section Header */}
       <div className="text-center space-y-2">
@@ -142,7 +142,7 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
                 <div
                   className={`red-corner-border bg-[var(--bg-main)] rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-xl transition-all duration-300 ${
                     isActive
-                      ? 'shadow-[0_15px_35px_rgba(255,30,39,0.35)] border-2 border-[#FF1E27]'
+                      ? 'shadow-xl border-2 border-[#FF1E27]'
                       : 'border border-[var(--border-subtle)]'
                   }`}
                 >
@@ -203,7 +203,7 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
             if (hasAnyHover) {
               if (isHovered) {
                 // Prominently enlarged active card with AVN red border highlight
-                cardStateClasses = 'scale-[1.08] -translate-y-3 z-30 opacity-100 border-2 border-[#FF1E27] shadow-[0_25px_60px_rgba(255,30,39,0.3)] filter blur-none';
+                cardStateClasses = 'scale-[1.08] -translate-y-3 z-30 opacity-100 border-2 border-[#FF1E27] shadow-xl filter blur-none';
               } else {
                 // Inactive cards: Strictly 100% scale (no reduction, no position shift), blurred softly
                 cardStateClasses = 'scale-100 z-10 opacity-75 filter blur-[1.8px]';

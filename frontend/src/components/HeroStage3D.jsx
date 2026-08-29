@@ -12,7 +12,7 @@ export default function HeroStage3D({ theme }) {
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-12">
         <div className={`w-[340px] h-[340px] sm:w-[480px] sm:h-[480px] rounded-full border-[3px] border-[#FF1E27] ${
           isLight
-            ? 'opacity-80 shadow-[0_0_20px_rgba(255,30,39,0.2)]'
+            ? 'opacity-80 shadow-md'
             : 'shadow-[0_0_110px_#ff1e27,inset_0_0_55px_#ff1e27] opacity-95 animate-blaze'
         }`} />
       </div>

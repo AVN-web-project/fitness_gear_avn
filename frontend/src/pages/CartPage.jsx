@@ -1,3 +1,4 @@
+import DiscountPromo from '../components/DiscountPromo';
 import React, { useState } from 'react';
 import {
   ShoppingBag,
@@ -28,6 +29,7 @@ import { createCheckoutOrderApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 
 export default function CartPage({
+  isMobileView = false,
   cartItems: propsCartItems,
   onUpdateQuantity: propsUpdateQuantity,
   onRemoveItem: propsRemoveItem,
@@ -246,7 +248,7 @@ export default function CartPage({
             <span>Important messages for items in your Cart:</span>
           </div>
           <ul className="list-disc list-inside space-y-1 pl-2 text-[11px] font-mono text-[var(--text-main)] opacity-90">
-            <li>AVN Competition Wrist Wraps price updated with <span className="text-[#FF1E27] font-bold">15% Limited-Time Multi-Pack Discount</span>.</li>
+            <li>Standard Express Shipping rates applied to all cart line items.</li>
             <li>Free Express Dispatch available for all orders placed before 6:00 PM today.</li>
           </ul>
         </div>
@@ -292,10 +294,10 @@ export default function CartPage({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className={`grid gap-6 items-start ${isMobileView ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-12"}`}>
             
             {/* LEFT MAIN COLUMN: Cart Items & Saved for Later (Cols 1-8) */}
-            <div className="lg:col-span-8 space-y-6">
+            <div className={`${isMobileView ? "col-span-1" : "lg:col-span-8"} space-y-6`}>
               
               {/* CART ITEMS CONTAINER CARD */}
               <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] space-y-5">
@@ -332,17 +334,17 @@ export default function CartPage({
                     return (
                       <div
                         key={itemIdKey}
-                        className={`py-5 transition-all space-y-3 ${!isChecked ? 'opacity-50' : ''}`}
+                        className={`p-4 sm:p-5 my-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/70 hover:border-[#FF1E27]/40 transition-all duration-300 shadow-sm space-y-3 ${!isChecked ? 'opacity-50' : ''}`}
                       >
-                        <div className="flex items-start gap-3 sm:gap-4">
+                        <div className="flex items-start gap-3 sm:gap-5">
                           
                           {/* Item Selection Checkbox */}
-                          <div className="pt-2">
+                          <div className="pt-3">
                             <input
                               type="checkbox"
                               checked={isChecked}
                               onChange={() => toggleItemSelection(itemIdKey)}
-                              className="w-4 h-4 accent-[#C41E24] rounded cursor-pointer"
+                              className="w-4 h-4 accent-[#FF1E27] rounded cursor-pointer"
                               title="Select item for purchase"
                             />
                           </div>
@@ -350,30 +352,31 @@ export default function CartPage({
                           {/* Product Image Thumbnail */}
                           <div
                             onClick={() => onSelectProduct && onSelectProduct(item)}
-                            className="cursor-pointer"
+                            className="cursor-pointer shrink-0"
                           >
                             <ProductGraphic
                               image={item.image}
                               imageLight={item.imageLight}
                               type={item.imageType}
                               theme={theme}
-                              className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 border border-[var(--border-subtle)] bg-[var(--bg-main)] hover:scale-105 transition-transform"
+                              className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] hover:scale-105 transition-transform shadow-sm"
                             />
                           </div>
 
-                          {/* Product Details & Variant Metadata */}
-                          <div className="flex-1 min-w-0 space-y-1">
+                          {/* Product Details (Shifted Rightward) */}
+                          <div className="flex-1 min-w-0 pl-1 sm:pl-2 space-y-2">
                             <div className="flex items-start justify-between gap-4">
-                              <div>
+                              <div className="space-y-1">
+                                {/* Bolder & More Prominent Product Name */}
                                 <h3
                                   onClick={() => onSelectProduct && onSelectProduct(item)}
-                                  className="text-sm sm:text-base font-extrabold font-heading uppercase tracking-wide text-[var(--text-main)] hover:text-[#C41E24] transition-colors cursor-pointer line-clamp-2"
+                                  className="text-base sm:text-lg lg:text-xl font-black font-sans italic uppercase tracking-wider text-[var(--text-main)] hover:text-[#FF1E27] transition-colors cursor-pointer leading-tight line-clamp-2"
                                 >
                                   {item.name}
                                 </h3>
 
-                                {/* Stock Status Badge */}
-                                <div className="flex items-center gap-2 text-xs mt-1">
+                                {/* Stock Status Badge & SKU */}
+                                <div className="flex items-center gap-2 text-xs pt-0.5">
                                   <span className="text-[#FF1E27] font-bold flex items-center gap-1">
                                     <Check className="w-3.5 h-3.5" /> In stock
                                   </span>
@@ -384,29 +387,26 @@ export default function CartPage({
                                 </div>
 
                                 {/* Delivery & Fulfilled Badge */}
-                                <div className="flex items-center gap-2 text-[11px] text-[var(--text-sub)] mt-1 flex-wrap">
-                                  <span className="text-[var(--text-main)] font-semibold">
+                                <div className="flex items-center gap-2 text-[11px] text-[var(--text-sub)] pt-0.5 flex-wrap">
+                                  <span className="text-[var(--text-main)] font-medium">
                                     FREE Express Delivery Fri, 28 Aug available
                                   </span>
-                                  <span className="bg-[#C41E24]/10 text-[#C41E24] border border-[#C41E24]/30 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">
+                                  <span className="bg-[#FF1E27]/10 text-[#FF1E27] border border-[#FF1E27]/30 px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase font-heading">
                                     AVN Fulfilled
                                   </span>
                                 </div>
                               </div>
 
-                              {/* Price Display (Top Right of Card) */}
+                              {/* Price Display & Remove Button directly underneath Price Area */}
                               <div className="text-right shrink-0">
-                                <span className="text-base sm:text-lg font-extrabold text-[#FF1E27] font-heading block">
+                                <span className="text-lg sm:text-xl font-black font-heading text-[#FF1E27] block leading-none">
                                   ₹{item.price * item.quantity}
                                 </span>
                                 {item.quantity > 1 && (
-                                  <span className="text-[10px] text-[var(--text-sub)] block">
+                                  <span className="text-[11px] text-[var(--text-sub)] block mt-1 font-medium">
                                     ₹{item.price} each
                                   </span>
                                 )}
-                                <span className="text-[10px] text-[#FF1E27] font-semibold block mt-0.5">
-                                  7% Off with AVN10
-                                </span>
                               </div>
                             </div>
 
@@ -444,7 +444,9 @@ export default function CartPage({
                             </div>
 
                             {/* Bottom Action Bar: Pill Quantity Selector & Links */}
-                            <div className="flex items-center gap-3 sm:gap-4 pt-3 flex-wrap text-xs">
+                            <div className="flex items-center justify-between gap-3 pt-3 flex-wrap text-xs">
+                              
+                              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
                               
                               {/* Compact Pill Quantity Selector */}
                               <div className="flex items-center border border-[var(--border-subtle)] rounded-lg bg-[var(--bg-main)] overflow-hidden">
@@ -480,13 +482,6 @@ export default function CartPage({
 
                               {/* Action Links: Delete, Save for later, Share */}
                               <button
-                                onClick={() => onRemoveItem(itemIdKey)}
-                                className="text-[var(--text-sub)] hover:text-[#C41E24] hover:underline font-medium cursor-pointer"
-                              >
-                                Delete
-                              </button>
-                              <span className="text-[var(--text-sub)] font-mono">|</span>
-                              <button
                                 onClick={() => handleSaveForLater(item)}
                                 className="text-[var(--text-sub)] hover:text-[#FF1E27] hover:underline font-medium cursor-pointer"
                               >
@@ -504,6 +499,17 @@ export default function CartPage({
                                 className="text-[var(--text-sub)] hover:text-[var(--text-main)] hover:underline font-medium cursor-pointer flex items-center gap-1"
                               >
                                 <Share2 className="w-3 h-3" /> Share
+                              </button>
+                              </div>
+
+                              {/* Remove Button leveled horizontally with Save for later */}
+                              <button
+                                onClick={() => onRemoveItem(itemIdKey)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-[#FF1E27] border border-red-500/30 hover:border-red-500/60 transition-all text-xs font-extrabold font-heading uppercase tracking-wider cursor-pointer group/rem shadow-sm ml-auto"
+                                title="Remove from Cart"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 group-hover/rem:scale-110 transition-transform" />
+                                <span>Remove</span>
                               </button>
 
                               {isAtStockLimit && (
@@ -580,7 +586,7 @@ export default function CartPage({
             </div>
 
             {/* RIGHT STICKY ORDER SUMMARY SIDEBAR (Cols 9-12) */}
-            <div className="lg:col-span-4 space-y-5 sticky top-24">
+            <div className={`${isMobileView ? "col-span-1 static" : "lg:col-span-4 sticky top-24"} space-y-5`}>
               
               {/* STICKY SUMMARY CARD (Amazon style primary Checkout box) */}
               <div className="glass-panel p-6 rounded-2xl border border-[var(--border-subtle)] space-y-4 shadow-xl">
@@ -610,11 +616,7 @@ export default function CartPage({
                     Subtotal ({activeSelectedItems.reduce((a, b) => a + b.quantity, 0)} items):{' '}
                     <span className="text-[#FF1E27] font-mono">₹{finalTotal}</span>
                   </div>
-                  {discountAmount > 0 && (
-                    <div className="text-xs text-[#FF1E27] font-bold">
-                      Total Savings: ₹{discountAmount} ({appliedCoupon?.code})
-                    </div>
-                  )}
+                  
                 </div>
 
                 {/* Gift Option Checkbox */}
@@ -669,76 +671,7 @@ export default function CartPage({
 
               </div>
 
-              {/* PROMOTIONS & DISCOUNTS ACCORDION CARD */}
-              <div className="glass-panel p-5 rounded-2xl border border-[var(--border-subtle)] space-y-3">
-                <h3 className="text-xs font-extrabold font-heading uppercase tracking-wider text-[var(--text-main)] flex items-center gap-2">
-                  <Tag className="w-3.5 h-3.5 text-[#C41E24]" />
-                  Promotions & Coupon Codes
-                </h3>
-
-                {appliedCoupon ? (
-                  <div className="p-3 rounded-xl bg-[#C41E24]/10 border border-[#C41E24]/30 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 text-[#FF1E27] font-bold">
-                      <Sparkles className="w-4 h-4 text-[#FF1E27]" />
-                      <span>Coupon '{appliedCoupon.code}' Applied</span>
-                    </div>
-                    <button
-                      onClick={handleRemoveCoupon}
-                      className="text-xs text-red-400 hover:text-red-300 underline font-bold cursor-pointer"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      placeholder="Enter promo code"
-                      className="flex-1 bg-[var(--bg-main)] text-[var(--text-main)] text-xs font-mono uppercase px-3 py-2 rounded-lg border border-[var(--border-subtle)] focus:border-[#C41E24] focus:outline-none"
-                    />
-                    <button
-                      onClick={() => handleApplyCoupon()}
-                      className="bg-[#C41E24] hover:bg-[#A8191E] px-4 py-2 rounded-lg text-xs font-bold uppercase text-white cursor-pointer"
-                    >
-                      APPLY
-                    </button>
-                  </div>
-                )}
-
-                {couponMessage && (
-                  <p className="text-[11px] text-[#FF1E27] font-bold bg-[#C41E24]/10 p-2 rounded border border-red-500/30">
-                    {couponMessage}
-                  </p>
-                )}
-                {couponError && (
-                  <p className="text-[11px] text-red-400 font-bold bg-[#C41E24]/10 p-2 rounded border border-red-500/30">
-                    {couponError}
-                  </p>
-                )}
-
-                {/* Available Promo Code Badges */}
-                <div className="grid grid-cols-2 gap-1.5 pt-1">
-                  {availablePromos.map((p) => (
-                    <button
-                      key={p.code}
-                      onClick={() => {
-                        setCouponCode(p.code);
-                        handleApplyCoupon(p.code);
-                      }}
-                      className="p-1.5 rounded bg-[var(--bg-main)] border border-[var(--border-subtle)] hover:border-[#C41E24] text-left transition-colors cursor-pointer group"
-                    >
-                      <div className="text-[10px] font-mono font-extrabold text-[#C41E24] flex items-center justify-between">
-                        <span>{p.code}</span>
-                        <Copy className="w-2.5 h-2.5 text-[var(--text-sub)]" />
-                      </div>
-                      <div className="text-[8px] text-[var(--text-sub)] line-clamp-1">{p.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+              
             </div>
 
           </div>
@@ -798,3 +731,6 @@ export default function CartPage({
     </div>
   );
 }
+
+
+

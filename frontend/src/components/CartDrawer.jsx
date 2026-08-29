@@ -11,6 +11,7 @@ export default function CartDrawer({
   onRemoveItem: propsRemoveItem,
   onCheckout: propsCheckout,
   onOpenFullCart,
+  onSelectProduct,
   theme
 }) {
   const context = useCart();
@@ -98,16 +99,30 @@ export default function CartDrawer({
                   key={item.id || item.itemId || item.productId}
                   className="glass-panel p-3.5 rounded-xl flex items-center gap-4 border border-[var(--border-subtle)]"
                 >
-                  <ProductGraphic
-                    image={item.image}
-                    imageLight={item.imageLight}
-                    type={item.imageType}
-                    theme={theme}
-                    className="w-16 h-16 rounded-lg shrink-0 border border-[var(--border-subtle)] bg-[var(--bg-main)] bg-[var(--bg-main)]"
-                  />
+                  <div
+                    onClick={() => {
+                      if (onClose) onClose();
+                      if (onSelectProduct) onSelectProduct(item);
+                    }}
+                    className="cursor-pointer shrink-0 group/img"
+                  >
+                    <ProductGraphic
+                      image={item.image}
+                      imageLight={item.imageLight}
+                      type={item.imageType}
+                      theme={theme}
+                      className="w-16 h-16 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-main)] group-hover/img:scale-105 transition-transform"
+                    />
+                  </div>
                   
                   <div className="flex-1 min-w-0 text-left space-y-1">
-                    <h4 className="text-xs font-extrabold tracking-wider font-sans font-black italic uppercase text-[var(--text-main)] truncate">
+                    <h4
+                      onClick={() => {
+                        if (onClose) onClose();
+                        if (onSelectProduct) onSelectProduct(item);
+                      }}
+                      className="text-xs sm:text-sm font-black font-sans italic uppercase tracking-wider text-[var(--text-main)] hover:text-[#FF1E27] transition-colors leading-tight line-clamp-2 cursor-pointer"
+                    >
                       {item.name}
                     </h4>
                     
@@ -139,19 +154,31 @@ export default function CartDrawer({
                         </button>
                       </div>
                       
-                      <button
-                        onClick={() => onRemoveItem(item.id || item.itemId || item.productId)}
-                        className="text-[var(--text-sub)] hover:text-red-500 p-1 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <span className="text-sm font-bold text-[#FF1E27] font-heading">
-                      ₹{item.price * item.quantity}
-                    </span>
+                  <div className="text-right shrink-0 flex flex-col items-end space-y-3 sm:space-y-4">
+                    <div>
+                      <span className="text-sm sm:text-base font-black font-heading text-[#FF1E27] block">
+                        ₹{item.price * item.quantity}
+                      </span>
+                      {item.quantity > 1 && (
+                        <span className="text-[10px] text-[var(--text-sub)] block font-medium">
+                          ₹{item.price} ea
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Remove Button directly underneath Price Area */}
+                    <button
+                      onClick={() => onRemoveItem(item.id || item.itemId || item.productId)}
+                      className="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-[#FF1E27] border border-red-500/30 hover:border-red-500/60 transition-all text-[10px] font-extrabold uppercase tracking-wider cursor-pointer group/rem shadow-sm"
+                      title="Remove Item"
+                    >
+                      <Trash2 className="w-3 h-3 group-hover/rem:scale-110 transition-transform" />
+                      <span>Remove</span>
+                    </button>
                   </div>
                 </div>
               ))
@@ -178,7 +205,7 @@ export default function CartDrawer({
 
               <button
                 onClick={handleCheckoutClick}
-                className="w-full btn-glow-red py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(255,30,39,0.4)]"
+                className="w-full btn-glow-red py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-md"
               >
                 <span>VIEW FULL CART & CHECKOUT</span>
                 <ArrowRight className="w-4 h-4" />

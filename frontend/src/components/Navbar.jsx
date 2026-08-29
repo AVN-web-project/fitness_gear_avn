@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home } from 'lucide-react';
+import {Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home, History, PackageCheck } from 'lucide-react';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
 
@@ -30,7 +30,7 @@ export default function Navbar({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navItems = [
+      const navItems = [
     { label: 'HOME', href: '#home' },
     { label: 'ABOUT', href: '#about' },
     { label: 'PRODUCTS', href: '#products' },
@@ -38,6 +38,18 @@ export default function Navbar({
     { label: 'REVIEWS', href: '#reviews' },
     { label: 'CONTACT', href: '#contact' }
   ];
+
+    const handleOrderHistoryClick = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setMobileMenuOpen(false);
+    if (props.onOpenOrderHistory) {
+      props.onOpenOrderHistory();
+    } else if (props.onOpenAccount) {
+      props.onOpenAccount();
+    } else if (onOpenAccount) {
+      onOpenAccount();
+    }
+  };
 
   const handleNavClick = (label, href) => {
     setActiveNav(label);
@@ -100,7 +112,7 @@ export default function Navbar({
 
           {/* Center Navigation Links (Desktop) */}
           <nav className="hidden lg:flex items-center space-x-8">
-            {navItems.map((item) => {
+            {navItems.filter(item => item.label !== 'CONTACT').map((item) => {
               const isActive = activeNav === item.label && activeView === 'home';
               return (
                 <a
@@ -120,7 +132,7 @@ export default function Navbar({
                     {item.label}
                   </span>
                   {isActive && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-[#FF1E27] shadow-[0_0_8px_#FF1E27]" />
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-[#FF1E27] shadow-none" />
                   )}
                 </a>
               );
@@ -164,6 +176,16 @@ export default function Navbar({
               <User className="w-5 h-5" />
             </button>
 
+            {/* Order History Icon (Desktop) */}
+            <button
+              onClick={handleOrderHistoryClick}
+              className="p-2 text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors hover:scale-110 transform hidden lg:block cursor-pointer"
+              aria-label="Order History"
+              title="Order History"
+            >
+              <History className="w-5 h-5" />
+            </button>
+
             {/* Shopping Cart Icon with Badge */}
             <button
               onClick={handleCartClick}
@@ -204,7 +226,7 @@ export default function Navbar({
               </div>
 
               <nav className="flex flex-col space-y-4">
-                {navItems.map((item) => (
+                {navItems.filter(item => !['WHY AVN', 'REVIEWS'].includes(item.label)).map((item) => (
                   <a
                     key={item.label}
                     href={item.href}
@@ -215,31 +237,32 @@ export default function Navbar({
                     }}
                     className={`text-sm font-extrabold uppercase font-heading tracking-wider py-2 px-3 rounded-lg transition-colors ${
                       activeNav === item.label
-                        ? 'bg-[#FF1E27] text-white shadow-[0_0_15px_rgba(255,30,39,0.4)]'
+                        ? 'bg-[#FF1E27] text-white shadow-md'
                         : 'text-[var(--text-main)] hover:bg-[var(--border-subtle)] hover:text-[#FF1E27]'
                     }`}
                   >
                     {item.label}
                   </a>
                 ))}
+
+                {/* Orders & Returns Button (Mobile Sidebar ONLY) */}
+                <a
+                  href="#orders"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMobileMenuOpen(false);
+                    if (onOpenAccount) onOpenAccount();
+                  }}
+                  className="text-sm font-extrabold uppercase font-heading tracking-wider py-2 px-3 rounded-lg transition-colors text-[var(--text-main)] hover:bg-[var(--border-subtle)] hover:text-[#FF1E27]"
+                >
+                  ORDERS & RETURNS
+                </a>
               </nav>
             </div>
 
-            <div className="pt-6 border-t border-[var(--border-subtle)] space-y-4">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  if (onNavigateSearch) onNavigateSearch();
-                }}
-                className="w-full btn-glow-red py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(255,30,39,0.4)]"
-              >
-                <span>EXPLORE CATALOG</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <div className="flex items-center justify-between text-xs text-[var(--text-sub)] pt-2">
+            <div className="pt-4 border-t border-[var(--border-subtle)]">
+              <div className="flex items-center justify-center text-xs text-[var(--text-sub)] font-normal">
                 <span>© {new Date().getFullYear()} AVN ATHLETICS</span>
-                <span className="text-[#FF1E27] font-bold">PREMIUM GEAR</span>
               </div>
             </div>
           </div>

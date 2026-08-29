@@ -29,7 +29,7 @@ export default function WhyChoose() {
   }, []);
 
   return (
-    <section id="why-avn" className="py-6 px-6 sm:px-10 lg:px-16 xl:px-20 max-w-[1536px] mx-auto">
+    <section id="why-avn" className="pt-1 sm:pt-4 pb-6 px-6 sm:px-10 lg:px-16 xl:px-20 max-w-[1536px] mx-auto">
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
 
