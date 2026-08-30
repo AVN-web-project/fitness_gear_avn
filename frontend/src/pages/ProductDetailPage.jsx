@@ -323,6 +323,7 @@ export default function ProductDetailPage({
               imageLight={activeImageLight}
               type={currentGalleryItem?.type || product.imageType}
               theme={theme}
+              noGlow
               className="w-full h-full"
             />
           </div>
@@ -351,6 +352,7 @@ export default function ProductDetailPage({
                   imageLight={item.imageLight || product.imageLight}
                   type={item.type || product.imageType}
                   theme={theme}
+              noGlow
                   className="w-full h-full"
                 />
                 <span className="text-[9px] font-bold uppercase truncate max-w-full text-[var(--text-sub)]">
@@ -752,6 +754,7 @@ export default function ProductDetailPage({
                   imageLight={product.imageLight}
                   type={product.imageType}
                   theme={theme}
+              noGlow
                   className="w-14 h-14 object-contain"
                 />
                 <div>
@@ -769,6 +772,7 @@ export default function ProductDetailPage({
                   imageLight={companionProduct.imageLight}
                   type={companionProduct.imageType}
                   theme={theme}
+              noGlow
                   className="w-14 h-14 object-contain"
                 />
                 <div>
@@ -1146,6 +1150,7 @@ export default function ProductDetailPage({
                     imageLight={item.imageLight}
                     type={item.imageType}
                     theme={theme}
+              noGlow
                     className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
@@ -1195,6 +1200,7 @@ export default function ProductDetailPage({
               imageLight={activeImageLight}
               type={currentGalleryItem?.type || product.imageType}
               theme={theme}
+              noGlow
               className="max-h-[75vh] w-auto object-contain filter drop-shadow-xl"
             />
           </div>

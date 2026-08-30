@@ -16,6 +16,7 @@ import {
   Check
 } from 'lucide-react';
 import ProductGraphic from '../components/ProductGraphic';
+import Button from '../components/Button';
 
 export default function CheckoutPage({
   checkoutData,
@@ -92,13 +93,13 @@ export default function CheckoutPage({
 
           {/* Actions */}
           <div className="pt-2 flex flex-col sm:flex-row gap-3">
-            <button
+            <Button
               onClick={onNavigateHome}
-              className="flex-1 btn-glow-red py-3.5 rounded-xl text-xs font-extrabold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer"
+              variant="primary" className="flex-1"
             >
               <ShoppingBag className="w-4 h-4" />
               <span>CONTINUE SHOPPING</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -112,13 +113,13 @@ export default function CheckoutPage({
         {/* Step Indicator Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
           <div className="flex items-center gap-3">
-            <button
+            <Button
               onClick={onNavigateCart}
-              className="p-2 rounded-xl border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
+              variant="icon"
               title="Back to Cart"
             >
               <ArrowLeft className="w-5 h-5" />
-            </button>
+            </Button>
             <h1 className="text-xl sm:text-2xl font-sans font-black italic uppercase tracking-wide text-[var(--text-main)]">
               CHECKOUT
             </h1>
@@ -147,13 +148,13 @@ export default function CheckoutPage({
                   <MapPin className="w-5 h-5 text-[#FF1E27]" />
                   <span>1. Delivery Address</span>
                 </div>
-                <button
+                <Button
                   onClick={onChangeAddress}
-                  className="px-3 py-1.5 rounded-lg bg-[#FF1E27]/10 hover:bg-[#FF1E27]/20 text-[#FF1E27] border border-[#FF1E27]/30 text-xs font-bold font-heading uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+                  variant="tag"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>Change / Edit</span>
-                </button>
+                </Button>
               </div>
 
               {userAddress ? (
@@ -177,12 +178,12 @@ export default function CheckoutPage({
               ) : (
                 <div className="text-center py-4 space-y-3">
                   <p className="text-xs text-[var(--text-sub)]">No delivery address saved yet.</p>
-                  <button
+                  <Button
                     onClick={onChangeAddress}
-                    className="btn-glow-red px-5 py-2 rounded-xl text-xs font-bold text-white uppercase cursor-pointer"
+                    variant="primary" size="md"
                   >
                     Add Address Now
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -268,12 +269,12 @@ export default function CheckoutPage({
                       onChange={(e) => setUpiId(e.target.value)}
                       className="flex-1 bg-[var(--bg-main)] text-[var(--text-main)] text-xs px-4 py-2.5 rounded-lg border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
                     />
-                    <button
+                    <Button
                       type="button"
-                      className="px-4 py-2.5 rounded-lg bg-[#FF1E27]/10 text-[#FF1E27] border border-[#FF1E27]/30 text-xs font-extrabold uppercase font-heading hover:bg-[#FF1E27]/20 transition-colors"
+                      variant="tag"
                     >
                       Verify
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -348,10 +349,10 @@ export default function CheckoutPage({
               </div>
 
               {/* Place Order CTA Button */}
-              <button
+              <Button
                 onClick={handleConfirmOrder}
                 disabled={isPlacingOrder || !userAddress}
-                className="w-full btn-glow-red py-4 rounded-xl text-sm font-extrabold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="primary" fullWidth
               >
                 {isPlacingOrder ? (
                   <span>PROCESSING ORDER...</span>
@@ -361,7 +362,7 @@ export default function CheckoutPage({
                     <span>PLACE ORDER • ₹{totalAmount}</span>
                   </>
                 )}
-              </button>
+              </Button>
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-[var(--text-sub)] font-mono">
                 <ShieldCheck className="w-3.5 h-3.5 text-green-500" />

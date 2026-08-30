@@ -9,19 +9,21 @@ export default function HomePage({
   products,
   onExploreClick,
   onAddToCart,
-  onSelectProduct
+  onSelectProduct,
+  isMobileView
 }) {
   return (
     <>
-      <Hero onExploreClick={onExploreClick} theme={theme} />
-      <FeatureBar />
+      <Hero onExploreClick={onExploreClick} theme={theme} isMobileView={isMobileView} />
+      <FeatureBar isMobileView={isMobileView} />
       <Bestsellers
         products={products}
         theme={theme}
         onAddToCart={onAddToCart}
         onSelectProduct={onSelectProduct}
+        isMobileView={isMobileView}
       />
-      <WhyChoose />
+      <WhyChoose isMobileView={isMobileView} />
     </>
   );
 }

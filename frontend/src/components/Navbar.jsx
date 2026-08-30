@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home, History, PackageCheck } from 'lucide-react';
+import {Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home, History, PackageCheck, MapPin, ChevronDown, LogOut, Shield } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
 
@@ -12,10 +13,16 @@ export default function Navbar({
   onToggleTheme,
   onNavigateHome,
   onOpenAccount,
+  onSignOut,
+  onNavigateAddresses,
+  onNavigateOrders,
   onNavigateCart,
+  onNavigateAdminDashboard,
   activeView = 'home'
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
   const [activeNav, setActiveNav] = useState('HOME');
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -42,10 +49,8 @@ export default function Navbar({
     const handleOrderHistoryClick = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setMobileMenuOpen(false);
-    if (props.onOpenOrderHistory) {
-      props.onOpenOrderHistory();
-    } else if (props.onOpenAccount) {
-      props.onOpenAccount();
+    if (onNavigateOrders) {
+      onNavigateOrders();
     } else if (onOpenAccount) {
       onOpenAccount();
     }
@@ -77,7 +82,7 @@ export default function Navbar({
     <>
       {/* Latest Committed Desktop Header: Transparent when at top, Translucent Blur on Scroll */}
       <header className={`sticky top-0 z-40 w-full transition-all duration-300 isolate ${
-        activeView === 'home' && !isScrolled
+        (activeView === 'home' || activeView === 'search') && !isScrolled
           ? 'bg-transparent border-b border-transparent backdrop-blur-none shadow-none'
           : 'bg-[var(--bg-navbar)] backdrop-blur-md border-b border-[var(--border-subtle)] shadow-sm'
       }`}>
@@ -144,14 +149,14 @@ export default function Navbar({
             {/* Theme Switcher Toggle */}
             <button
               onClick={onToggleTheme}
-              className="p-2 text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors hover:scale-110 transform cursor-pointer rounded-full"
+              className="p-2 text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors hover:scale-110 transform cursor-pointer rounded-full"
               aria-label="Toggle Light/Dark Theme"
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {theme === 'dark' ? (
-                <Sun className="w-5 h-5 text-slate-400 hover:text-[#FF1E27] transition-colors" />
+                <Sun className="w-5 h-5" />
               ) : (
-                <Moon className="w-5 h-5 text-slate-700 hover:text-slate-900 transition-colors" />
+                <Moon className="w-5 h-5" />
               )}
             </button>
 
@@ -161,20 +166,164 @@ export default function Navbar({
                 if (onNavigateSearch) onNavigateSearch();
                 else if (onOpenSearch) onOpenSearch();
               }}
-              className="p-2 text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors hover:scale-110 transform hidden lg:block cursor-pointer"
+              className="p-2 text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors hover:scale-110 transform hidden lg:block cursor-pointer"
               aria-label="Search"
+              title="Search Catalog"
             >
               <Search className="w-5 h-5" />
             </button>
 
-            {/* User Account Icon (Desktop) */}
-            <button
-              onClick={onOpenAccount || (() => {})}
-              className="p-2 text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors hover:scale-110 transform hidden lg:block cursor-pointer"
-              aria-label="Account"
-            >
-              <User className="w-5 h-5" />
-            </button>
+            {/* Fully Functional User Account Dropdown (Visible on Desktop & Mobile) */}
+            <div className="relative hidden lg:flex items-center group" onMouseLeave={() => setProfileDropdownOpen(false)}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProfileDropdownOpen(!profileDropdownOpen);
+                }}
+                onMouseEnter={() => setProfileDropdownOpen(true)}
+                className="p-2 text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors hover:scale-110 transform cursor-pointer rounded-full"
+                aria-label="User Profile Account Menu"
+                title="My Profile & Settings"
+              >
+                <User className="w-5 h-5" />
+              </button>
+
+              {/* Profile Dropdown Overlay */}
+              {profileDropdownOpen && (
+                <div
+                  className="absolute right-0 top-full pt-2 w-64 z-50"
+                  onMouseEnter={() => setProfileDropdownOpen(true)}
+                >
+                  <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card-solid)] shadow-2xl p-2.5 opacity-100 z-50">
+                  {user ? (
+                    <>
+                      {/* User Info Header */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProfileDropdownOpen(false);
+                          if (onOpenAccount) onOpenAccount();
+                        }}
+                        className="p-3 border-b border-[var(--border-subtle)] space-y-0.5 cursor-pointer hover:bg-[#FF1E27]/5 rounded-xl transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-black font-heading text-[var(--text-main)] uppercase">
+                            {user.name || user.fullName || 'ATHLETE'}
+                          </p>
+                          <span className="text-[9px] font-extrabold uppercase font-heading bg-[#FF1E27]/10 text-[#FF1E27] border border-[#FF1E27]/30 px-1.5 py-0.5 rounded">
+                            {user.tier || 'MEMBER'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-[var(--text-sub)] font-medium">
+                          {user.email}
+                        </p>
+                      </div>
+
+                      {/* Navigation Items */}
+                      <div className="py-1 space-y-0.5">
+                        {user.role === 'admin' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProfileDropdownOpen(false);
+                              if (onNavigateAdminDashboard) onNavigateAdminDashboard();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer text-left border border-amber-500/25 mb-1.5"
+                          >
+                            <Shield className="w-4 h-4 text-amber-400" />
+                            <span>Admin Console</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProfileDropdownOpen(false);
+                            if (onOpenAccount) onOpenAccount();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
+                        >
+                          <User className="w-4 h-4 text-[#FF1E27]" />
+                          <span>My Profile</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProfileDropdownOpen(false);
+                            if (onNavigateAddresses) onNavigateAddresses();
+                            else if (onOpenAccount) onOpenAccount();
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <MapPin className="w-4 h-4 text-[#FF1E27]" />
+                            <span>Saved Addresses</span>
+                          </div>
+                          <span className="text-[10px] font-extrabold bg-[#FF1E27]/10 text-[#FF1E27] px-1.5 py-0.5 rounded-full">
+                            Manage
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProfileDropdownOpen(false);
+                            if (onNavigateOrders) onNavigateOrders();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
+                        >
+                          <PackageCheck className="w-4 h-4 text-[#FF1E27]" />
+                          <span>My Orders & Tracking</span>
+                        </button>
+                      </div>
+
+                      {/* Sign Out Action */}
+                      <div className="pt-1 border-t border-[var(--border-subtle)]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProfileDropdownOpen(false);
+                            logout();
+                            if (onSignOut) onSignOut();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-4 text-center space-y-3">
+                      <div className="space-y-1">
+                        <h4 className="text-xs font-black font-heading text-[var(--text-main)] uppercase tracking-wider">GUEST ATHLETE</h4>
+                        <p className="text-[10px] text-[var(--text-sub)] leading-relaxed">
+                          Sign in to track orders, manage addresses, and view your profile.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProfileDropdownOpen(false);
+                          if (onOpenAccount) onOpenAccount();
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-[#FF1E27] hover:bg-red-600 text-white text-xs font-black font-heading uppercase tracking-wider transition-colors cursor-pointer"
+                      >
+                        SIGN IN / REGISTER
+                      </button>
+                    </div>
+                  )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Order History Icon (Desktop) */}
             <button
@@ -189,10 +338,11 @@ export default function Navbar({
             {/* Shopping Cart Icon with Badge */}
             <button
               onClick={handleCartClick}
-              className="relative p-2 text-[var(--text-main)] hover:text-[#FF1E27] transition-colors cursor-pointer rounded-full group"
+              className="relative p-2 text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors cursor-pointer rounded-full group"
               aria-label="Shopping Cart"
+              title="Shopping Cart"
             >
-              <ShoppingBag className="w-6 h-6 transition-transform group-hover:scale-110" />
+              <ShoppingBag className="w-5 h-5 transition-transform group-hover:scale-110" />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 bg-[#FF1E27] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
                   {cartCount}
@@ -290,8 +440,14 @@ export default function Navbar({
 
           {/* 2. Profile Button */}
           <button
-            onClick={onOpenAccount || (() => {})}
-            className="flex flex-col items-center justify-center space-y-1 relative text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium cursor-pointer transition-colors"
+            onClick={() => {
+              if (onOpenAccount) onOpenAccount();
+            }}
+            className={`flex flex-col items-center justify-center space-y-1 relative cursor-pointer transition-colors ${
+              activeView === 'profile' || activeView === 'auth' || activeView === 'order-history'
+                ? 'text-[#FF1E27] font-extrabold'
+                : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
+            }`}
           >
             <User className="w-5 h-5" />
             <span className="text-[10px] tracking-wider uppercase font-heading">Profile</span>

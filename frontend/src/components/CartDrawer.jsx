@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Trash2, ShoppingBag, Plus, Minus, ArrowRight, ShieldCheck } from 'lucide-react';
 import ProductGraphic from './ProductGraphic';
 import { useCart } from '../context/CartContext';
+import Button from './Button';
 
 export default function CartDrawer({
   isOpen,
@@ -86,12 +87,12 @@ export default function CartDrawer({
               <div className="h-full flex flex-col items-center justify-center text-center space-y-4 text-[var(--text-sub)]">
                 <ShoppingBag className="w-16 h-16 text-[var(--text-sub)] stroke-[1.5]" />
                 <p className="text-base font-medium">Your cart is currently empty.</p>
-                <button
+                <Button
                   onClick={onClose}
-                  className="btn-glow-red px-6 py-2.5 rounded-lg text-xs font-bold uppercase text-white cursor-pointer"
+                  variant="primary" size="md"
                 >
                   START SHOPPING
-                </button>
+                </Button>
               </div>
             ) : (
               cartItems.map((item) => (
@@ -203,13 +204,13 @@ export default function CartDrawer({
                 </div>
               </div>
 
-              <button
+              <Button
                 onClick={handleCheckoutClick}
-                className="w-full btn-glow-red py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                variant="primary" fullWidth
               >
                 <span>VIEW FULL CART & CHECKOUT</span>
                 <ArrowRight className="w-4 h-4" />
-              </button>
+              </Button>
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-[var(--text-sub)] font-mono">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#FF1E27]" />

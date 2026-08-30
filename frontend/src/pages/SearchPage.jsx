@@ -588,14 +588,15 @@ export default function SearchPage({
                     return (
                       <div
                         key={product.id}
-                        className="glass-panel p-4 rounded-2xl border border-[var(--border-subtle)] hover:border-[#FF1E27]/50 transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-6 group"
+                        onClick={() => onSelectProduct(product)}
+                        className="glass-panel p-4 rounded-2xl border border-[var(--border-subtle)] hover:border-[#FF1E27]/50 transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-6 group cursor-pointer"
                       >
                         <div className="flex items-center gap-5 w-full sm:w-auto">
                           <div
                             onClick={() => onSelectProduct(product)}
                             className="relative w-24 h-24 rounded-xl bg-[var(--bg-main)] overflow-hidden shrink-0 cursor-pointer p-2 flex items-center justify-center border border-[var(--border-subtle)]"
                           >
-                            <ProductGraphic image={product.image} imageLight={product.imageLight} type={product.imageType} theme={theme} className="w-full h-full" />
+                            <ProductGraphic image={product.image} imageLight={product.imageLight} type={product.imageType} theme={theme} noGlow className="w-full h-full" />
                           </div>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
@@ -636,7 +637,7 @@ export default function SearchPage({
 
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => onSelectProduct(product)}
+                              onClick={(e) => { e.stopPropagation(); onSelectProduct(product); }}
                               className="p-2.5 rounded-xl border border-[var(--border-subtle)] text-[var(--text-main)] hover:border-[#FF1E27] transition-colors cursor-pointer"
                               title="Quick View Details"
                             >
@@ -644,7 +645,7 @@ export default function SearchPage({
                             </button>
                             <button
                               disabled={isOutOfStock}
-                              onClick={() => onAddToCart(product)}
+                              onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
                               className={`btn-glow-red px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md ${
                                 isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-700' : ''
                               }`}
@@ -662,13 +663,13 @@ export default function SearchPage({
                   return (
                     <div
                       key={product.id}
-                      className="glass-panel rounded-2xl border border-[var(--border-subtle)] hover:border-[#FF1E27]/50 transition-all duration-300 flex flex-col justify-between overflow-hidden group shadow-lg"
+                      onClick={() => onSelectProduct(product)}
+                      className="glass-panel rounded-2xl border border-[var(--border-subtle)] hover:border-[#FF1E27]/50 transition-all duration-300 flex flex-col justify-between overflow-hidden group shadow-lg cursor-pointer"
                     >
                       <div>
                         {/* Image Container with Badges */}
                         <div
-                          onClick={() => onSelectProduct(product)}
-                          className="relative h-48 bg-[var(--bg-main)] p-4 flex items-center justify-center overflow-hidden cursor-pointer border-b border-[var(--border-subtle)]"
+                          className="relative h-48 bg-[var(--bg-main)] p-4 flex items-center justify-center overflow-hidden border-b border-[var(--border-subtle)]"
                         >
                           {/* Badge Overlay */}
                           <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 items-start">
@@ -702,6 +703,7 @@ export default function SearchPage({
                             imageLight={product.imageLight}
                             type={product.imageType}
                             theme={theme}
+                            noGlow
                             className="w-full h-36"
                           />
                         </div>
@@ -739,7 +741,7 @@ export default function SearchPage({
                       {/* Card Action Footer */}
                       <div className="p-4 pt-0 grid grid-cols-4 gap-2">
                         <button
-                          onClick={() => onSelectProduct(product)}
+                          onClick={(e) => { e.stopPropagation(); onSelectProduct(product); }}
                           className="col-span-1 py-2.5 rounded-xl border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:border-[#FF1E27] transition-colors flex items-center justify-center cursor-pointer"
                           title="View Product Details"
                         >
@@ -748,7 +750,7 @@ export default function SearchPage({
 
                         <button
                           disabled={isOutOfStock}
-                          onClick={() => onAddToCart(product)}
+                          onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
                           className={`col-span-3 btn-glow-red py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${
                             isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-700' : ''
                           }`}

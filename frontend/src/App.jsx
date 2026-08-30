@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import FeatureBar from './components/FeatureBar';
-import Bestsellers from './components/Bestsellers';
-import WhyChoose from './components/WhyChoose';
+import HomePage from './pages/HomePage';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import CartPage from './pages/CartPage';
@@ -12,17 +9,107 @@ import SearchModal from './components/SearchModal';
 import ProductDetailPage from './pages/ProductDetailPage';
 import SearchPage from './pages/SearchPage';
 import AddAddressPage from './pages/AddAddressPage';
+// Removed AddressListPage import
+import UserProfilePage from './pages/UserProfilePage';
+import AuthPage from './pages/AuthPage';
 import CheckoutPage from './pages/CheckoutPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import OrderHistoryPage from './pages/OrderHistoryPage';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { PRODUCTS as LOCAL_PRODUCTS } from './data/products';
 import { fetchProducts, submitOrder } from './services/api';
 import { CartProvider, useCart } from './context/CartContext';
 
 function AppContent() {
+  const { user, isAuthenticated, logout, setRedirectPath, redirectPath } = useAuth();
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('avn-theme') || 'dark';
   });
 
   const cart = useCart();
+
+
+
+  // Saved Addresses State & Fallbacks
+  const [savedAddresses, setSavedAddresses] = useState(() => {
+    try {
+      const saved = localStorage.getItem('avn-saved-addresses');
+      return saved ? JSON.parse(saved) : [
+        {
+          id: 'addr-demo-1',
+          fullName: 'Vikram Malhotra',
+          phone: '+91 98765 43210',
+          houseNo: 'House No. 42-B',
+          flatNo: 'Flat 402, 4th Floor',
+          street: 'Pinnacle Heights, Cyber City',
+          city: 'Gurugram',
+          state: 'Haryana',
+          pincode: '122002',
+          type: 'HOME',
+          landmark: 'Near DLF Cyber Hub',
+          isDefault: true
+        }
+      ];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Address Handlers
+  const handleSetDefaultAddress = (addressId) => {
+    setSavedAddresses((prev) => {
+      const updated = prev.map(a => ({ ...a, isDefault: a.id === addressId }));
+      localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleDeleteAddress = (addressId) => {
+    setSavedAddresses((prev) => {
+      const updated = prev.filter(a => a.id !== addressId);
+      localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleSaveAddress = (addressData) => {
+    let savedAddrObj;
+    setSavedAddresses((prev) => {
+      let updated;
+      if (addressData.id) {
+        savedAddrObj = addressData;
+        updated = prev.map(a => a.id === addressData.id ? addressData : a);
+      } else {
+        savedAddrObj = { ...addressData, id: 'addr-' + Date.now(), isDefault: prev.length === 0 };
+        updated = [...prev, savedAddrObj];
+      }
+      localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+      return updated;
+    });
+    setUserAddress(savedAddrObj);
+    localStorage.setItem('avn-saved-address', JSON.stringify(savedAddrObj));
+
+    if (checkoutData) {
+      setActiveView('checkout');
+    } else {
+      setActiveView('addresses');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSignOut = () => {
+    logout();
+    setActiveView('auth');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteProduct = (productId) => {
+    setProducts(prev => prev.filter(p => p.id !== productId));
+  };
+
+  const handleAddProduct = (newProd) => {
+    setProducts(prev => [...prev, newProd]);
+  };
 
   // Dynamic Window Dimension & Aspect Ratio Listener
   const [windowDimensions, setWindowDimensions] = useState(() => ({
@@ -94,14 +181,7 @@ function AppContent() {
   });
   const [checkoutData, setCheckoutData] = useState(null);
 
-  const handleSaveAddress = (addressData) => {
-    setUserAddress(addressData);
-    try {
-      localStorage.setItem('avn-saved-address', JSON.stringify(addressData));
-    } catch (e) {}
-    setActiveView('checkout');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
@@ -122,6 +202,11 @@ function AppContent() {
     setActiveView('pdp');
     setQuickViewProduct(null);
     setIsSearchOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavigateAuth = () => {
+    setActiveView('auth');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -156,7 +241,19 @@ function AppContent() {
       shippingFee: 0,
       totalAmount: cart.cartItems.reduce((a, b) => a + b.price * b.quantity, 0)
     };
+    
+    // Store checkout payload
     setCheckoutData(payload);
+    
+    // Guest Checkout Check
+    if (!user) {
+      if (setRedirectPath) setRedirectPath('checkout');
+      setActiveView('auth');
+      cart.setIsCartOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (!userAddress) {
       setActiveView('add-address');
     } else {
@@ -182,6 +279,35 @@ function AppContent() {
         onNavigateCart={handleNavigateCart}
         onOpenSearch={() => setIsSearchOpen(true)}
         onNavigateSearch={handleNavigateSearch}
+        onOpenAccount={() => {
+          if (!user) {
+            setActiveView('auth');
+          } else {
+            setActiveView('profile');
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onNavigateAddresses={() => {
+          setActiveView('profile');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          setTimeout(() => {
+            const el = document.getElementById('saved-addresses-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }, 150);
+        }}
+        onNavigateOrders={() => {
+          if (!user) {
+            setActiveView('auth');
+          } else {
+            setActiveView('order-history');
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onSignOut={handleSignOut}
+        onNavigateAdminDashboard={() => {
+          setActiveView('admin-dashboard');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         theme={theme}
         onToggleTheme={toggleTheme}
         onNavigateHome={handleNavigateHome}
@@ -208,16 +334,88 @@ function AppContent() {
             theme={theme}
             isMobileView={isMobileView}
           />
+        ) : activeView === 'auth' ? (
+          <AuthPage
+            onLoginSuccess={(userData) => {
+              if (redirectPath === 'checkout') {
+                if (setRedirectPath) setRedirectPath(null);
+                if (!userAddress) {
+                  setActiveView('add-address');
+                } else {
+                  setActiveView('checkout');
+                }
+              } else {
+                setActiveView('profile');
+              }
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onBack={handleNavigateHome}
+            theme={theme}
+          />
+        ) : activeView === 'profile' ? (
+          <UserProfilePage
+            currentUser={user}
+            savedAddresses={savedAddresses}
+            onSetDefaultAddress={handleSetDefaultAddress}
+            onDeleteAddress={handleDeleteAddress}
+            onEditAddress={(addr) => {
+              setUserAddress(addr);
+              setActiveView('add-address');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onAddNewAddress={() => {
+              setUserAddress(null);
+              setActiveView('add-address');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateOrders={() => {
+              if (!user) {
+                setActiveView('auth');
+              } else {
+                setActiveView('order-history');
+              }
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateAuth={handleNavigateAuth}
+            onNavigateAdminDashboard={() => {
+              setActiveView('admin-dashboard');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onBack={handleNavigateHome}
+            onSignOut={handleSignOut}
+            theme={theme}
+          />
+        ) : activeView === 'order-history' && !user ? (
+          // Auth gate: redirect to auth if not logged in
+          (() => { setActiveView('auth'); return null; })()
+        ) : activeView === 'order-history' ? (
+          <OrderHistoryPage
+            onBack={() => setActiveView('profile')}
+            onWriteReviewClick={(productSlug) => {
+              const productObj = products.find(p => p.slug === productSlug || p.id === productSlug || p.name.toLowerCase().includes(productSlug.replace(/-/g, ' ')));
+              if (productObj) {
+                setCurrentPdpProduct(productObj);
+                setActiveView('pdp');
+              } else {
+                // Try fallback search page or home
+                setActiveView('search');
+              }
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            theme={theme}
+          />
+// AddressListPage view removed
         ) : activeView === 'add-address' ? (
           <AddAddressPage
             userAddress={userAddress}
             onSaveAddress={handleSaveAddress}
             onCancel={() => {
-              setActiveView(checkoutData ? 'checkout' : 'cart');
+              setActiveView(checkoutData ? 'checkout' : 'profile');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             theme={theme}
             isMobileView={isMobileView}
+            isCheckoutMode={!!checkoutData}
           />
         ) : activeView === 'cart' ? (
           <CartPage
@@ -250,22 +448,20 @@ function AppContent() {
             onOpenCart={handleNavigateCart}
             onNavigateCart={handleNavigateCart}
             cartCount={cart.totalCartCount}
+            currentUser={user}
+            onNavigateAuth={handleNavigateAuth}
             theme={theme}
             isMobileView={isMobileView}
           />
         ) : (
-          <>
-            <Hero onExploreClick={handleNavigateSearch} theme={theme} isMobileView={isMobileView} />
-            <FeatureBar isMobileView={isMobileView} />
-            <Bestsellers
-              products={products}
-              theme={theme}
-              onAddToCart={cart.addToCart}
-              onSelectProduct={handleSelectProductForPdp}
-              isMobileView={isMobileView}
-            />
-            <WhyChoose isMobileView={isMobileView} />
-          </>
+          <HomePage
+            theme={theme}
+            products={products}
+            onExploreClick={handleNavigateSearch}
+            onAddToCart={cart.addToCart}
+            onSelectProduct={handleSelectProductForPdp}
+            isMobileView={isMobileView}
+          />
         )}
       </main>
 
@@ -374,7 +570,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <CartProvider>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </CartProvider>
     </ErrorBoundary>
   );

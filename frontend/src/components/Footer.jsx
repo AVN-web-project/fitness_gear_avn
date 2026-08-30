@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
+import Button from './Button';
 
 export default function Footer({ theme, isMobileView = false, activeView = 'home' }) {
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
@@ -233,13 +234,14 @@ export default function Footer({ theme, isMobileView = false, activeView = 'home
                 placeholder="Enter your email"
                 className="w-full px-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl text-sm text-[var(--text-main)] placeholder-[var(--text-sub)] focus:outline-none focus:border-[#FF1E27] focus:ring-1 focus:ring-[#FF1E27] transition-all"
               />
-              <button
+              <Button
                 type="submit"
-                className="w-full py-3 px-5 bg-[#FF1E27] hover:bg-[#ff3b42] text-white text-sm font-extrabold font-heading uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                variant="primary"
+                fullWidth
+                iconRight={<ArrowRight className="w-4 h-4" />}
               >
-                <span>SUBSCRIBE</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+                SUBSCRIBE
+              </Button>
             </form>
           </div>
 
