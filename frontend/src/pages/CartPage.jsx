@@ -334,7 +334,7 @@ export default function CartPage({
                     return (
                       <div
                         key={itemIdKey}
-                        className={`p-4 sm:p-5 my-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/70 hover:border-[#FF1E27]/40 transition-all duration-300 shadow-sm space-y-3 ${!isChecked ? 'opacity-50' : ''}`}
+                        className={`p-4 sm:p-5 my-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/30 hover:border-[#FF1E27]/40 transition-all duration-300 shadow-sm space-y-3 ${!isChecked ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-start gap-3 sm:gap-5">
                           
@@ -359,7 +359,7 @@ export default function CartPage({
                               imageLight={item.imageLight}
                               type={item.imageType}
                               theme={theme}
-                              className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] hover:scale-105 transition-transform shadow-sm"
+                              className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl hover:scale-105 transition-transform"
                             />
                           </div>
 

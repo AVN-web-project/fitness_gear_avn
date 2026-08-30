@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Trash2, ShoppingBag, Plus, Minus, ArrowRight, ShieldCheck } from 'lucide-react';
 import ProductGraphic from './ProductGraphic';
 import { useCart } from '../context/CartContext';
+import Button from './Button';
 
 export default function CartDrawer({
   isOpen,
@@ -88,7 +89,7 @@ export default function CartDrawer({
                 <p className="text-base font-medium">Your cart is currently empty.</p>
                 <button
                   onClick={onClose}
-                  className="btn-glow-red px-6 py-2.5 rounded-lg text-xs font-bold uppercase text-white cursor-pointer"
+                  variant="primary" size="md"
                 >
                   START SHOPPING
                 </button>
@@ -205,7 +206,7 @@ export default function CartDrawer({
 
               <button
                 onClick={handleCheckoutClick}
-                className="w-full btn-glow-red py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                variant="primary" fullWidth
               >
                 <span>VIEW FULL CART & CHECKOUT</span>
                 <ArrowRight className="w-4 h-4" />

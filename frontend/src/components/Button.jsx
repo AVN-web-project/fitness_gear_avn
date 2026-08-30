@@ -1,87 +1,92 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
-/**
- * AVN Athletics - Universal Custom Button Component
- * Supports signature brand variants: primary (glow red), outline, dark, inward-glow, ghost, and danger.
+
+/**
+ * AVN Athletics — Universal Button Component
+ *
+ * Variants:
+ *   primary    -> Red glow CTA (btn-glow-red). Main purchase/submit actions.
+ *   inward     -> Dark with red inward glow (btn-cart-inward-glow). Add to Cart.
+ *   outline    -> Subtle bordered button. Hover fills with red.
+ *   ghost      -> Transparent red text link-style. Subtle/secondary actions.
+ *   danger     -> Rose-tinted bordered button. Destructive/sign-out actions.
+ *   icon       -> Square bordered icon-only button (back, close, navigation).
+ *   tag        -> Small pill-shaped red-tinted badge button. Filters, chips.
+ *
+ * Sizes:
+ *   sm   -> text-[10px], py-2 px-3.5
+ *   md   -> text-xs, py-3 px-5    (default)
+ *   lg   -> text-sm, py-3.5 px-6
+ *   full -> w-full, text-sm, py-4
  */
 export default function Button({
   children,
   variant = 'primary',
   size = 'md',
-  icon: Icon,
-  rightIcon: RightIcon,
   fullWidth = false,
-  isLoading = false,
+  loading = false,
   disabled = false,
+  icon = null,
+  iconRight = null,
+  className = '',
   onClick,
   type = 'button',
-  href,
-  className = '',
-  ...props
+  title,
+  ...rest
 }) {
-  // Base classes for all AVN buttons
-  const baseClasses = 'inline-flex items-center justify-center font-heading font-extrabold uppercase tracking-wider rounded-xl transition-all duration-200 cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none';
+  const base =
+    'inline-flex items-center justify-center gap-2 font-heading font-extrabold uppercase tracking-wider transition-all cursor-pointer select-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed';
 
-  // Size variants
-  const sizeClasses = {
-    xs: 'px-3 py-1.5 text-[10px] gap-1.5',
-    sm: 'px-4 py-2 text-xs gap-1.5',
-    md: 'px-6 py-3 text-xs sm:text-sm gap-2',
-    lg: 'px-7 py-3.5 text-sm gap-2.5',
-    xl: 'px-8 py-4 text-base gap-3'
+  const rounded = 'rounded-xl';
+
+  const sizeMap = {
+    sm:   'text-[10px] py-2   px-3.5',
+    md:   'text-xs    py-3   px-5',
+    lg:   'text-sm    py-3.5 px-6',
+    full: 'text-sm    py-4   w-full',
+  };
+  const sizeClass = fullWidth ? sizeMap.full : (sizeMap[size] || sizeMap.md);
+
+  const variantMap = {
+    primary: 'btn-glow-red text-white shadow-md',
+    inward:  'btn-cart-inward-glow',
+    outline: 'border border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-main)] hover:border-[#FF1E27] hover:bg-[#FF1E27]/5',
+    ghost:   'text-[#FF1E27] hover:underline underline-offset-4 bg-transparent px-1 py-0.5 font-bold text-xs',
+    danger:  'border border-[var(--border-subtle)] text-rose-400 hover:border-rose-500 hover:bg-rose-500/10',
+    icon:    'p-2.5 border border-[var(--border-subtle)] hover:border-[#FF1E27] text-[var(--text-main)] hover:bg-[#FF1E27]/5',
+    tag:     'px-3 py-1.5 rounded-lg bg-[#FF1E27]/10 hover:bg-[#FF1E27]/20 text-[#FF1E27] border border-[#FF1E27]/30 text-xs font-bold tracking-wider',
   };
 
-  // Style variants matching AVN brand aesthetic
-  const variantClasses = {
-    primary: 'btn-glow-red text-white shadow-md hover:shadow-md active:scale-[0.98]',
-    'glow-red': 'btn-glow-red text-white shadow-md hover:shadow-md active:scale-[0.98]',
-    outline: 'border border-[var(--border-subtle)] text-[var(--text-main)] hover:border-[#FF1E27] hover:text-[#FF1E27] bg-transparent active:scale-[0.98]',
-    'outline-red': 'border border-[#FF1E27] text-[#FF1E27] hover:bg-[#FF1E27] hover:text-white bg-transparent active:scale-[0.98]',
-    dark: 'btn-outline-dark text-[var(--text-main)] active:scale-[0.98]',
-    'inward-glow': 'btn-cart-inward-glow text-white active:scale-[0.98]',
-    ghost: 'bg-transparent text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)]',
-    danger: 'bg-red-600/90 text-white hover:bg-red-700 shadow-md active:scale-[0.98]'
-  };
+  const skipSize = ['icon', 'ghost', 'tag'].includes(variant);
+  const variantClass = variantMap[variant] || variantMap.primary;
 
-  const widthClass = fullWidth ? 'w-full' : '';
-  const selectedSize = sizeClasses[size] || sizeClasses.md;
-  const selectedVariant = variantClasses[variant] || variantClasses.primary;
-
-  const combinedClasses = `${baseClasses} ${selectedSize} ${selectedVariant} ${widthClass} ${className}`.trim();
-
-  const buttonContent = (
-    <>
-      {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-      ) : Icon ? (
-        <Icon className="w-4 h-4 shrink-0" />
-      ) : null}
-
-      {children && <span>{children}</span>}
-
-      {!isLoading && RightIcon && (
-        <RightIcon className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-1" />
-      )}
-    </>
-  );
-
-  if (href) {
-    return (
-      <a href={href} onClick} className={combinedClasses} {...props}>
-        {buttonContent}
-      </a>
-    );
-  }
+  const classes = [
+    base,
+    rounded,
+    !skipSize ? sizeClass : '',
+    variantClass,
+    fullWidth && !skipSize ? 'w-full' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled || isLoading}
-      className={combinedClasses}
-      {...props}
+      disabled={disabled || loading}
+      className={classes}
+      title={title}
+      {...rest}
     >
-      {buttonContent}
+      {loading ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        icon
+      )}
+      {children}
+      {!loading && iconRight}
     </button>
   );
 }

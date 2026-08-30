@@ -16,13 +16,25 @@ export default function ProductGraphic({ image, imageLight, type, theme, classNa
     ? 'scale-105 sm:scale-110 group-hover:scale-115'
     : 'scale-100 group-hover:scale-105';
 
+  // Subtle radial gradient: very faint lighter center fading to transparent.
+  // Makes dark transparent-PNG products distinguishable from dark card backgrounds
+  // without a visible box border or drop-shadow glow.
+  const containerStyle = theme === 'light'
+    ? {}
+    : {
+        background: 'radial-gradient(ellipse at 50% 45%, rgba(255,255,255,0.07) 0%, transparent 72%)',
+      };
+
   return (
-    <div className={`relative flex items-center justify-center bg-[var(--bg-main)] overflow-hidden group ${className}`}>
+    <div
+      className={`relative flex items-center justify-center overflow-hidden group ${className}`}
+      style={containerStyle}
+    >
       {activeSrc && !hasError ? (
         <img
           src={activeSrc}
           alt={type || 'Product Image'}
-          className={`w-full h-full object-contain object-center transition-transform duration-500 ease-out rounded-xl transform-gpu ${scaleClass} drop-shadow-md`}
+          className={`relative z-10 max-w-full max-h-full object-contain object-center transition-all duration-500 ease-out rounded-xl transform-gpu ${scaleClass}`}
           onError={() => setHasError(true)}
         />
       ) : (

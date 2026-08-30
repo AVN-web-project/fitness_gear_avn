@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Ruler, CheckCircle2 } from 'lucide-react';
+import Button from './Button';
 
 export default function SizeChartModal({ isOpen, onClose, category }) {
   if (!isOpen) return null;
@@ -86,7 +87,7 @@ export default function SizeChartModal({ isOpen, onClose, category }) {
         {/* Action button */}
         <button
           onClick={onClose}
-          className="w-full btn-cart-inward-glow py-3 rounded-xl font-bold uppercase tracking-wider text-xs"
+          variant="inward" fullWidth size="md"
         >
           GOT IT, CLOSE GUIDE
         </button>

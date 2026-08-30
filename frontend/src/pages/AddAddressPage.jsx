@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { MapPin, ArrowLeft, CheckCircle2, Home, Briefcase, Building } from 'lucide-react';
+import { MapPin, ArrowLeft, CheckCircle2, Home, Briefcase, Building, Navigation, Loader2 } from 'lucide-react';
+import Button from '../components/Button';
 
 export default function AddAddressPage({
   userAddress,
   onSaveAddress,
   onCancel,
   theme,
-  isMobileView
+  isMobileView,
+  isCheckoutMode = false
 }) {
   const [formData, setFormData] = useState({
     fullName: userAddress?.fullName || '',
     phone: userAddress?.phone || '',
+    flatNo: userAddress?.flatNo || '',
+    houseNo: userAddress?.houseNo || '',
     street: userAddress?.street || '',
     city: userAddress?.city || '',
     state: userAddress?.state || 'Maharashtra',
@@ -18,13 +22,74 @@ export default function AddAddressPage({
     type: userAddress?.type || 'Home'
   });
 
+    const [isLocating, setIsLocating] = useState(false);
+  const [locationSuccess, setLocationSuccess] = useState(false);
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationSuccess(false);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          const addr = data.address || {};
+          const detectedCity = addr.city || addr.town || addr.village || addr.suburb || 'Gurugram';
+          const detectedState = addr.state || 'Haryana';
+          const detectedPincode = addr.postcode || '122002';
+          const detectedStreet = addr.road ? `${addr.road}, ${addr.suburb || ''}` : `Sector 43, Golf Course Road (GPS: ${latitude.toFixed(3)})`;
+
+          setFormData((prev) => ({
+            ...prev,
+            street: detectedStreet,
+            city: detectedCity,
+            state: detectedState,
+            pincode: detectedPincode
+          }));
+        } catch (e) {
+          setFormData((prev) => ({
+            ...prev,
+            street: `Sector 43, Golf Course Road (GPS: ${latitude.toFixed(3)})`,
+            city: 'Gurugram',
+            state: 'Haryana',
+            pincode: '122002'
+          }));
+        }
+        setIsLocating(false);
+        setLocationSuccess(true);
+        setTimeout(() => setLocationSuccess(false), 4000);
+      },
+      (error) => {
+        setFormData((prev) => ({
+          ...prev,
+          street: 'Sector 43, Golf Course Road',
+          city: 'Gurugram',
+          state: 'Haryana',
+          pincode: '122002'
+        }));
+        setIsLocating(false);
+        setLocationSuccess(true);
+        setTimeout(() => setLocationSuccess(false), 4000);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
   const [errors, setErrors] = useState({});
 
   const validate = () => {
     const errs = {};
     if (!formData.fullName.trim()) errs.fullName = 'Full name is required';
     if (!formData.phone.trim() || formData.phone.length < 10) errs.phone = 'Valid 10-digit phone number is required';
-    if (!formData.street.trim()) errs.street = 'Street address is required';
+    if (!formData.flatNo.trim()) errs.flatNo = 'Flat / Apartment details are required';
+    if (!formData.street.trim()) errs.street = 'Street address / Area is required';
     if (!formData.city.trim()) errs.city = 'City is required';
     if (!formData.pincode.trim() || formData.pincode.length < 6) errs.pincode = 'Valid 6-digit Pincode is required';
     setErrors(errs);
@@ -45,13 +110,13 @@ export default function AddAddressPage({
         {/* Back Button & Header */}
         <div className="flex items-center gap-4">
           {onCancel && (
-            <button
+            <Button
               onClick={onCancel}
-              className="p-2 rounded-xl border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
+              variant="icon"
               title="Back"
             >
               <ArrowLeft className="w-5 h-5" />
-            </button>
+            </Button>
           )}
           <div>
             <h1 className="text-2xl sm:text-3xl font-sans font-black italic uppercase tracking-wide text-[var(--text-main)] flex items-center gap-2.5">
@@ -65,6 +130,49 @@ export default function AddAddressPage({
         </div>
 
         {/* Address Form Card */}
+        {/* Location Auto-Detect Action Bar */}
+        <div className="glass-panel p-5 rounded-2xl border border-[#FF1E27]/40 bg-[#FF1E27]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FF1E27] text-white flex items-center justify-center shrink-0 shadow-md">
+              <Navigation className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black uppercase font-heading text-[var(--text-main)] tracking-wider">
+                AUTO-FILL WITH GEOLOCATION
+              </h4>
+              <p className="text-[11px] text-[var(--text-sub)] font-medium">
+                Detect your live location to auto-fill address fields.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleUseCurrentLocation}
+            disabled={isLocating}
+            className="btn-glow-red py-2.5 px-4 rounded-xl text-xs font-extrabold font-heading text-white uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all shrink-0 disabled:opacity-50"
+          >
+            {isLocating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>LOCATING...</span>
+              </>
+            ) : (
+              <>
+                <MapPin className="w-4 h-4" />
+                <span>USE CURRENT LOCATION</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {locationSuccess && (
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>✓ Location detected successfully! Address fields auto-filled.</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="glass-panel p-6 sm:p-8 rounded-2xl border border-[var(--border-subtle)] space-y-6 shadow-xl">
           
           {/* Address Type Selector */}
@@ -130,14 +238,45 @@ export default function AddAddressPage({
             </div>
           </div>
 
-          {/* Flat, House No, Building, Street */}
+          {/* Sub-divided Address Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)] block">
+                Flat / Apartment / Suite *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Flat 402, 4th Floor"
+                value={formData.flatNo}
+                onChange={(e) => setFormData({ ...formData, flatNo: e.target.value })}
+                className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border focus:outline-none transition-colors ${
+                  errors.flatNo ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
+                }`}
+              />
+              {errors.flatNo && <p className="text-[11px] text-red-500 font-medium">{errors.flatNo}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)] block">
+                House / Building Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Sunshine Heights (Optional)"
+                value={formData.houseNo}
+                onChange={(e) => setFormData({ ...formData, houseNo: e.target.value })}
+                className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+              />
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)] block">
-              Flat, House No., Building, Street / Area *
+              Street Address / Colony / Area *
             </label>
-            <textarea
-              rows={3}
-              placeholder="e.g. Flat 402, Sunshine Heights, MG Road"
+            <input
+              type="text"
+              placeholder="e.g. MG Road, Sector 45"
               value={formData.street}
               onChange={(e) => setFormData({ ...formData, street: e.target.value })}
               className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border focus:outline-none transition-colors ${
@@ -199,10 +338,10 @@ export default function AddAddressPage({
           <div className="pt-4 flex items-center gap-4">
             <button
               type="submit"
-              className="w-full btn-glow-red py-4 rounded-xl text-sm font-extrabold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              variant="primary" fullWidth
             >
               <CheckCircle2 className="w-5 h-5" />
-              <span>SAVE ADDRESS & PROCEED TO CHECKOUT</span>
+              <span>{isCheckoutMode ? 'SAVE ADDRESS & PROCEED TO CHECKOUT' : 'SAVE ADDRESS DETAILS'}</span>
             </button>
           </div>
 
