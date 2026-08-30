@@ -342,11 +342,7 @@ export default function AddAddressPage({
             >
               <CheckCircle2 className="w-5 h-5" />
               <span>{isCheckoutMode ? 'SAVE ADDRESS & PROCEED TO CHECKOUT' : 'SAVE ADDRESS DETAILS'}</span>
-<<<<<<< HEAD
             </Button>
-=======
-            </button>
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
           </div>
 
         </form>

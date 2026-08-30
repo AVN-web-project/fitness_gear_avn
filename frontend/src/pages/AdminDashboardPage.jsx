@@ -65,21 +65,13 @@ export default function AdminDashboardPage({
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border-subtle)]">
           <div className="flex items-center gap-3">
-<<<<<<< HEAD
             <Button
-=======
-            <button
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
               onClick={onBack}
               variant="icon"
               title="Back to Profile"
             >
               <ArrowLeft className="w-5 h-5" />
-<<<<<<< HEAD
             </Button>
-=======
-            </button>
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
             <div>
               <h1 className="text-2xl font-black font-heading italic uppercase text-[var(--text-main)] flex items-center gap-2">
                 <Shield className="w-6 h-6 text-[#FF1E27]" />
@@ -283,20 +275,12 @@ export default function AdminDashboardPage({
                 </div>
 
                 <div className="pt-2">
-<<<<<<< HEAD
                   <Button
-=======
-                  <button
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
                     type="submit"
                     variant="primary" fullWidth size="md"
                   >
                     + ADD PRODUCT
-<<<<<<< HEAD
                   </Button>
-=======
-                  </button>
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
                 </div>
               </form>
             </div>

@@ -66,21 +66,13 @@ export default function OrderHistoryPage({
         
         {/* Header */}
         <div className="flex items-center gap-3 pb-6 border-b border-[var(--border-subtle)]">
-<<<<<<< HEAD
           <Button
-=======
-          <button
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
             onClick={onBack}
             variant="icon"
             title="Back to Profile"
           >
             <ArrowLeft className="w-5 h-5" />
-<<<<<<< HEAD
           </Button>
-=======
-          </button>
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
           <div>
             <h1 className="text-2xl font-black font-heading italic uppercase text-[var(--text-main)]">
               MY ORDERS & SHIPMENTS

@@ -33,21 +33,13 @@ export default function UserProfilePage({
         {/* Header */}
         <div className="flex items-center justify-between pb-6 border-b border-[var(--border-subtle)]">
           <div className="flex items-center gap-3">
-<<<<<<< HEAD
             <Button
-=======
-            <button
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
               onClick={onBack}
               variant="icon"
               title="Back to Home"
             >
               <ArrowLeft className="w-5 h-5" />
-<<<<<<< HEAD
             </Button>
-=======
-            </button>
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
             <div>
               <h1 className="text-2xl font-black font-heading italic uppercase text-[var(--text-main)]">
                 MY ACCOUNT & PROFILE
@@ -85,21 +77,13 @@ export default function UserProfilePage({
             </div>
           </div>
 
-<<<<<<< HEAD
           <Button
-=======
-          <button
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
             onClick={onSignOut}
             variant="danger" size="md"
           >
             <LogOut className="w-4 h-4" />
             <span>SIGN OUT</span>
-<<<<<<< HEAD
           </Button>
-=======
-          </button>
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
         </div>
 
         {/* Quick Shortcut Tiles */}
@@ -175,40 +159,24 @@ export default function UserProfilePage({
                 Manage your shipping destinations directly inside your athlete profile.
               </p>
             </div>
-<<<<<<< HEAD
             <Button
-=======
-            <button
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
               onClick={onAddNewAddress}
               variant="primary" size="sm"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>ADD NEW ADDRESS</span>
-<<<<<<< HEAD
             </Button>
-=======
-            </button>
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
           </div>
 
           {savedAddresses.length === 0 ? (
             <div className="glass-panel p-8 rounded-3xl border border-[var(--border-subtle)] text-center space-y-3">
               <p className="text-xs text-[var(--text-sub)] italic">No saved addresses found. Add a default shipping destination.</p>
-<<<<<<< HEAD
               <Button
-=======
-              <button
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
                 onClick={onAddNewAddress}
                 variant="outline" size="sm" className="w-fit mx-auto"
               >
                 + Create First Address
-<<<<<<< HEAD
               </Button>
-=======
-              </button>
->>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
