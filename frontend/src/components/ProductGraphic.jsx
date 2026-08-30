@@ -16,12 +16,23 @@ export default function ProductGraphic({ image, imageLight, type, theme, classNa
     ? 'scale-105 sm:scale-110 group-hover:scale-115'
     : 'scale-100 group-hover:scale-105';
 
+<<<<<<< HEAD
   // Subtle radial gradient: faint lighter center fading to transparent.
   // Makes dark transparent-PNG products distinguishable from dark card backgrounds.
   // Pass noGlow to disable (e.g. search page where cards have their own bg treatment).
   const containerStyle = (!noGlow && theme !== 'light')
     ? { background: 'radial-gradient(ellipse at 50% 45%, rgba(255,255,255,0.07) 0%, transparent 72%)' }
     : {};
+=======
+  // Subtle radial gradient: very faint lighter center fading to transparent.
+  // Makes dark transparent-PNG products distinguishable from dark card backgrounds
+  // without a visible box border or drop-shadow glow.
+  const containerStyle = theme === 'light'
+    ? {}
+    : {
+        background: 'radial-gradient(ellipse at 50% 45%, rgba(255,255,255,0.07) 0%, transparent 72%)',
+      };
+>>>>>>> bf6d8c7d2eae56c1f22685767dc0faaaad48adeb
 
   return (
     <div
