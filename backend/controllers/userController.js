@@ -1,32 +1,6 @@
 // Simulated Backend User Database
 let users = [
   {
-    id: 'usr-admin-101',
-    fullName: 'Vikram Malhotra',
-    email: 'admin@avngear.com',
-    password: 'password123',
-    phone: '+91 98765 43210',
-    role: 'admin',
-    tier: 'AVN ADMIN',
-    memberSince: '2023',
-    addresses: [
-      {
-        id: 'addr-demo-1',
-        fullName: 'Vikram Malhotra',
-        phone: '+91 98765 43210',
-        houseNo: 'House No. 42-B',
-        flatNo: 'Flat 402, 4th Floor',
-        street: 'Pinnacle Heights, Cyber City',
-        city: 'Gurugram',
-        state: 'Haryana',
-        pincode: '122002',
-        type: 'HOME',
-        landmark: 'Near DLF Cyber Hub',
-        isDefault: true
-      }
-    ]
-  },
-  {
     id: 'usr-cust-202',
     fullName: 'Karan Sharma',
     email: 'customer@avngear.com',
@@ -107,10 +81,62 @@ export const loginUser = (req, res) => {
 };
 
 export const getUserProfile = (req, res) => {
-  // Return the first admin or user profile for profile loading simulation
   const user = users[0];
   res.json({
     success: true,
+    user: {
+      id: user.id,
+      name: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      tier: user.tier,
+      memberSince: user.memberSince
+    }
+  });
+};
+
+export const updateUserProfile = (req, res) => {
+  const { id, name, email, oldEmail, phone, currentPassword, verificationCode } = req.body;
+
+  const targetEmail = oldEmail || email;
+  const user = users.find(u => u.id === id || u.email.toLowerCase() === (targetEmail || '').toLowerCase());
+  
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User profile not found' });
+  }
+
+  // Check if email is changing
+  if (email && email.toLowerCase() !== user.email.toLowerCase()) {
+    if (!currentPassword && verificationCode !== '849201') {
+      return res.status(400).json({
+        success: false,
+        requiresEmailVerification: true,
+        message: 'Current email verification required to change email address'
+      });
+    }
+
+    if (currentPassword && user.password !== currentPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Incorrect password for current email verification'
+      });
+    }
+
+    const emailTaken = users.some(u => u.id !== user.id && u.email.toLowerCase() === email.toLowerCase());
+    if (emailTaken) {
+      return res.status(400).json({ success: false, message: 'An account with the new email already exists' });
+    }
+
+    user.email = email;
+  }
+
+  if (name) user.fullName = name;
+  if (phone) user.phone = phone;
+
+  res.json({
+    success: true,
+    message: 'Profile updated successfully',
     user: {
       id: user.id,
       name: user.fullName,

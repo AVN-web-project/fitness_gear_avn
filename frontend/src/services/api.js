@@ -196,6 +196,30 @@ export async function submitOrder(cartItems, totalAmount) {
   }
 }
 
+export async function fetchOrdersByEmail(email) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders?email=${encodeURIComponent(email || '')}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.warn('Orders API fetch failed:', error.message);
+    return [];
+  }
+}
+
+export async function fetchOrderById(orderId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data.data || null;
+  } catch (error) {
+    console.warn('Order API fetch failed:', error.message);
+    return null;
+  }
+}
+
 /**
  * User Auth & Profile Backend API Helpers
  */
@@ -227,4 +251,92 @@ export async function registerUserApi(userData) {
     throw error;
   }
   return await response.json();
+}
+
+
+/**
+ * Update User Profile API Helper
+ */
+export async function updateUserProfileApi(profileData) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/user/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profileData)
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to update profile');
+      error.status = response.status;
+      error.requiresEmailVerification = data.requiresEmailVerification;
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.status) throw error;
+    console.warn('Update profile API failed:', error.message);
+    return null;
+  }
+}
+
+
+export async function updateOrderStatusApi(orderId, statusData) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(typeof statusData === 'string' ? { status: statusData } : statusData)
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.warn('Update order status API failed:', error.message);
+    return null;
+  }
+}
+
+
+/**
+ * Customer Support API Helpers
+ */
+export async function submitSupportTicketApi(ticketData) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/support/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ticketData)
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.warn('Submit support ticket API failed:', error.message);
+    return { success: false, message: 'Server offline' };
+  }
+}
+
+export async function fetchSupportTicketsApi(email = '') {
+  try {
+    const response = await fetch(`${API_BASE_URL}/support/tickets?email=${encodeURIComponent(email)}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.warn('Fetch support tickets API failed:', error.message);
+    return [];
+  }
+}
+
+export async function sendSupportChatMessageApi(message) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/support/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.warn('Send support chat API failed:', error.message);
+    return { success: false, reply: 'Chat assistant offline. Please submit a support ticket.' };
+  }
 }

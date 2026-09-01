@@ -4,7 +4,7 @@ import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
 import Button from './Button';
 
-export default function Footer({ theme, isMobileView = false, activeView = 'home' }) {
+export default function Footer({ onNavigateSupport, theme, isMobileView = false, activeView = 'home' }) {
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
   const [isPaused, setIsPaused] = useState(false);
   const scrollRef = useRef(null);
@@ -251,6 +251,7 @@ export default function Footer({ theme, isMobileView = false, activeView = 'home
         <div className="mt-14 pt-8 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between text-sm text-[var(--text-sub)] gap-4 font-normal">
           <p>© {new Date().getFullYear()} AVN Athletics. All rights reserved.</p>
           <div className="flex space-x-8">
+            <button type="button" onClick={() => onNavigateSupport && onNavigateSupport()} className="text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors cursor-pointer font-normal">Athlete Support Hub</button>
             <a href="#" className="hover:text-[var(--text-main)] transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-[var(--text-main)] transition-colors">Terms of Service</a>
             <a href="#" className="hover:text-[var(--text-main)] transition-colors">Shipping Policy</a>

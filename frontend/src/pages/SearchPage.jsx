@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Star,
   ShoppingBag,
+  Check,
   Eye,
   ArrowUpDown,
   Grid,
@@ -19,6 +20,7 @@ import {
 import ProductGraphic from '../components/ProductGraphic';
 import { fetchSearchProducts } from '../services/api';
 import { PRODUCTS as LOCAL_PRODUCTS, CATEGORIES as LOCAL_CATEGORIES } from '../data/products';
+import { useCart } from '../context/CartContext';
 
 export default function SearchPage({
   onSelectProduct,
@@ -27,7 +29,13 @@ export default function SearchPage({
   theme = 'dark'
 }) {
   // --- 1. SEO & URL Synchronization State ---
-  const parseUrlParams = () => {
+  const { cartItems: cartItemsList } = useCart();
+  const getProductCartQty = (productId) =>
+    (cartItemsList || [])
+      .filter((item) => item.id === productId || item.productId === productId)
+      .reduce((sum, item) => sum + item.quantity, 0);
+
+    const parseUrlParams = () => {
     if (typeof window === 'undefined') return {};
     const params = new URLSearchParams(window.location.search);
     return {
@@ -257,12 +265,7 @@ export default function SearchPage({
       <div className="relative border-b border-[var(--border-subtle)] bg-[var(--bg-main)] py-8 px-6 sm:px-10 lg:px-16 overflow-hidden">
         <div className="max-w-[1536px] mx-auto relative z-10 space-y-6">
           
-          {/* Breadcrumb Navigation (Restored Top-Left Alignment) */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-sub)]">
-            <span className="hover:text-[#FF1E27] cursor-pointer" onClick={handleResetFilters}>Home</span>
-            <ChevronRight className="w-3.5 h-3.5 text-[var(--text-sub)]" />
-            <span className="text-[var(--text-main)] font-extrabold font-heading">Search Catalog</span>
-          </div>
+
 
           {/* Search Input & Subtitle Centered Container */}
           <div className="max-w-3xl mx-auto text-center space-y-3.5 flex flex-col items-center">
@@ -636,23 +639,35 @@ export default function SearchPage({
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onSelectProduct(product); }}
-                              className="p-2.5 rounded-xl border border-[var(--border-subtle)] text-[var(--text-main)] hover:border-[#FF1E27] transition-colors cursor-pointer"
-                              title="Quick View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              disabled={isOutOfStock}
-                              onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
-                              className={`btn-glow-red px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md ${
-                                isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-700' : ''
-                              }`}
-                            >
-                              <ShoppingBag className="w-4 h-4" />
-                              <span>{isOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}</span>
-                            </button>
+
+                            {(() => {
+                              const qtyInCart = getProductCartQty(product.id);
+                              return (
+                                <button
+                                  disabled={isOutOfStock}
+                                  onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
+                                  className={`px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md transition-all ${
+                                    isOutOfStock
+                                      ? 'opacity-50 cursor-not-allowed bg-slate-700 text-white'
+                                      : 'btn-glow-red'
+                                  }`}
+                                >
+                                  {isOutOfStock ? (
+                                    <span>OUT OF STOCK</span>
+                                  ) : qtyInCart > 0 ? (
+                                    <>
+                                      <Check className="w-4 h-4" />
+                                      <span>Added {qtyInCart} {qtyInCart === 1 ? 'item' : 'items'}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ShoppingBag className="w-4 h-4" />
+                                      <span>ADD TO CART</span>
+                                    </>
+                                  )}
+                                </button>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -739,25 +754,37 @@ export default function SearchPage({
                       </div>
 
                       {/* Card Action Footer */}
-                      <div className="p-4 pt-0 grid grid-cols-4 gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onSelectProduct(product); }}
-                          className="col-span-1 py-2.5 rounded-xl border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:border-[#FF1E27] transition-colors flex items-center justify-center cursor-pointer"
-                          title="View Product Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                      <div className="p-4 pt-0">
 
-                        <button
-                          disabled={isOutOfStock}
-                          onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
-                          className={`col-span-3 btn-glow-red py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${
-                            isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-700' : ''
-                          }`}
-                        >
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                          <span>{isOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}</span>
-                        </button>
+
+                        {(() => {
+                          const qtyInCart = getProductCartQty(product.id);
+                          return (
+                            <button
+                              disabled={isOutOfStock}
+                              onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
+                              className={`w-full py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${
+                                isOutOfStock
+                                  ? 'opacity-50 cursor-not-allowed bg-slate-700'
+                                  : 'btn-glow-red'
+                              }`}
+                            >
+                              {isOutOfStock ? (
+                                <span>OUT OF STOCK</span>
+                              ) : qtyInCart > 0 ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Added {qtyInCart} {qtyInCart === 1 ? 'item' : 'items'}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ShoppingBag className="w-3.5 h-3.5" />
+                                  <span>ADD TO CART</span>
+                                </>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

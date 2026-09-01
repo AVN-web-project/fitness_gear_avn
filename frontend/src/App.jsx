@@ -9,12 +9,14 @@ import SearchModal from './components/SearchModal';
 import ProductDetailPage from './pages/ProductDetailPage';
 import SearchPage from './pages/SearchPage';
 import AddAddressPage from './pages/AddAddressPage';
-// Removed AddressListPage import
+import AddressListPage from './pages/AddressListPage';
 import UserProfilePage from './pages/UserProfilePage';
 import AuthPage from './pages/AuthPage';
 import CheckoutPage from './pages/CheckoutPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
+import OrderDetailsPage from './pages/OrderDetailsPage';
+import SupportPage from './pages/SupportPage';
+import SupportWidget from './components/SupportWidget';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PRODUCTS as LOCAL_PRODUCTS } from './data/products';
 import { fetchProducts, submitOrder } from './services/api';
@@ -59,6 +61,11 @@ function AppContent() {
   const handleSetDefaultAddress = (addressId) => {
     setSavedAddresses((prev) => {
       const updated = prev.map(a => ({ ...a, isDefault: a.id === addressId }));
+      const defaultAddress = updated.find(a => a.id === addressId) || updated[0] || null;
+      if (defaultAddress) {
+        setUserAddress(defaultAddress);
+        localStorage.setItem('avn-saved-address', JSON.stringify(defaultAddress));
+      }
       localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
       return updated;
     });
@@ -67,6 +74,19 @@ function AppContent() {
   const handleDeleteAddress = (addressId) => {
     setSavedAddresses((prev) => {
       const updated = prev.filter(a => a.id !== addressId);
+      if (updated.length > 0) {
+        const nextDefault = updated.find(a => a.isDefault) || updated[0];
+        if (nextDefault) {
+          setUserAddress(nextDefault);
+          localStorage.setItem('avn-saved-address', JSON.stringify(nextDefault));
+        } else {
+          setUserAddress(null);
+          localStorage.removeItem('avn-saved-address');
+        }
+      } else {
+        setUserAddress(null);
+        localStorage.removeItem('avn-saved-address');
+      }
       localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
       return updated;
     });
@@ -89,11 +109,9 @@ function AppContent() {
     setUserAddress(savedAddrObj);
     localStorage.setItem('avn-saved-address', JSON.stringify(savedAddrObj));
 
-    if (checkoutData) {
-      setActiveView('checkout');
-    } else {
-      setActiveView('addresses');
-    }
+    const nextView = checkoutData ? 'checkout' : 'addresses';
+    setAddressReturnView(nextView);
+    setActiveView(nextView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -180,6 +198,18 @@ function AppContent() {
     }
   });
   const [checkoutData, setCheckoutData] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [addressReturnView, setAddressReturnView] = useState('profile');
+
+  useEffect(() => {
+    if (savedAddresses.length > 0) {
+      const defaultAddress = savedAddresses.find(a => a.isDefault) || savedAddresses[0];
+      if (defaultAddress && (!userAddress || userAddress.id !== defaultAddress.id)) {
+        setUserAddress(defaultAddress);
+        localStorage.setItem('avn-saved-address', JSON.stringify(defaultAddress));
+      }
+    }
+  }, [savedAddresses, userAddress]);
 
 
 
@@ -205,7 +235,10 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleNavigateAuth = () => {
+  const handleNavigateAuth = (redirectTarget = null) => {
+    if (redirectTarget) {
+      setRedirectPath(redirectTarget);
+    }
     setActiveView('auth');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -255,6 +288,7 @@ function AppContent() {
     }
 
     if (!userAddress) {
+      setAddressReturnView('checkout');
       setActiveView('add-address');
     } else {
       setActiveView('checkout');
@@ -288,12 +322,8 @@ function AppContent() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onNavigateAddresses={() => {
-          setActiveView('profile');
+          setActiveView('addresses');
           window.scrollTo({ top: 0, behavior: 'smooth' });
-          setTimeout(() => {
-            const el = document.getElementById('saved-addresses-section');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }, 150);
         }}
         onNavigateOrders={() => {
           if (!user) {
@@ -304,10 +334,6 @@ function AppContent() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onSignOut={handleSignOut}
-        onNavigateAdminDashboard={() => {
-          setActiveView('admin-dashboard');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
         theme={theme}
         onToggleTheme={toggleTheme}
         onNavigateHome={handleNavigateHome}
@@ -323,7 +349,8 @@ function AppContent() {
             checkoutData={checkoutData}
             userAddress={userAddress}
             onChangeAddress={() => {
-              setActiveView('add-address');
+              setAddressReturnView('checkout');
+              setActiveView('addresses');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onPlaceOrder={() => {
@@ -340,10 +367,14 @@ function AppContent() {
               if (redirectPath === 'checkout') {
                 if (setRedirectPath) setRedirectPath(null);
                 if (!userAddress) {
+                  setAddressReturnView('checkout');
                   setActiveView('add-address');
                 } else {
                   setActiveView('checkout');
                 }
+              } else if (redirectPath === 'review') {
+                if (setRedirectPath) setRedirectPath(null);
+                setActiveView('pdp');
               } else {
                 setActiveView('profile');
               }
@@ -360,11 +391,13 @@ function AppContent() {
             onDeleteAddress={handleDeleteAddress}
             onEditAddress={(addr) => {
               setUserAddress(addr);
+              setAddressReturnView('profile');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onAddNewAddress={() => {
               setUserAddress(null);
+              setAddressReturnView('profile');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
@@ -377,12 +410,59 @@ function AppContent() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateAuth={handleNavigateAuth}
-            onNavigateAdminDashboard={() => {
-              setActiveView('admin-dashboard');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onOpenAddressManager={() => setActiveView('addresses')}
             onBack={handleNavigateHome}
             onSignOut={handleSignOut}
+            theme={theme}
+          />
+        ) : activeView === 'addresses' ? (
+          <AddressListPage
+            savedAddresses={savedAddresses}
+            onBack={() => setActiveView('profile')}
+            onAddNewAddress={() => {
+              setUserAddress(null);
+              setAddressReturnView('addresses');
+              setActiveView('add-address');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onEditAddress={(addr) => {
+              setUserAddress(addr);
+              setAddressReturnView('addresses');
+              setActiveView('add-address');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onDeleteAddress={handleDeleteAddress}
+            onSetDefaultAddress={handleSetDefaultAddress}
+            theme={theme}
+          />
+        ) : activeView === 'order-details' ? (
+          <OrderDetailsPage
+            order={selectedOrder}
+            onBack={() => setActiveView('order-history')}
+            onOrderUpdated={(updatedOrder) => {
+              const normalizedOrder = {
+                ...updatedOrder,
+                orderId: updatedOrder.orderId || updatedOrder.id,
+                id: updatedOrder.id || updatedOrder.orderId
+              };
+
+              setSelectedOrder(normalizedOrder);
+              const savedOrders = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
+              const updatedSavedOrders = savedOrders.map((order) => {
+                const orderKey = order.orderId || order.id;
+                const updatedKey = normalizedOrder.orderId || normalizedOrder.id;
+                if (
+                  orderKey === updatedKey ||
+                  order.transactionId === normalizedOrder.transactionId ||
+                  order.id === normalizedOrder.id ||
+                  order.orderId === normalizedOrder.orderId
+                ) {
+                  return { ...order, ...normalizedOrder, orderId: orderKey || normalizedOrder.orderId, id: order.id || normalizedOrder.id };
+                }
+                return order;
+              });
+              localStorage.setItem('avn-user-orders', JSON.stringify(updatedSavedOrders));
+            }}
             theme={theme}
           />
         ) : activeView === 'order-history' && !user ? (
@@ -391,6 +471,7 @@ function AppContent() {
         ) : activeView === 'order-history' ? (
           <OrderHistoryPage
             onBack={() => setActiveView('profile')}
+            currentUser={user}
             onWriteReviewClick={(productSlug) => {
               const productObj = products.find(p => p.slug === productSlug || p.id === productSlug || p.name.toLowerCase().includes(productSlug.replace(/-/g, ' ')));
               if (productObj) {
@@ -402,15 +483,33 @@ function AppContent() {
               }
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            onViewOrderDetails={(order) => {
+              setSelectedOrder(order);
+              setActiveView('order-details');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             theme={theme}
           />
-// AddressListPage view removed
+                ) : activeView === 'support' ? (
+          <SupportPage
+            currentUser={user}
+            initialOrderId={selectedOrder?.orderId || selectedOrder?.id || ''}
+            onNavigateOrders={() => {
+              setActiveView('order-history');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onBack={() => {
+              setActiveView('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            theme={theme}
+          />
         ) : activeView === 'add-address' ? (
           <AddAddressPage
             userAddress={userAddress}
             onSaveAddress={handleSaveAddress}
             onCancel={() => {
-              setActiveView(checkoutData ? 'checkout' : 'profile');
+              setActiveView(addressReturnView || (checkoutData ? 'checkout' : 'profile'));
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             theme={theme}
@@ -465,7 +564,15 @@ function AppContent() {
         )}
       </main>
 
-      <Footer theme={theme} isMobileView={isMobileView} activeView={activeView} />
+      <Footer
+        theme={theme}
+        isMobileView={isMobileView}
+        activeView={activeView}
+        onNavigateSupport={() => {
+          setActiveView('support');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
 
       <CartDrawer
         isOpen={cart.isCartOpen}

@@ -11,6 +11,7 @@ export default function AddAddressPage({
   isCheckoutMode = false
 }) {
   const [formData, setFormData] = useState({
+    id: userAddress?.id || null,
     fullName: userAddress?.fullName || '',
     phone: userAddress?.phone || '',
     flatNo: userAddress?.flatNo || '',
@@ -19,7 +20,8 @@ export default function AddAddressPage({
     city: userAddress?.city || '',
     state: userAddress?.state || 'Maharashtra',
     pincode: userAddress?.pincode || '',
-    type: userAddress?.type || 'Home'
+    type: userAddress?.type || 'Home',
+    isDefault: userAddress?.isDefault || false
   });
 
     const [isLocating, setIsLocating] = useState(false);
@@ -99,7 +101,11 @@ export default function AddAddressPage({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      onSaveAddress(formData);
+      onSaveAddress({
+        ...formData,
+        id: userAddress?.id || formData.id || null,
+        isDefault: userAddress?.isDefault ?? formData.isDefault ?? false
+      });
     }
   };
 

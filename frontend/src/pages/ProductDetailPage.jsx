@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Star,
   ShoppingCart,
@@ -11,7 +12,6 @@ import {
   Heart,
   Share2,
   MapPin,
-  Maximize2,
   X,
   ThumbsUp,
   MessageSquarePlus,
@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import ProductGraphic from '../components/ProductGraphic';
 import SizeChartModal from '../components/SizeChartModal';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 export default function ProductDetailPage({
   product,
@@ -32,9 +34,11 @@ export default function ProductDetailPage({
   onSelectProduct,
   onOpenCart,
   onNavigateCart,
+  onNavigateAuth,
   cartCount = 0,
   theme
 }) {
+  const { isAuthenticated, user } = useAuth();
   // All hooks MUST be declared at the top before any conditional returns
   const [selectedSize, setSelectedSize] = useState(
     product?.sizes ? product.sizes[0] : 'Standard'
@@ -52,6 +56,10 @@ export default function ProductDetailPage({
   // Lightbox & Modal view states
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+  const [isHoveringImage, setIsHoveringImage] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const [imageFrameRect, setImageFrameRect] = useState(null);
+  const imageFrameRef = useRef(null);
 
   // Wishlist & Share
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -65,6 +73,16 @@ export default function ProductDetailPage({
   const [added, setAdded] = useState(false);
   const [bundleAdded, setBundleAdded] = useState(false);
 
+  // Live cart quantity for this product (drives button label + quantity sync)
+  const { cartItems, updateQuantity: updateCartQty } = useCart();
+  const inCartQty = cartItems
+    ? cartItems
+        .filter((item) => item.id === product?.id || item.productId === product?.id)
+        .reduce((sum, item) => sum + item.quantity, 0)
+    : 0;
+
+
+
   // Dynamic reviews list (with moderation filter: isApproved !== false)
   const approvedReviews = (product?.reviews || []).filter((r) => r.isApproved !== false);
   const [reviewsList, setReviewsList] = useState(approvedReviews);
@@ -76,6 +94,54 @@ export default function ProductDetailPage({
     comment: ''
   });
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewAccessMessage, setReviewAccessMessage] = useState('');
+
+  const productReviewEligible = React.useMemo(() => {
+    if (!isAuthenticated || !product) return false;
+
+    try {
+      const savedOrders = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
+      const currentUserEmail = user?.email || JSON.parse(localStorage.getItem('avn-user') || 'null')?.email;
+
+      return savedOrders.some((order) => {
+        const matchesCustomer = !currentUserEmail || (order.customerEmail || '').toLowerCase() === currentUserEmail.toLowerCase();
+        if (!matchesCustomer) return false;
+
+        const productKeys = [
+          product.slug,
+          product.id,
+          String(product.id),
+          product.name,
+          String(product.name).toLowerCase().replace(/\s+/g, '-')
+        ].map((value) => String(value || '').toLowerCase());
+
+        return (order.items || []).some((item) => {
+          const itemKeys = [
+            item.slug,
+            item.productId,
+            item.id,
+            item.name,
+            String(item.name || '').toLowerCase().replace(/\s+/g, '-')
+          ].map((value) => String(value || '').toLowerCase());
+
+          const matchesProduct = productKeys.some((key) => itemKeys.includes(key));
+          const isDelivered = item.deliveryStatus === 'delivered' || item.deliveryStatus === 'accepted' || order.status === 'Delivered' || order.status === 'delivered';
+          const isAccepted = Boolean(item.acceptedAtDelivery) || item.deliveryStatus === 'accepted';
+
+          return matchesProduct && isDelivered && isAccepted;
+        });
+      });
+    } catch (e) {
+      console.warn('Unable to verify purchase status for review.', e);
+      return false;
+    }
+  }, [isAuthenticated, product, user]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.name && !newReview.author) {
+      setNewReview((prev) => ({ ...prev, author: user.name }));
+    }
+  }, [isAuthenticated, user, newReview.author]);
 
   // Reset state & Inject SEO metadata + JSON-LD structured data when product changes
   useEffect(() => {
@@ -179,7 +245,7 @@ export default function ProductDetailPage({
       quantity
     });
     setAdded(true);
-    setTimeout(() => setAdded(false), 3000);
+    setTimeout(() => setAdded(false), 800);
   };
 
   // Handle Buy Now
@@ -238,6 +304,19 @@ export default function ProductDetailPage({
   // Handle Review Submission
   const handleSubmitReview = (e) => {
     e.preventDefault();
+
+    if (!isAuthenticated) {
+      if (onNavigateAuth) {
+        onNavigateAuth('review');
+      }
+      return;
+    }
+
+    if (!productReviewEligible) {
+      setReviewAccessMessage('You can submit a review only after purchasing this item and confirming delivery acceptance.');
+      return;
+    }
+
     if (!newReview.author || !newReview.comment) return;
 
     const createdReview = {
@@ -253,7 +332,8 @@ export default function ProductDetailPage({
     };
 
     setReviewsList([createdReview, ...reviewsList]);
-    setNewReview({ author: '', rating: 5, title: '', comment: '' });
+    setNewReview({ author: user?.name || '', rating: 5, title: '', comment: '' });
+    setReviewAccessMessage('');
     setShowReviewForm(false);
     setReviewSubmitted(true);
     setTimeout(() => setReviewSubmitted(false), 3500);
@@ -297,27 +377,30 @@ export default function ProductDetailPage({
         <div className="lg:col-span-6 space-y-4 sticky top-24">
           
           {/* Main Visual Frame */}
-          <div className="relative w-full aspect-square rounded-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-6 sm:p-10 flex items-center justify-center overflow-hidden shadow-2xl group">
-            
-            {/* Badge Overlay */}
-            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-              <span className="text-[10px] font-extrabold tracking-widest text-white uppercase bg-[#FF1E27] px-3 py-1 rounded-full shadow-md">
-                {product.badge || 'PREMIUM'}
-              </span>
-              
-            </div>
+          <div
+            ref={imageFrameRef}
+            className="relative w-full aspect-square rounded-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-6 sm:p-10 flex items-center justify-center overflow-hidden shadow-2xl group cursor-crosshair"
+            onMouseEnter={() => {
+              if (imageFrameRef.current) {
+                setImageFrameRect(imageFrameRef.current.getBoundingClientRect());
+              }
+              setIsHoveringImage(true);
+            }}
+            onMouseLeave={() => {
+              setIsHoveringImage(false);
+            }}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setImageFrameRect(rect);
+              setMousePos({
+                x: (e.clientX - rect.left) / rect.width,
+                y: (e.clientY - rect.top) / rect.height,
+              });
+            }}
+          >
 
-            {/* Expand / Lightbox Button */}
-            <button
-              onClick={() => setIsLightboxOpen(true)}
-              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-[var(--bg-main)]/80 backdrop-blur-md border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-white hover:bg-[#FF1E27] flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-md cursor-pointer"
-              title="Expand image view"
-              aria-label="Expand product image lightbox view"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
 
-            {/* Graphic Component */}
+            {/* Graphic Component — normal, no zoom */}
             <ProductGraphic
               image={activeImage}
               imageLight={activeImageLight}
@@ -327,6 +410,56 @@ export default function ProductDetailPage({
               className="w-full h-full"
             />
           </div>
+
+          {/* Fixed-position side zoom panel — rendered via React Portal at document.body to escape all stacking contexts */}
+          {isHoveringImage && imageFrameRect && typeof window !== 'undefined' && window.innerWidth >= 1024 && createPortal(
+            (() => {
+              const panelWidth = imageFrameRect.width;
+              const panelHeight = imageFrameRect.height;
+              const spaceRight = window.innerWidth - imageFrameRect.right;
+              const leftPos = spaceRight > panelWidth + 20
+                ? imageFrameRect.right + 16
+                : imageFrameRect.left - panelWidth - 16;
+              const topPos = imageFrameRect.top;
+              const bgColor = theme === 'light' ? '#ffffff' : '#0a0a0a';
+              return (
+                <div
+                  style={{
+                    position: 'fixed',
+                    left: `${leftPos}px`,
+                    top: `${topPos}px`,
+                    width: `${panelWidth}px`,
+                    height: `${panelHeight}px`,
+                    zIndex: 2147483647,
+                    pointerEvents: 'none',
+                    backgroundColor: bgColor,
+                    boxShadow: '0 25px 60px rgba(0,0,0,0.85)',
+                  }}
+                  className="rounded-2xl border-0 overflow-hidden opacity-100"
+                >
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      transform: 'scale(2.5)',
+                      transformOrigin: `${mousePos.x * 100}% ${mousePos.y * 100}%`,
+                      transition: 'transform-origin 0.05s ease-out',
+                    }}
+                  >
+                    <ProductGraphic
+                      image={activeImage}
+                      imageLight={activeImageLight}
+                      type={currentGalleryItem?.type || product.imageType}
+                      theme={theme}
+                      noGlow
+                      className="w-full h-full"
+                    />
+                  </div>
+                </div>
+              );
+            })(),
+            document.body
+          )}
 
           {/* Gallery Thumbnails Switcher */}
           <div
@@ -561,7 +694,11 @@ export default function ProductDetailPage({
             </label>
             <div className="flex items-center w-36 border border-[var(--border-subtle)] rounded-xl bg-[var(--bg-main)] p-1">
               <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                onClick={() => {
+                  const newQty = Math.max(1, quantity - 1);
+                  setQuantity(newQty);
+                  if (inCartQty > 0) updateCartQty(product.id, newQty);
+                }}
                 disabled={isPurchasingDisabled}
                 className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
                 aria-label="Decrease quantity"
@@ -569,10 +706,14 @@ export default function ProductDetailPage({
                 -
               </button>
               <span className="flex-1 text-center font-extrabold font-heading text-sm">
-                {quantity}
+                {inCartQty > 0 ? inCartQty : quantity}
               </span>
               <button
-                onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+                onClick={() => {
+                  const newQty = Math.min(maxStock, quantity + 1);
+                  setQuantity(newQty);
+                  if (inCartQty > 0) updateCartQty(product.id, newQty);
+                }}
                 disabled={isPurchasingDisabled || quantity >= maxStock}
                 className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
                 aria-label="Increase quantity"
@@ -585,22 +726,7 @@ export default function ProductDetailPage({
           {/* Action CTAs */}
           <div className="space-y-3 pt-2">
             
-            {/* Added to Cart Quick Toast Banner */}
-            {added && (
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-between animate-fade-in shadow-md">
-                <span className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Added {product.name} to cart! Total: {cartCount} items</span>
-                </span>
-                <button
-                  onClick={() => (onNavigateCart ? onNavigateCart() : onOpenCart())}
-                  className="px-3 py-1 rounded-lg bg-emerald-500 text-black font-heading font-extrabold text-[11px] hover:bg-emerald-400 transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <span>VIEW CART</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+            
 
             <div className="flex items-center gap-3">
               {/* Add to Cart */}
@@ -615,10 +741,10 @@ export default function ProductDetailPage({
               >
                 {isPurchasingDisabled ? (
                   <span>UNAVAILABLE</span>
-                ) : added ? (
+                ) : inCartQty > 0 ? (
                   <>
                     <Check className="w-5 h-5" />
-                    <span>ADDED! ({cartCount})</span>
+                    <span>Added {inCartQty} {inCartQty === 1 ? 'item' : 'items'}</span>
                   </>
                 ) : (
                   <>
@@ -986,17 +1112,35 @@ export default function ProductDetailPage({
                       VERIFIED ATHLETE REVIEWS
                     </h4>
                     <button
-                      onClick={() => setShowReviewForm(!showReviewForm)}
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          if (onNavigateAuth) {
+                            onNavigateAuth('review');
+                          }
+                          return;
+                        }
+                        if (!productReviewEligible) {
+                          setReviewAccessMessage('Review access is locked until this product is delivered and accepted by you.');
+                          return;
+                        }
+                        setShowReviewForm((prev) => !prev);
+                      }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF1E27] text-white text-xs font-bold uppercase font-heading hover:bg-red-600 transition-colors cursor-pointer"
                     >
                       <MessageSquarePlus className="w-3.5 h-3.5" />
-                      <span>{showReviewForm ? 'CANCEL' : 'WRITE A REVIEW'}</span>
+                      <span>{showReviewForm ? 'CANCEL' : isAuthenticated ? 'WRITE A REVIEW' : 'SIGN IN TO REVIEW'}</span>
                     </button>
                   </div>
 
                   {reviewSubmitted && (
                     <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
                       ✓ Thank you! Your review has been submitted and published.
+                    </div>
+                  )}
+
+                  {reviewAccessMessage && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold">
+                      {reviewAccessMessage}
                     </div>
                   )}
                 </div>
@@ -1184,30 +1328,9 @@ export default function ProductDetailPage({
         </div>
       </div>
 
-      {/* Lightbox Image Preview Modal */}
-      {isLightboxOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fade-in" role="dialog" aria-modal="true">
-          <button
-            onClick={() => setIsLightboxOpen(false)}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[var(--border-subtle)] text-[var(--text-main)] hover:bg-[#FF1E27] hover:text-white hover:bg-[#FF1E27] flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Close Lightbox"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <div className="max-w-4xl max-h-[80vh] w-full p-8 flex items-center justify-center">
-            <ProductGraphic
-              image={activeImage}
-              imageLight={activeImageLight}
-              type={currentGalleryItem?.type || product.imageType}
-              theme={theme}
-              noGlow
-              className="max-h-[75vh] w-auto object-contain filter drop-shadow-xl"
-            />
-          </div>
-        </div>
-      )}
 
-      {/* Size Chart Modal */}
+
+            {/* Size Chart Modal */}
       <SizeChartModal
         isOpen={isSizeChartOpen}
         onClose={() => setIsSizeChartOpen(false)}
@@ -1217,4 +1340,3 @@ export default function ProductDetailPage({
     </div>
   );
 }
-

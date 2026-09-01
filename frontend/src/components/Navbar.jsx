@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home, History, PackageCheck, MapPin, ChevronDown, LogOut, Shield } from 'lucide-react';
+import {Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home, History, PackageCheck, MapPin, ChevronDown, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
@@ -17,7 +17,6 @@ export default function Navbar({
   onNavigateAddresses,
   onNavigateOrders,
   onNavigateCart,
-  onNavigateAdminDashboard,
   activeView = 'home'
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -222,20 +221,6 @@ export default function Navbar({
 
                       {/* Navigation Items */}
                       <div className="py-1 space-y-0.5">
-                        {user.role === 'admin' && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setProfileDropdownOpen(false);
-                              if (onNavigateAdminDashboard) onNavigateAdminDashboard();
-                            }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer text-left border border-amber-500/25 mb-1.5"
-                          >
-                            <Shield className="w-4 h-4 text-amber-400" />
-                            <span>Admin Console</span>
-                          </button>
-                        )}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -278,7 +263,7 @@ export default function Navbar({
                           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
                         >
                           <PackageCheck className="w-4 h-4 text-[#FF1E27]" />
-                          <span>My Orders & Tracking</span>
+                          <span>Orders & Returns</span>
                         </button>
                       </div>
 
@@ -329,8 +314,8 @@ export default function Navbar({
             <button
               onClick={handleOrderHistoryClick}
               className="p-2 text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors hover:scale-110 transform hidden lg:block cursor-pointer"
-              aria-label="Order History"
-              title="Order History"
+              aria-label="Orders & Returns"
+              title="Orders & Returns"
             >
               <History className="w-5 h-5" />
             </button>
@@ -401,7 +386,7 @@ export default function Navbar({
                   onClick={(e) => {
                     e.preventDefault();
                     setMobileMenuOpen(false);
-                    if (onOpenAccount) onOpenAccount();
+                    if (onNavigateOrders) onNavigateOrders();
                   }}
                   className="text-sm font-extrabold uppercase font-heading tracking-wider py-2 px-3 rounded-lg transition-colors text-[var(--text-main)] hover:bg-[var(--border-subtle)] hover:text-[#FF1E27]"
                 >

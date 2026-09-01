@@ -1,6 +1,7 @@
-import React from 'react';
-import { User, MapPin, PackageCheck, ShieldCheck, ArrowLeft, ChevronRight, Award, LogOut, Plus, Trash2, Edit3, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, MapPin, PackageCheck, ShieldCheck, ArrowLeft, ChevronRight, Award, LogOut, Plus, Trash2, Edit3, CheckCircle, Mail, Phone, Lock, KeyRound, AlertCircle, X, ShieldAlert } from 'lucide-react';
 import Button from '../components/Button';
+import { useAuth } from '../context/AuthContext';
 
 export default function UserProfilePage({
   currentUser,
@@ -11,12 +12,14 @@ export default function UserProfilePage({
   onAddNewAddress,
   onNavigateOrders,
   onNavigateAuth,
-  onNavigateAdminDashboard,
+  onOpenAddressManager,
   onBack,
   onSignOut,
   theme = 'dark'
 }) {
-  const user = currentUser || {
+  const { user: authUser, updateProfile } = useAuth();
+
+  const user = authUser || currentUser || {
     name: 'Not Logged In',
     email: 'N/A',
     phone: 'N/A',
@@ -25,6 +28,95 @@ export default function UserProfilePage({
   };
 
   const defaultAddress = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+
+  // Dynamic Latest Order Preview
+  const latestActiveOrder = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
+      const userEmail = (user.email || '').toLowerCase();
+      const userOrders = saved.filter(
+        (o) => !userEmail || (o.customerEmail || '').toLowerCase() === userEmail
+      );
+      const activeStatuses = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'In Transit', 'Pending Dispatch'];
+      const activeMatch = userOrders.find((o) => activeStatuses.includes(o.status));
+      if (activeMatch) return activeMatch;
+      return userOrders[userOrders.length - 1] || null;
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  // Edit Profile Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationMode, setVerificationMode] = useState('password'); // 'password' | 'code'
+  const [sentCode, setSentCode] = useState(null);
+
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const openEditModal = () => {
+    setFormData({
+      name: user.name || user.fullName || '',
+      email: user.email || '',
+      phone: user.phone || ''
+    });
+    setCurrentPassword('');
+    setVerificationCode('');
+    setSentCode(null);
+    setErrorMessage('');
+    setSuccessMessage('');
+    setIsEditModalOpen(true);
+  };
+
+  const isEmailChanged = (formData.email || '').toLowerCase().trim() !== (user.email || '').toLowerCase().trim();
+
+  const handleSendCode = () => {
+    setSentCode('849201');
+    setSuccessMessage(`✓ Verification code sent to ${user.email}! (Simulated Code: 849201)`);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (isEmailChanged && !currentPassword && !verificationCode) {
+      setErrorMessage('Current email verification required to change email address.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await updateProfile(
+        {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone
+        },
+        {
+          currentPassword,
+          verificationCode: verificationCode || (sentCode === verificationCode ? '849201' : '')
+        }
+      );
+
+      setSuccessMessage('✓ Profile details updated successfully!');
+      setTimeout(() => {
+        setIsEditModalOpen(false);
+      }, 1000);
+    } catch (err) {
+      setErrorMessage(err.message || 'Failed to update profile details');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] py-10 px-4 sm:px-8 lg:px-16 transition-colors duration-300">
@@ -42,10 +134,10 @@ export default function UserProfilePage({
             </Button>
             <div>
               <h1 className="text-2xl font-black font-heading italic uppercase text-[var(--text-main)]">
-                MY ACCOUNT & PROFILE
+                ACCOUNT & PROFILE
               </h1>
               <p className="text-xs text-[var(--text-sub)] font-medium">
-                Manage your membership, saved addresses, and active orders.
+                Manage your membership, profile details, saved addresses, and active orders.
               </p>
             </div>
           </div>
@@ -77,43 +169,30 @@ export default function UserProfilePage({
             </div>
           </div>
 
-          <Button
-            onClick={onSignOut}
-            variant="danger" size="md"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>SIGN OUT</span>
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <Button
+              onClick={openEditModal}
+              variant="outline"
+              size="sm"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>EDIT DETAILS</span>
+            </Button>
+            <Button
+              onClick={onSignOut}
+              variant="danger"
+              size="sm"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>SIGN OUT</span>
+            </Button>
+          </div>
         </div>
 
         {/* Quick Shortcut Tiles */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {user && user.role === 'admin' && (
-            <div
-              onClick={onNavigateAdminDashboard}
-              className="glass-panel p-6 rounded-3xl border border-amber-500/30 hover:border-amber-400 bg-amber-500/5 transition-all duration-300 cursor-pointer space-y-4 group shadow-lg md:col-span-2"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <ShieldCheck className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black font-heading uppercase text-amber-400">
-                      🛡️ ADMIN CONSOLE
-                    </h3>
-                    <p className="text-xs text-[var(--text-sub)] font-medium">
-                      Manage products, orders, stock levels, and user reviews.
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-amber-400 group-hover:text-amber-300 transition-colors" />
-              </div>
-            </div>
-          )}
-
-          {/* Order History & Live Tracking Tile (Full Width) */}
+          {/* Order History & Live Tracking Tile */}
           <div
             onClick={onNavigateOrders}
             className="glass-panel p-6 rounded-3xl border border-[var(--border-subtle)] hover:border-[#FF1E27] transition-all duration-300 cursor-pointer space-y-4 group shadow-lg md:col-span-2"
@@ -125,145 +204,319 @@ export default function UserProfilePage({
                 </div>
                 <div>
                   <h3 className="text-base font-black font-heading uppercase text-[var(--text-main)]">
-                    MY ORDERS & TRACKING
+                    ORDERS & RETURNS
                   </h3>
                   <p className="text-xs text-[var(--text-sub)] font-medium">
-                    View active dispatches, tracking timelines & order history
+                    View active dispatches, returns & order history
                   </p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-[var(--text-sub)] group-hover:text-[#FF1E27] transition-colors" />
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold font-heading text-[var(--text-main)]">ORDER #AVN-89421</span>
-                <span className="text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full">
-                  IN TRANSIT
+            {latestActiveOrder ? (
+              <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold font-heading text-[var(--text-main)]">
+                    ORDER #{latestActiveOrder.orderId || latestActiveOrder.id}
+                  </span>
+                  <span className={"text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full " + (
+                    latestActiveOrder.status === 'Cancelled'
+                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                      : ['Processing', 'Shipped', 'In Transit', 'Pending Dispatch'].includes(latestActiveOrder.status)
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-slate-700/50 text-slate-300'
+                  )}>
+                    {latestActiveOrder.status || 'Processing'}
+                  </span>
+                </div>
+                <p className="text-[var(--text-sub)] text-[11px] truncate">
+                  {(latestActiveOrder.items || []).map((i) => `${i.quantity || i.qty || 1}x ${i.name || i.productName || 'Equipment'}`).join(', ')}
+                </p>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs flex items-center justify-between text-[var(--text-sub)]">
+                <span>No active shipments in transit. Click to view order history & past dispatches.</span>
+                <span className="text-[9px] font-extrabold uppercase font-heading bg-slate-700/40 text-slate-400 px-2 py-0.5 rounded-full">
+                  ALL CLEAR
                 </span>
               </div>
-              <p className="text-[var(--text-sub)] text-[11px]">2x Competition Knee Wraps, 1x Power Belt</p>
-            </div>
+            )}
           </div>
 
         </div>
 
-        {/* Integrated Saved Addresses Section */}
+        {/* Default Address Section */}
         <div id="saved-addresses-section" className="space-y-6 pt-6 border-t border-[var(--border-subtle)]">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-black font-heading italic uppercase text-[var(--text-main)]">
-                SAVED ADDRESS DESTINATIONS
+                DEFAULT ADDRESS
               </h2>
               <p className="text-xs text-[var(--text-sub)] font-medium">
-                Manage your shipping destinations directly inside your athlete profile.
+                Your selected primary delivery destination.
               </p>
             </div>
             <Button
-              onClick={onAddNewAddress}
+              onClick={onOpenAddressManager || onAddNewAddress}
               variant="primary" size="sm"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>ADD NEW ADDRESS</span>
+              <MapPin className="w-3.5 h-3.5" />
+              <span>MANAGE ADDRESSES</span>
             </Button>
           </div>
 
-          {savedAddresses.length === 0 ? (
+          {!defaultAddress ? (
             <div className="glass-panel p-8 rounded-3xl border border-[var(--border-subtle)] text-center space-y-3">
-              <p className="text-xs text-[var(--text-sub)] italic">No saved addresses found. Add a default shipping destination.</p>
+              <p className="text-xs text-[var(--text-sub)] italic">No default address set. Add a shipping destination.</p>
               <Button
                 onClick={onAddNewAddress}
                 variant="outline" size="sm" className="w-fit mx-auto"
               >
-                + Create First Address
+                + Add Address
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {savedAddresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  className={`glass-panel p-5 rounded-3xl border transition-all duration-300 flex flex-col justify-between space-y-4 ${
-                    addr.isDefault
-                      ? 'border-2 border-[#FF1E27] shadow-lg bg-[#FF1E27]/5'
-                      : 'border-[var(--border-subtle)] hover:border-[var(--text-sub)]'
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase font-heading px-2 py-0.5 rounded bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[#FF1E27]">
-                        {addr.type || 'HOME'}
-                      </span>
-                      {addr.isDefault && (
-                        <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase font-heading text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                          <CheckCircle className="w-2.5 h-2.5" /> DEFAULT
-                        </span>
-                      )}
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-black font-heading text-[var(--text-main)]">
-                        {addr.fullName}
-                      </h3>
-                      <p className="text-[11px] text-[var(--text-sub)] font-medium">
-                        Phone: <span className="text-[var(--text-main)] font-semibold">{addr.phone}</span>
-                      </p>
-                    </div>
-
-                    <div className="text-[11px] text-[var(--text-sub)] space-y-0.5 leading-relaxed">
-                      {(addr.houseNo || addr.flatNo) && (
-                        <p className="font-semibold text-[var(--text-main)]">
-                          {[addr.houseNo, addr.flatNo].filter(Boolean).join(', ')}
-                        </p>
-                      )}
-                      <p>{addr.street}</p>
-                      <p>{addr.city}, {addr.state} - <span className="font-mono font-bold text-[var(--text-main)]">{addr.pincode}</span></p>
-                      {addr.landmark && (
-                        <p className="text-[10px] font-semibold text-[var(--text-main)] pt-0.5">Landmark: {addr.landmark}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
-                    {!addr.isDefault ? (
-                      <button
-                        onClick={() => onSetDefaultAddress(addr.id)}
-                        className="text-[10px] font-bold text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors cursor-pointer"
-                      >
-                        Set as Default
-                      </button>
-                    ) : (
-                      <span className="text-[9px] font-bold text-emerald-400 flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3" /> Primary Shipping Address
-                      </span>
-                    )}
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => onEditAddress(addr)}
-                        className="p-1.5 rounded-lg border border-[var(--border-subtle)] hover:border-[#FF1E27] text-[var(--text-main)] transition-colors cursor-pointer"
-                        title="Edit Address"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                      </button>
-                      {!addr.isDefault && (
-                        <button
-                          onClick={() => onDeleteAddress(addr.id)}
-                          className="p-1.5 rounded-lg border border-[var(--border-subtle)] hover:border-rose-500 text-rose-400 transition-colors cursor-pointer"
-                          title="Delete Address"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+            <div className="glass-panel p-5 rounded-3xl border-2 border-[#FF1E27] shadow-lg bg-[#FF1E27]/5 flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase font-heading px-2 py-0.5 rounded bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[#FF1E27]">
+                    {defaultAddress.type || 'HOME'}
+                  </span>
+                  <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase font-heading text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                    <CheckCircle className="w-2.5 h-2.5" /> DEFAULT
+                  </span>
                 </div>
-              ))}
+
+                <div>
+                  <h3 className="text-sm font-black font-heading text-[var(--text-main)]">
+                    {defaultAddress.fullName}
+                  </h3>
+                  <p className="text-[11px] text-[var(--text-sub)] font-medium">
+                    Phone: <span className="text-[var(--text-main)] font-semibold">{defaultAddress.phone}</span>
+                  </p>
+                </div>
+
+                <div className="text-[11px] text-[var(--text-sub)] space-y-0.5 leading-relaxed">
+                  {(defaultAddress.houseNo || defaultAddress.flatNo) && (
+                    <p className="font-semibold text-[var(--text-main)]">
+                      {[defaultAddress.houseNo, defaultAddress.flatNo].filter(Boolean).join(', ')}
+                    </p>
+                  )}
+                  <p>{defaultAddress.street}</p>
+                  <p>{defaultAddress.city}, {defaultAddress.state} - <span className="font-mono font-bold text-[var(--text-main)]">{defaultAddress.pincode}</span></p>
+                  {defaultAddress.landmark && (
+                    <p className="text-[10px] font-semibold text-[var(--text-main)] pt-0.5">Landmark: {defaultAddress.landmark}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
+                <button
+                  onClick={() => onAddNewAddress && onAddNewAddress()}
+                  className="text-[10px] font-bold text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors cursor-pointer"
+                >
+                  Add New Address
+                </button>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => onEditAddress && onEditAddress(defaultAddress)}
+                    className="p-1.5 rounded-lg border border-[var(--border-subtle)] hover:border-[#FF1E27] text-[var(--text-main)] transition-colors cursor-pointer"
+                    title="Edit Default Address"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
       </div>
+
+      {/* EDIT PROFILE MODAL WITH EMAIL VERIFICATION */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg glass-panel p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
+              <div>
+                <h2 className="text-xl font-black font-heading italic uppercase text-[var(--text-main)] flex items-center gap-2">
+                  <User className="w-5 h-5 text-[#FF1E27]" /> EDIT ATHLETE PROFILE
+                </h2>
+                <p className="text-xs text-[var(--text-sub)] font-medium">Update your name, phone number, or email address.</p>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-[#FF1E27] text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error & Success Messages */}
+            {errorMessage && (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+            {successMessage && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 shrink-0" />
+                <span>{successMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              
+              {/* Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub)] flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-[#FF1E27]" /> Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                  placeholder="Enter full name"
+                />
+              </div>
+
+              {/* Phone */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub)] flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-[#FF1E27]" /> Phone Number
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                  placeholder="Enter phone number"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub)] flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-[#FF1E27]" /> Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                  placeholder="Enter email address"
+                />
+              </div>
+
+              {/* EMAIL CHANGE VERIFICATION STEP */}
+              {isEmailChanged && (
+                <div className="p-4 rounded-2xl bg-[#FF1E27]/10 border-2 border-[#FF1E27]/40 space-y-4 animate-fade-in">
+                  <div className="flex items-start gap-3">
+                    <ShieldAlert className="w-5 h-5 text-[#FF1E27] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-black font-heading uppercase text-white tracking-wider">
+                        SECURITY VERIFICATION REQUIRED
+                      </h4>
+                      <p className="text-[11px] text-slate-300 font-medium leading-relaxed mt-0.5">
+                        You are changing your account email from <span className="text-[#FF1E27] font-mono font-bold">{user.email}</span> to <span className="text-emerald-400 font-mono font-bold">{formData.email}</span>. Verification of your current email is required.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mode Tabs */}
+                  <div className="flex items-center gap-2 p-1 bg-black/40 rounded-xl border border-white/10 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setVerificationMode('password')}
+                      className={`flex-1 py-1.5 rounded-lg transition-all ${verificationMode === 'password' ? 'bg-[#FF1E27] text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      Verify via Password
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationMode('code')}
+                      className={`flex-1 py-1.5 rounded-lg transition-all ${verificationMode === 'code' ? 'bg-[#FF1E27] text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      Verify via Code (OTP)
+                    </button>
+                  </div>
+
+                  {verificationMode === 'password' ? (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-[#FF1E27]" /> Current Password
+                      </label>
+                      <input
+                        type="password"
+                        required={isEmailChanged}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="w-full bg-[var(--bg-main)] text-white text-sm px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                        placeholder="Enter your current password to confirm email change"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                          <KeyRound className="w-3.5 h-3.5 text-[#FF1E27]" /> Verification Code (OTP)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleSendCode}
+                          className="text-[10px] font-extrabold uppercase text-[#FF1E27] hover:underline"
+                        >
+                          {sentCode ? 'Resend Code' : 'Send Code to Current Email'}
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        required={isEmailChanged}
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        className="w-full bg-[var(--bg-main)] text-white font-mono tracking-widest text-center text-sm px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                        placeholder="Enter 6-digit code (e.g. 849201)"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Submit / Cancel CTAs */}
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-[var(--border-subtle)]">
+                <Button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  variant="outline"
+                  size="md"
+                >
+                  CANCEL
+                </Button>
+                <Button
+                  type="submit"
+                  loading={loading}
+                  variant="primary"
+                  size="md"
+                >
+                  SAVE CHANGES
+                </Button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

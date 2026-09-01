@@ -11,22 +11,15 @@ import {
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([
-    {
-      ...LOCAL_PRODUCTS[0],
-      quantity: 1,
-      selectedSize: 'Standard 79"',
-      selectedColor: 'Crimson Red',
-      selectedPack: 'Single Pair (2 Wraps)'
-    },
-    {
-      ...LOCAL_PRODUCTS[2],
-      quantity: 1,
-      selectedSize: '18 Inch Competition',
-      selectedColor: 'Crimson Red',
-      selectedPack: 'Single Pair (2 Wraps)'
+  // Load saved cart items from localStorage, defaulting to an empty cart []
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('avn-cart-items');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
     }
-  ]);
+  });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
@@ -34,7 +27,16 @@ export function CartProvider({ children }) {
   const [toastMessage, setToastMessage] = useState(null);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
 
-  // Initial cart synchronization with /api/cart endpoint
+  // Persist cartItems to localStorage whenever cart changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('avn-cart-items', JSON.stringify(cartItems));
+    } catch (e) {
+      console.warn('Unable to persist cart to localStorage', e);
+    }
+  }, [cartItems]);
+
+  // Initial cart synchronization with backend /api/cart endpoint if available
   useEffect(() => {
     async function syncCartFromBackend() {
       const apiCart = await fetchCart();
@@ -68,18 +70,15 @@ export function CartProvider({ children }) {
           item.selectedColor === color
       );
       if (existingIndex > -1) {
-        return prevItems.map((item, idx) =>
-          idx === existingIndex
-            ? { ...item, quantity: Math.min(item.quantity + qtyToAdd, product.stockQuantity || 10) }
-            : item
-        );
+        const updated = [...prevItems];
+        updated[existingIndex].quantity += qtyToAdd;
+        return updated;
       }
       return [
         ...prevItems,
         {
           ...product,
-          id: product.id || product.productId,
-          productId: product.id || product.productId,
+          productId: product.id,
           quantity: qtyToAdd,
           selectedSize: size,
           selectedColor: color,
@@ -88,136 +87,110 @@ export function CartProvider({ children }) {
       ];
     });
 
-    const res = await addToCartApi({
-      productId: product.id || product.productId,
-      name: product.name,
-      price: product.price,
+    showToast(`Added ${product.name} to cart!`);
+
+    // Sync with backend API asynchronously
+    addToCartApi({
+      productId: product.id,
       quantity: qtyToAdd,
       selectedSize: size,
       selectedColor: color,
-      selectedPack: pack,
-      image: product.image,
-      imageLight: product.imageLight,
-      imageType: product.imageType
+      selectedPack: pack
     });
-
-    if (res && res.data && res.data.items) {
-      setCartItems(res.data.items);
-      setIsBackendConnected(true);
-    }
-
-    showToast(`Added ${product.name} to cart!`);
   };
 
-  // Update Line Item Quantity (Optimistic State Update + Syncs with PATCH /api/cart/:itemId)
-  const updateQuantity = async (id, newQty) => {
-    if (newQty <= 0) {
-      return removeItem(id);
-    }
-
-    const item = cartItems.find((i) => i.id === id || i.itemId === id || i.productId === id);
-    const maxStock = item?.stockQuantity || 10;
-    const safeQty = Math.min(newQty, maxStock);
-
-    setCartItems((prev) =>
-      prev.map((i) => ((i.id === id || i.itemId === id || i.productId === id) ? { ...i, quantity: safeQty } : i))
+  // Update Line Item Quantity
+  const updateQuantity = async (itemId, delta) => {
+    let newQty = 0;
+    setCartItems((prevItems) =>
+      prevItems
+        .map((item) => {
+          if (item.id === itemId || item.productId === itemId) {
+            newQty = Math.max(0, item.quantity + delta);
+            return { ...item, quantity: newQty };
+          }
+          return item;
+        })
+        .filter((item) => item.quantity > 0)
     );
 
-    const targetId = item?.itemId || id;
-    const res = await updateCartItemApi(targetId, { quantity: safeQty });
-    if (res && res.data && res.data.items) {
-      setCartItems(res.data.items);
-    }
+    updateCartItemApi(itemId, { quantity: newQty });
   };
 
-  // Update Line Item Variant Selection (Optimistic State Update + Syncs with PATCH /api/cart/:itemId)
-  const updateVariant = async (id, field, value) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        (item.id === id || item.itemId === id || item.productId === id) ? { ...item, [field]: value } : item
-      )
+  // Remove Item Completely
+  const removeFromCart = async (itemId) => {
+    setCartItems((prevItems) =>
+      prevItems.filter((item) => item.id !== itemId && item.productId !== itemId)
     );
 
-    const item = cartItems.find((i) => i.id === id || i.itemId === id || i.productId === id);
-    const targetId = item?.itemId || id;
-    const res = await updateCartItemApi(targetId, { [field]: value });
-    if (res && res.data && res.data.items) {
-      setCartItems(res.data.items);
-    }
+    showToast('Item removed from cart.');
+    removeCartItemApi(itemId);
   };
 
-  // Remove Line Item (Optimistic State Update + Syncs with DELETE /api/cart/:itemId)
-  const removeItem = async (id) => {
-    const itemToRemove = cartItems.find((i) => i.id === id || i.itemId === id || i.productId === id);
-    setCartItems((prev) => prev.filter((i) => i.id !== id && i.itemId !== id && i.productId !== id));
-
-    const targetId = itemToRemove?.itemId || id;
-    const res = await removeCartItemApi(targetId);
-    if (res && res.data && res.data.items) {
-      setCartItems(res.data.items);
-    }
-  };
-
-  // Clear Cart
+  // Clear Entire Cart
   const clearCart = () => {
     setCartItems([]);
     setAppliedCoupon(null);
+    try {
+      localStorage.removeItem('avn-cart-items');
+    } catch (e) {}
   };
 
-  // Validate Cart & Coupon Code (Calls POST /api/cart/validate)
-  const validateCart = async (code = couponCode) => {
-    const res = await validateCartApi(cartItems, code);
-    if (res && res.data) {
-      if (res.data.items) setCartItems(res.data.items);
-      if (res.data.appliedCoupon) setAppliedCoupon(res.data.appliedCoupon);
-      return res.data;
+  // Coupon Logic
+  const applyCoupon = async (code) => {
+    const cleanCode = code.trim().toUpperCase();
+    if (cleanCode === 'AVN10') {
+      const couponObj = { code: 'AVN10', discountPercent: 10, description: '10% OFF AVN Pro Gear' };
+      setAppliedCoupon(couponObj);
+      showToast('Coupon AVN10 applied successfully! (10% OFF)');
+      return { success: true, coupon: couponObj };
+    } else if (cleanCode === 'PRO20') {
+      const couponObj = { code: 'PRO20', discountPercent: 20, description: '20% OFF Pro Athlete Discount' };
+      setAppliedCoupon(couponObj);
+      showToast('Coupon PRO20 applied successfully! (20% OFF)');
+      return { success: true, coupon: couponObj };
+    } else {
+      showToast('Invalid promo code. Try AVN10 or PRO20.');
+      return { success: false, message: 'Invalid promo code' };
     }
-    return null;
   };
 
-  // Financial calculations
-  const totalCartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const freeShippingThreshold = 1499;
-  const isFreeShipping = subtotal >= freeShippingThreshold || cartItems.length === 0;
-  const shippingFee = isFreeShipping ? 0 : 99;
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    showToast('Promo code removed.');
+  };
 
-  let discountAmount = 0;
-  if (appliedCoupon) {
-    if (appliedCoupon.code === 'AVN10') discountAmount = Math.round(subtotal * 0.1);
-    else if (appliedCoupon.code === 'POWER20' && subtotal >= 1500) discountAmount = Math.round(subtotal * 0.2);
-    else if (appliedCoupon.code === 'BULK500' && subtotal >= 2500) discountAmount = 500;
-    else if (appliedCoupon.code === 'MULTI15' && totalCartCount >= 2) discountAmount = Math.round(subtotal * 0.15);
-  }
-
-  const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
+  // Financial Calculations
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const discountAmount = appliedCoupon ? Math.round((subtotal * appliedCoupon.discountPercent) / 100) : 0;
+  const shippingFee = subtotal > 1500 || subtotal === 0 ? 0 : 99;
+  const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+  const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
     <CartContext.Provider
       value={{
         cartItems,
-        totalCartCount,
-        subtotal,
-        discountAmount,
-        shippingFee,
-        finalTotal,
-        freeShippingThreshold,
-        isFreeShipping,
         isCartOpen,
         setIsCartOpen,
+        addToCart,
+        updateQuantity,
+        removeFromCart,
+        clearCart,
         couponCode,
         setCouponCode,
         appliedCoupon,
-        setAppliedCoupon,
+        applyCoupon,
+        removeCoupon,
+        subtotal,
+        discountAmount,
+        shippingFee,
+        totalAmount,
+        totalCartCount,
         toastMessage,
-        isBackendConnected,
-        addToCart,
-        updateQuantity,
-        updateVariant,
-        removeItem,
-        clearCart,
-        validateCart,
-        showToast
+        showToast,
+        isBackendConnected
       }}
     >
       {children}

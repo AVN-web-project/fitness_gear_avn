@@ -52,19 +52,19 @@ export default function AuthPage({
       <div className="w-full max-w-md space-y-6">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
+        <div className="relative flex items-center justify-center pb-4 border-b border-[var(--border-subtle)] text-center">
           <button
             onClick={onBack}
-            className="p-2 rounded-xl border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
+            className="absolute left-0 p-2 rounded-xl border border-[var(--border-subtle)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
             title="Back to Home"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="text-right">
-            <h1 className="text-xl font-black font-heading italic uppercase text-[var(--text-main)]">
+          <div className="text-center">
+            <h1 className="text-xl font-black font-heading italic uppercase text-[var(--text-main)] tracking-wide">
               {isSignUp ? 'JOIN AVN ATHLETICS' : 'ATHLETE SIGN IN'}
             </h1>
-            <p className="text-xs text-[var(--text-sub)] font-medium">
+            <p className="text-xs text-[var(--text-sub)] font-medium mt-0.5">
               Access your saved addresses, orders & pro perks.
             </p>
           </div>

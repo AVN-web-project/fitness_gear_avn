@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import ProductGraphic from '../components/ProductGraphic';
 import Button from '../components/Button';
+import { createCheckoutOrderApi } from '../services/api';
 
 export default function CheckoutPage({
   checkoutData,
@@ -43,15 +44,90 @@ export default function CheckoutPage({
   const handleConfirmOrder = async () => {
     setIsPlacingOrder(true);
     const mockOrderId = `AVN-ORD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const transactionId = `AVN-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const orderDetails = {
       orderId: mockOrderId,
-      items,
+      transactionId,
+      items: (items || []).map((item) => ({
+        ...item,
+        slug: item.slug || item.productSlug || item.id || `product-${Date.now()}-${Math.random()}`,
+        productId: item.productId || item.id,
+        acceptedAtDelivery: false,
+        deliveryStatus: 'delivered'
+      })),
       address: userAddress,
       financials: { subtotal, discountAmount, shippingFee, totalAmount },
       paymentMethod: selectedPaymentMethod,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      customerEmail: (() => {
+        try {
+          const savedUser = JSON.parse(localStorage.getItem('avn-user') || 'null');
+          return savedUser?.email || 'guest@avngear.com';
+        } catch (e) {
+          return 'guest@avngear.com';
+        }
+      })(),
+      customerName: (() => {
+        try {
+          const savedUser = JSON.parse(localStorage.getItem('avn-user') || 'null');
+          return savedUser?.name || userAddress?.fullName || 'AVN Customer';
+        } catch (e) {
+          return userAddress?.fullName || 'AVN Customer';
+        }
+      })(),
+      status: 'Processing'
     };
+
+    const orderPayload = {
+      items: (items || []).map((item) => ({
+        ...item,
+        id: item.productId || item.id,
+        name: item.name,
+        price: Number(item.price || 0),
+        quantity: Number(item.quantity || 1),
+        slug: item.slug || item.productId || item.id
+      })),
+      shippingAddress: userAddress,
+      paymentMethod: selectedPaymentMethod,
+      subtotal,
+      discountAmount,
+      shippingFee,
+      totalAmount,
+      customerEmail: (() => {
+        try {
+          const savedUser = JSON.parse(localStorage.getItem('avn-user') || 'null');
+          return savedUser?.email || 'guest@avngear.com';
+        } catch (e) {
+          return 'guest@avngear.com';
+        }
+      })(),
+      customerName: (() => {
+        try {
+          const savedUser = JSON.parse(localStorage.getItem('avn-user') || 'null');
+          return savedUser?.name || userAddress?.fullName || 'AVN Customer';
+        } catch (e) {
+          return userAddress?.fullName || 'AVN Customer';
+        }
+      })()
+    };
+
+    try {
+      const apiResponse = await createCheckoutOrderApi(orderPayload);
+      const backendOrder = apiResponse?.data || orderDetails;
+
+      const savedOrders = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
+      localStorage.setItem('avn-user-orders', JSON.stringify([...savedOrders, backendOrder]));
+
+      if (apiResponse?.success) {
+        orderDetails.transactionId = backendOrder.transactionId || orderDetails.transactionId;
+        orderDetails.orderId = backendOrder.orderId || orderDetails.orderId;
+        orderDetails.status = backendOrder.status || orderDetails.status;
+        orderDetails.paymentStatus = backendOrder.paymentStatus || orderDetails.paymentStatus;
+      }
+    } catch (e) {
+      console.warn('Unable to persist order history locally', e);
+    }
 
     setTimeout(() => {
       setIsPlacingOrder(false);

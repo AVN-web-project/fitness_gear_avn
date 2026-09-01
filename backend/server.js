@@ -5,6 +5,7 @@ import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import supportRoutes from './routes/supportRoutes.js';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api', productRoutes);
 app.use('/api', orderRoutes);
 app.use('/api', cartRoutes);
 app.use('/api', userRoutes);
+app.use('/api', supportRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
