@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, ArrowLeft, CheckCircle2, Home, Briefcase, Building, Navigation, Loader2 } from 'lucide-react';
 import Button from '../components/Button';
 
@@ -24,7 +24,23 @@ export default function AddAddressPage({
     isDefault: userAddress?.isDefault || false
   });
 
-    const [isLocating, setIsLocating] = useState(false);
+      useEffect(() => {
+    setFormData({
+      id: userAddress?.id || null,
+      fullName: userAddress?.fullName || '',
+      phone: userAddress?.phone || '',
+      flatNo: userAddress?.flatNo || '',
+      houseNo: userAddress?.houseNo || '',
+      street: userAddress?.street || '',
+      city: userAddress?.city || '',
+      state: userAddress?.state || 'Maharashtra',
+      pincode: userAddress?.pincode || '',
+      type: userAddress?.type || 'Home',
+      isDefault: userAddress?.isDefault || false
+    });
+  }, [userAddress]);
+
+  const [isLocating, setIsLocating] = useState(false);
   const [locationSuccess, setLocationSuccess] = useState(false);
 
   const handleUseCurrentLocation = () => {

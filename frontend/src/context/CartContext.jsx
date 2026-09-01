@@ -50,16 +50,13 @@ export function CartProvider({ children }) {
   }, []);
 
   // Helper: Trigger Toast Notification
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
+  const showToast = () => {};
 
-  // Add Line Item to Cart (Optimistic State Update + Syncs with POST /api/cart)
+    // Add Line Item to Cart (Immutable update preventing React StrictMode double increments)
   const addToCart = async (product) => {
-    const qtyToAdd = product.quantity || 1;
+    const qtyToAdd = Math.max(1, Number(product.quantity) || 1);
     const size = product.selectedSize || (product.sizes ? product.sizes[0] : 'Standard');
-    const color = product.selectedColor || (product.colors ? product.colors[0].name : 'Crimson Red');
+    const color = typeof product.selectedColor === 'string' ? product.selectedColor : (product.colors ? product.colors[0].name : 'Crimson Red');
     const pack = product.selectedPack || (product.packQuantityOptions ? product.packQuantityOptions[0] : 'Single Pair');
 
     setCartItems((prevItems) => {
@@ -70,14 +67,22 @@ export function CartProvider({ children }) {
           item.selectedColor === color
       );
       if (existingIndex > -1) {
-        const updated = [...prevItems];
-        updated[existingIndex].quantity += qtyToAdd;
-        return updated;
+        return prevItems.map((item, idx) => {
+          if (idx === existingIndex) {
+            const currentQty = Math.max(1, Number(item.quantity) || 1);
+            return {
+              ...item,
+              quantity: currentQty + qtyToAdd
+            };
+          }
+          return item;
+        });
       }
       return [
         ...prevItems,
         {
           ...product,
+          id: product.id || product.productId || `cart-${Date.now()}`,
           productId: product.id,
           quantity: qtyToAdd,
           selectedSize: size,
@@ -87,9 +92,6 @@ export function CartProvider({ children }) {
       ];
     });
 
-    showToast(`Added ${product.name} to cart!`);
-
-    // Sync with backend API asynchronously
     addToCartApi({
       productId: product.id,
       quantity: qtyToAdd,
@@ -99,22 +101,22 @@ export function CartProvider({ children }) {
     });
   };
 
-  // Update Line Item Quantity
-  const updateQuantity = async (itemId, delta) => {
-    let newQty = 0;
+  // Update Line Item Quantity (Explicit target quantity)
+  const updateQuantity = async (itemId, newQty) => {
+    const qty = Math.max(0, Number(newQty) || 0);
     setCartItems((prevItems) =>
       prevItems
         .map((item) => {
-          if (item.id === itemId || item.productId === itemId) {
-            newQty = Math.max(0, item.quantity + delta);
-            return { ...item, quantity: newQty };
+          const matchId = item.id || item.productId;
+          if (matchId === itemId || item.id === itemId || item.productId === itemId) {
+            return { ...item, quantity: qty };
           }
           return item;
         })
         .filter((item) => item.quantity > 0)
     );
 
-    updateCartItemApi(itemId, { quantity: newQty });
+    updateCartItemApi(itemId, { quantity: qty });
   };
 
   // Remove Item Completely
@@ -123,7 +125,7 @@ export function CartProvider({ children }) {
       prevItems.filter((item) => item.id !== itemId && item.productId !== itemId)
     );
 
-    showToast('Item removed from cart.');
+    // Toast removed
     removeCartItemApi(itemId);
   };
 
@@ -142,15 +144,15 @@ export function CartProvider({ children }) {
     if (cleanCode === 'AVN10') {
       const couponObj = { code: 'AVN10', discountPercent: 10, description: '10% OFF AVN Pro Gear' };
       setAppliedCoupon(couponObj);
-      showToast('Coupon AVN10 applied successfully! (10% OFF)');
+      // Toast removed
       return { success: true, coupon: couponObj };
     } else if (cleanCode === 'PRO20') {
       const couponObj = { code: 'PRO20', discountPercent: 20, description: '20% OFF Pro Athlete Discount' };
       setAppliedCoupon(couponObj);
-      showToast('Coupon PRO20 applied successfully! (20% OFF)');
+      // Toast removed
       return { success: true, coupon: couponObj };
     } else {
-      showToast('Invalid promo code. Try AVN10 or PRO20.');
+      // Toast removed
       return { success: false, message: 'Invalid promo code' };
     }
   };
@@ -158,7 +160,7 @@ export function CartProvider({ children }) {
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
-    showToast('Promo code removed.');
+    // Toast removed
   };
 
   // Financial Calculations
@@ -177,6 +179,7 @@ export function CartProvider({ children }) {
         addToCart,
         updateQuantity,
         removeFromCart,
+        removeItem: removeFromCart,
         clearCart,
         couponCode,
         setCouponCode,

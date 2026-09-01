@@ -98,7 +98,7 @@ export default function CartDrawer({
               cartItems.map((item) => (
                 <div
                   key={item.id || item.itemId || item.productId}
-                  className="glass-panel p-3.5 rounded-xl flex items-center gap-4 border border-[var(--border-subtle)]"
+                  className="glass-panel p-3.5 rounded-xl flex items-center gap-4 border border-[var(--border-subtle)] opacity-80 hover:opacity-100 transition-opacity"
                 >
                   <div
                     onClick={() => {

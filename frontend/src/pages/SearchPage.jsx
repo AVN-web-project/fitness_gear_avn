@@ -700,18 +700,7 @@ export default function SearchPage({
                             )}
                           </div>
 
-                          {/* Availability Status Badge */}
-                          <div className="absolute top-3 right-3 z-10">
-                            {isOutOfStock ? (
-                              <span className="bg-rose-950/90 text-rose-300 border border-rose-800/80 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-heading">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Out of Stock
-                              </span>
-                            ) : (
-                              <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-800/80 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-heading">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> In Stock ({product.stockQuantity || 10})
-                              </span>
-                            )}
-                          </div>
+
 
                           <ProductGraphic
                             image={product.image}

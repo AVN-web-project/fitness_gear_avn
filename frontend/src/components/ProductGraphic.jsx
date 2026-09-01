@@ -19,9 +19,7 @@ export default function ProductGraphic({ image, imageLight, type, theme, classNa
   // Subtle radial gradient: faint lighter center fading to transparent.
   // Makes dark transparent-PNG products distinguishable from dark card backgrounds.
   // Pass noGlow to disable (e.g. search page where cards have their own bg treatment).
-  const containerStyle = (!noGlow && theme !== 'light')
-    ? { background: 'radial-gradient(ellipse at 50% 45%, rgba(255,255,255,0.07) 0%, transparent 72%)' }
-    : {};
+  const containerStyle = {};
 
   return (
     <div

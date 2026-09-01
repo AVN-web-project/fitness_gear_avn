@@ -77,8 +77,13 @@ export default function ProductDetailPage({
   const { cartItems, updateQuantity: updateCartQty } = useCart();
   const inCartQty = cartItems
     ? cartItems
-        .filter((item) => item.id === product?.id || item.productId === product?.id)
-        .reduce((sum, item) => sum + item.quantity, 0)
+        .filter(
+          (item) =>
+            (item.id === product?.id || item.productId === product?.id) &&
+            item.selectedSize === selectedSize &&
+            item.selectedColor === (typeof selectedColor === 'string' ? selectedColor : selectedColor?.name)
+        )
+        .reduce((sum, item) => Number(sum) + Number(item.quantity || 0), 0)
     : 0;
 
 
@@ -237,15 +242,14 @@ export default function ProductDetailPage({
   // Handle Add to Cart
   const handleAddToCart = () => {
     if (isPurchasingDisabled) return;
+    const qtyToAdd = inCartQty > 0 ? 1 : Math.max(1, Number(quantity) || 1);
     onAddToCart({
       ...product,
       selectedSize,
-      selectedColor: selectedColor.name,
+      selectedColor: typeof selectedColor === 'string' ? selectedColor : selectedColor?.name,
       selectedPack,
-      quantity
+      quantity: qtyToAdd
     });
-    setAdded(true);
-    setTimeout(() => setAdded(false), 800);
   };
 
   // Handle Buy Now
@@ -575,21 +579,10 @@ export default function ProductDetailPage({
           </div>
 
           {/* Stock & Availability Indicator */}
-          {isPurchasingDisabled ? (
+          {isPurchasingDisabled && (
             <div className="flex items-center gap-2 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold font-heading">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>
-                {product.status === 'Discontinued'
-                  ? 'ðŸš« THIS ITEM HAS BEEN DISCONTINUED'
-                  : '⚠️ï¸ CURRENTLY OUT OF STOCK - ITEM UNAVAILABLE'}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 p-3.5 rounded-xl bg-[#FF1E27]/10 border border-[#FF1E27]/30 text-[#FF1E27] text-xs font-bold font-heading">
-              <Zap className="w-4 h-4 fill-current animate-pulse shrink-0" />
-              <span>
-                ⚡ Hurry! Only {maxStock} units left in stock — order soon for fast dispatch.
-              </span>
+              <span>OUT OF STOCK - ITEM UNAVAILABLE</span>
             </div>
           )}
 
@@ -687,41 +680,53 @@ export default function ProductDetailPage({
             </div>
           )}
 
-          {/* Quantity Counter */}
-          <div className="space-y-2.5">
-            <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider">
-              QUANTITY:
-            </label>
-            <div className="flex items-center w-36 border border-[var(--border-subtle)] rounded-xl bg-[var(--bg-main)] p-1">
-              <button
-                onClick={() => {
-                  const newQty = Math.max(1, quantity - 1);
-                  setQuantity(newQty);
-                  if (inCartQty > 0) updateCartQty(product.id, newQty);
-                }}
-                disabled={isPurchasingDisabled}
-                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
-                aria-label="Decrease quantity"
-              >
-                -
-              </button>
-              <span className="flex-1 text-center font-extrabold font-heading text-sm">
-                {inCartQty > 0 ? inCartQty : quantity}
-              </span>
-              <button
-                onClick={() => {
-                  const newQty = Math.min(maxStock, quantity + 1);
-                  setQuantity(newQty);
-                  if (inCartQty > 0) updateCartQty(product.id, newQty);
-                }}
-                disabled={isPurchasingDisabled || quantity >= maxStock}
-                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
-                aria-label="Increase quantity"
-              >
-                +
-              </button>
+          {/* Quantity Counter (Only displayed when item is in cart) */}
+          {inCartQty > 0 && (
+            <div className="space-y-2.5 animate-fade-in">
+              <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider">
+                QUANTITY IN CART:
+              </label>
+              <div className="flex items-center w-36 border border-[var(--border-subtle)] rounded-xl bg-[var(--bg-main)] p-1">
+                <button
+                  onClick={() => {
+                    const match = cartItems.find(
+                      (item) =>
+                        (item.id === product?.id || item.productId === product?.id) &&
+                        item.selectedSize === selectedSize &&
+                        item.selectedColor === (typeof selectedColor === 'string' ? selectedColor : selectedColor?.name)
+                    );
+                    const targetId = match ? (match.id || match.productId) : product.id;
+                    updateCartQty(targetId, inCartQty - 1);
+                  }}
+                  disabled={isPurchasingDisabled}
+                  className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
+                  aria-label="Decrease quantity"
+                >
+                  -
+                </button>
+                <span className="flex-1 text-center font-extrabold font-heading text-sm text-[#FF1E27] font-mono">
+                  {inCartQty}
+                </span>
+                <button
+                  onClick={() => {
+                    const match = cartItems.find(
+                      (item) =>
+                        (item.id === product?.id || item.productId === product?.id) &&
+                        item.selectedSize === selectedSize &&
+                        item.selectedColor === (typeof selectedColor === 'string' ? selectedColor : selectedColor?.name)
+                    );
+                    const targetId = match ? (match.id || match.productId) : product.id;
+                    updateCartQty(targetId, inCartQty + 1);
+                  }}
+                  disabled={isPurchasingDisabled}
+                  className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Action CTAs */}
           <div className="space-y-3 pt-2">
@@ -743,7 +748,7 @@ export default function ProductDetailPage({
                   <span>UNAVAILABLE</span>
                 ) : inCartQty > 0 ? (
                   <>
-                    <Check className="w-5 h-5" />
+                    <ShoppingCart className="w-5 h-5" />
                     <span>Added {inCartQty} {inCartQty === 1 ? 'item' : 'items'}</span>
                   </>
                 ) : (
@@ -769,19 +774,18 @@ export default function ProductDetailPage({
               </button>
             </div>
 
-            {/* Dedicated Button to Redirect to Cart Page with Live Count Badge */}
-            <button
-              onClick={() => (onNavigateCart ? onNavigateCart() : onOpenCart())}
-              className="w-full py-3.5 px-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] hover:bg-[#FF1E27] hover:text-white text-xs font-bold font-heading uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-md group"
-              aria-label="View Shopping Cart Page"
-            >
-              <ShoppingBag className="w-4 h-4 text-[#FF1E27] group-hover:text-white transition-colors" />
-              <span>REDIRECT TO CART PAGE</span>
-              <span className="bg-[#FF1E27] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full font-mono group-hover:bg-white group-hover:text-[#FF1E27] transition-colors">
-                {cartCount} {cartCount === 1 ? 'ITEM' : 'ITEMS'}
-              </span>
-              <ArrowRight className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all ml-auto" />
-            </button>
+            {/* Dedicated Button to Redirect to Cart Page (Only rendered when this product is in cart) */}
+            {inCartQty > 0 && (
+              <button
+                onClick={() => (onNavigateCart ? onNavigateCart() : onOpenCart())}
+                className="w-full py-3.5 px-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] hover:bg-[#FF1E27] hover:text-white text-xs font-bold font-heading uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-md group animate-fade-in"
+                aria-label="View Shopping Cart Page"
+              >
+                <ShoppingBag className="w-4 h-4 text-[#FF1E27] group-hover:text-white transition-colors" />
+                <span>VIEW IN CART ({inCartQty} IN CART)</span>
+                <ArrowRight className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all ml-auto" />
+              </button>
+            )}
 
             {/* Utility Buttons: Wishlist & Share */}
             <div className="flex items-center gap-3">

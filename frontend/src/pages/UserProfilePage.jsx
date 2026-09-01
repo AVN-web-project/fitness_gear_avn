@@ -268,13 +268,7 @@ export default function UserProfilePage({
 
           {!defaultAddress ? (
             <div className="glass-panel p-8 rounded-3xl border border-[var(--border-subtle)] text-center space-y-3">
-              <p className="text-xs text-[var(--text-sub)] italic">No default address set. Add a shipping destination.</p>
-              <Button
-                onClick={onAddNewAddress}
-                variant="outline" size="sm" className="w-fit mx-auto"
-              >
-                + Add Address
-              </Button>
+              <p className="text-xs text-[var(--text-sub)] italic">No default address set.</p>
             </div>
           ) : (
             <div className="glass-panel p-5 rounded-3xl border-2 border-[#FF1E27] shadow-lg bg-[#FF1E27]/5 flex flex-col justify-between space-y-4">
@@ -311,24 +305,7 @@ export default function UserProfilePage({
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
-                <button
-                  onClick={() => onAddNewAddress && onAddNewAddress()}
-                  className="text-[10px] font-bold text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors cursor-pointer"
-                >
-                  Add New Address
-                </button>
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => onEditAddress && onEditAddress(defaultAddress)}
-                    className="p-1.5 rounded-lg border border-[var(--border-subtle)] hover:border-[#FF1E27] text-[var(--text-main)] transition-colors cursor-pointer"
-                    title="Edit Default Address"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </div>

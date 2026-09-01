@@ -16,6 +16,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import OrderDetailsPage from './pages/OrderDetailsPage';
 import SupportPage from './pages/SupportPage';
+import ContactPage from './pages/ContactPage';
 import SupportWidget from './components/SupportWidget';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PRODUCTS as LOCAL_PRODUCTS } from './data/products';
@@ -93,24 +94,42 @@ function AppContent() {
   };
 
   const handleSaveAddress = (addressData) => {
-    let savedAddrObj;
+    const targetId = addressData.id || ('addr-' + Date.now());
+    const isEdit = Boolean(addressData.id);
+
     setSavedAddresses((prev) => {
+      const isDefault = isEdit
+        ? (addressData.isDefault ?? false)
+        : (prev.length === 0 || addressData.isDefault);
+
+      const savedAddrObj = {
+        ...addressData,
+        id: targetId,
+        isDefault
+      };
+
       let updated;
-      if (addressData.id) {
-        savedAddrObj = addressData;
-        updated = prev.map(a => a.id === addressData.id ? addressData : a);
+      if (isEdit) {
+        updated = prev.map((a) => (a.id === targetId ? savedAddrObj : a));
       } else {
-        savedAddrObj = { ...addressData, id: 'addr-' + Date.now(), isDefault: prev.length === 0 };
         updated = [...prev, savedAddrObj];
       }
-      localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+
+      if (isDefault || !userAddress || userAddress.id === targetId) {
+        setUserAddress(savedAddrObj);
+        try {
+          localStorage.setItem('avn-saved-address', JSON.stringify(savedAddrObj));
+        } catch (e) {}
+      }
+
+      try {
+        localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+      } catch (e) {}
       return updated;
     });
-    setUserAddress(savedAddrObj);
-    localStorage.setItem('avn-saved-address', JSON.stringify(savedAddrObj));
 
-    const nextView = checkoutData ? 'checkout' : 'addresses';
-    setAddressReturnView(nextView);
+    setEditingAddress(null);
+    const nextView = addressReturnView === 'checkout' ? 'checkout' : (addressReturnView || 'addresses');
     setActiveView(nextView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -200,14 +219,15 @@ function AppContent() {
   const [checkoutData, setCheckoutData] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [addressReturnView, setAddressReturnView] = useState('profile');
+  const [editingAddress, setEditingAddress] = useState(null);
 
   useEffect(() => {
-    if (savedAddresses.length > 0) {
+    if (savedAddresses.length > 0 && !userAddress) {
       const defaultAddress = savedAddresses.find(a => a.isDefault) || savedAddresses[0];
-      if (defaultAddress && (!userAddress || userAddress.id !== defaultAddress.id)) {
-        setUserAddress(defaultAddress);
+      setUserAddress(defaultAddress);
+      try {
         localStorage.setItem('avn-saved-address', JSON.stringify(defaultAddress));
-      }
+      } catch (e) {}
     }
   }, [savedAddresses, userAddress]);
 
@@ -301,13 +321,10 @@ function AppContent() {
     ? 'min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col selection:bg-[#FF1E27] selection:text-white transition-colors duration-300 pb-20'
     : 'min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col selection:bg-[#FF1E27] selection:text-white transition-colors duration-300 pb-16 md:pb-0';
 
-  const toastContainerClasses = isMobileView
-    ? 'fixed bottom-20 right-4 left-4 z-50 bg-[var(--bg-card-solid)] border border-[#FF1E27]/50 text-white px-5 py-3 rounded-xl shadow-lg font-bold text-xs font-heading flex items-center justify-between gap-2'
-    : 'fixed bottom-6 right-6 z-50 bg-[var(--bg-card-solid)] border border-[#FF1E27]/50 text-white px-5 py-3 rounded-xl shadow-lg font-bold text-xs font-heading flex items-center justify-between gap-2';
-
-  return (
+    return (
     <div className={mainContainerClasses}>
       <Navbar
+        onNavigateContact={() => { setActiveView('contact'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         cartCount={cart.totalCartCount}
         onOpenCart={handleNavigateCart}
         onNavigateCart={handleNavigateCart}
@@ -390,13 +407,13 @@ function AppContent() {
             onSetDefaultAddress={handleSetDefaultAddress}
             onDeleteAddress={handleDeleteAddress}
             onEditAddress={(addr) => {
-              setUserAddress(addr);
+              setEditingAddress(addr);
               setAddressReturnView('profile');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onAddNewAddress={() => {
-              setUserAddress(null);
+              setEditingAddress(null);
               setAddressReturnView('profile');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -420,13 +437,13 @@ function AppContent() {
             savedAddresses={savedAddresses}
             onBack={() => setActiveView('profile')}
             onAddNewAddress={() => {
-              setUserAddress(null);
+              setEditingAddress(null);
               setAddressReturnView('addresses');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onEditAddress={(addr) => {
-              setUserAddress(addr);
+              setEditingAddress(addr);
               setAddressReturnView('addresses');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -490,7 +507,23 @@ function AppContent() {
             }}
             theme={theme}
           />
-                ) : activeView === 'support' ? (
+                ) : activeView === 'contact' ? (
+          <ContactPage
+            onBack={() => {
+              setActiveView('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateContact={() => {
+          setActiveView('contact');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onNavigateSupport={() => {
+              setActiveView('support');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            theme={theme}
+          />
+        ) : activeView === 'support' ? (
           <SupportPage
             currentUser={user}
             initialOrderId={selectedOrder?.orderId || selectedOrder?.id || ''}
@@ -506,7 +539,8 @@ function AppContent() {
           />
         ) : activeView === 'add-address' ? (
           <AddAddressPage
-            userAddress={userAddress}
+            key={editingAddress?.id || "new-address"}
+            userAddress={editingAddress}
             onSaveAddress={handleSaveAddress}
             onCancel={() => {
               setActiveView(addressReturnView || (checkoutData ? 'checkout' : 'profile'));
@@ -514,16 +548,17 @@ function AppContent() {
             }}
             theme={theme}
             isMobileView={isMobileView}
-            isCheckoutMode={!!checkoutData}
+            isCheckoutMode={addressReturnView === 'checkout'}
           />
         ) : activeView === 'cart' ? (
           <CartPage
             cartItems={cart.cartItems}
             onSelectProduct={handleSelectProductForPdp}
             onUpdateQuantity={cart.updateQuantity}
-            onRemoveItem={cart.removeItem}
+            onRemoveItem={cart.removeFromCart}
             onUpdateVariant={cart.updateVariant}
-            onNavigateHome={handleNavigateHome}
+            onNavigateHome={handleNavigateSearch}
+            onNavigateSearch={handleNavigateSearch}
             onProceedToCheckout={handleProceedToCheckout}
             onClearCart={cart.clearCart}
             theme={theme}
@@ -568,6 +603,10 @@ function AppContent() {
         theme={theme}
         isMobileView={isMobileView}
         activeView={activeView}
+        onNavigateContact={() => {
+          setActiveView('contact');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         onNavigateSupport={() => {
           setActiveView('support');
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -606,20 +645,6 @@ function AppContent() {
         onOpenSearchPage={handleNavigateSearch}
         isMobileView={isMobileView}
       />
-
-      {cart.toastMessage && (
-        <div className={toastContainerClasses}>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#FF1E27]" />
-            <span>{cart.toastMessage}</span>
-          </div>
-          {(isBackendConnected || cart.isBackendConnected) && (
-            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-1.5 py-0.5 rounded">
-              API SYNC
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -9,7 +9,21 @@ let users = [
     role: 'customer',
     tier: 'AVN ELITE CUSTOMER',
     memberSince: '2024',
-    addresses: []
+    addresses: [
+      {
+        id: 'addr-default-1',
+        fullName: 'Karan Sharma',
+        phone: '+91 91234 56789',
+        flatNo: 'Flat 402, Building A',
+        houseNo: 'Building A, Wing B',
+        street: 'DLF Cyber City, Sector 24',
+        city: 'Gurugram',
+        state: 'Haryana',
+        pincode: '122002',
+        type: 'Home',
+        isDefault: true
+      }
+    ]
   }
 ];
 
@@ -48,7 +62,8 @@ export const registerUser = (req, res) => {
       phone: newUser.phone,
       role: newUser.role,
       tier: newUser.tier,
-      memberSince: newUser.memberSince
+      memberSince: newUser.memberSince,
+      addresses: newUser.addresses
     }
   });
 };
@@ -75,7 +90,8 @@ export const loginUser = (req, res) => {
       phone: user.phone,
       role: user.role,
       tier: user.tier,
-      memberSince: user.memberSince
+      memberSince: user.memberSince,
+      addresses: user.addresses || []
     }
   });
 };
@@ -91,7 +107,8 @@ export const getUserProfile = (req, res) => {
       phone: user.phone,
       role: user.role,
       tier: user.tier,
-      memberSince: user.memberSince
+      memberSince: user.memberSince,
+      addresses: user.addresses || []
     }
   });
 };
@@ -144,7 +161,8 @@ export const updateUserProfile = (req, res) => {
       phone: user.phone,
       role: user.role,
       tier: user.tier,
-      memberSince: user.memberSince
+      memberSince: user.memberSince,
+      addresses: user.addresses || []
     }
   });
 };

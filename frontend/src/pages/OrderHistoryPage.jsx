@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, ArrowLeft, Clock, CheckCircle2, ChevronRight, PackageCheck, AlertCircle, MessageSquarePlus, XCircle, RotateCcw } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, Clock, CheckCircle2, ChevronRight, PackageCheck, AlertCircle, MessageSquarePlus, XCircle, RotateCcw, Truck } from 'lucide-react';
 import Button from '../components/Button';
 import { fetchOrdersByEmail } from '../services/api';
 
@@ -266,17 +266,48 @@ export default function OrderHistoryPage({
                     ))}
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="space-y-2 pt-2">
+                  {/* Track Order Milestone Flow */}
+                  <div className="space-y-3 pt-3 border-t border-[var(--border-subtle)]">
                     <div className="flex items-center justify-between text-[11px] font-extrabold font-heading uppercase">
-                      <span className="text-[#FF1E27]">{order.status}</span>
-                      <span className="text-[var(--text-sub)]">{Math.round(getOrderProgressPercent(order.status))}%</span>
+                      <span className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
+                        <Truck className="w-3.5 h-3.5 text-[#FF1E27]" /> LIVE TRACKING FLOW
+                      </span>
+                      <span className="text-[#FF1E27] font-mono">{Math.round(getOrderProgressPercent(order.status))}%</span>
                     </div>
+
+                    {/* Progress Bar */}
                     <div className="w-full h-2 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] overflow-hidden">
                       <div
-                        className="h-full bg-[#FF1E27] rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-[#FF1E27] to-amber-400 rounded-full transition-all duration-500"
                         style={{ width: `${getOrderProgressPercent(order.status)}%` }}
                       />
+                    </div>
+
+                    {/* Milestone Flow Steps */}
+                    <div className="grid grid-cols-5 gap-1 pt-2 text-center">
+                      {['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'].map((stepName, stepIdx) => {
+                        const orderStateList = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
+                        const currentIdx = orderStateList.indexOf(order.status);
+                        const isCompleted = stepIdx <= (currentIdx >= 0 ? currentIdx : 0);
+                        const isCurrent = stepIdx === currentIdx;
+
+                        return (
+                          <div key={stepName} className="flex flex-col items-center gap-1">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center border text-[10px] font-bold transition-all ${
+                              isCompleted
+                                ? 'bg-[#FF1E27] border-[#FF1E27] text-white shadow-[0_0_10px_rgba(255,30,39,0.5)]'
+                                : 'bg-[var(--bg-main)] border-[var(--border-subtle)] text-[var(--text-sub)]'
+                            }`}>
+                              {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : stepIdx + 1}
+                            </div>
+                            <span className={`text-[9px] font-heading uppercase leading-tight font-extrabold ${
+                              isCurrent ? 'text-[#FF1E27]' : isCompleted ? 'text-[var(--text-main)]' : 'text-[var(--text-sub)]'
+                            }`}>
+                              {stepName}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

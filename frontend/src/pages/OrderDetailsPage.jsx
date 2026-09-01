@@ -66,9 +66,32 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
     return localOrder.statusTimeline || baseSteps;
   };
 
-  const statusSteps = buildStatusTimeline(orderStatus);
-  const progressPercent = (statusSteps.filter((step) => step.done).length / statusSteps.length) * 100;
+  const rawSteps = buildStatusTimeline(orderStatus);
+  const statusSteps = (Array.isArray(rawSteps) && rawSteps.length > 0) ? rawSteps : [
+    { label: 'Processing', done: true, date: 'Placed' },
+    { label: 'Packed', done: false, date: 'Pending' },
+    { label: 'Shipped', done: false, date: 'Pending' },
+    { label: 'Out for Delivery', done: false, date: 'Pending' },
+    { label: 'Delivered', done: false, date: 'Pending' }
+  ];
+  const doneCount = statusSteps.filter((step) => Boolean(step && step.done)).length;
+  const totalCount = statusSteps.length || 1;
+  const rawPct = Math.round((doneCount / totalCount) * 100);
+  const progressPercent = isNaN(rawPct) ? 0 : Math.min(100, Math.max(0, rawPct));
   const isDispatchState = ['Shipped', 'Out for Delivery', 'Delivered', 'In Transit', 'Pending Dispatch'].includes(orderStatus);
+  const formatDateTime = (dateVal) => {
+    if (!dateVal) return 'N/A';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return String(dateVal);
+      const dateFormatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeFormatted = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return `${dateFormatted} • ${timeFormatted}`;
+    } catch (e) {
+      return String(dateVal);
+    }
+  };
+
   const isCancelable = ['Processing', 'Packed', 'Pending Dispatch'].includes(orderStatus) && !['Cancelled', 'Return Requested'].includes(orderStatus);
   const canRequestReturn = orderStatus === 'Delivered' && daysSinceOrder <= 10;
 
@@ -115,11 +138,14 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
   };
 
   const handleCancelOrder = () => {
+    const nowIso = new Date().toISOString();
     const cancelledOrder = {
       ...localOrder,
       id: localOrder.id || localOrder.orderId,
       orderId: localOrder.orderId || localOrder.id,
       status: 'Cancelled',
+      cancelledAt: localOrder.cancelledAt || nowIso,
+      updatedAt: nowIso,
       statusTimeline: buildStatusTimeline('Cancelled'),
       paymentStatus: 'Cancelled'
     };
@@ -127,11 +153,14 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
   };
 
   const handleRequestReturn = () => {
+    const nowIso = new Date().toISOString();
     const returnRequestedOrder = {
       ...localOrder,
       id: localOrder.id || localOrder.orderId,
       orderId: localOrder.orderId || localOrder.id,
       status: 'Return Requested',
+      returnRequestedAt: localOrder.returnRequestedAt || nowIso,
+      updatedAt: nowIso,
       statusTimeline: buildStatusTimeline('Return Requested'),
       paymentStatus: 'Return Requested'
     };
@@ -210,8 +239,8 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                 <h2 className="text-lg font-black font-heading text-[#FF1E27]">{order.id || order.orderId}</h2>
               </div>
               <div className="text-left sm:text-right">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-sub)]">Order placed</p>
-                <p className="text-xs font-bold text-[var(--text-main)]">{order.date || new Date(order.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-sub)]">Order placed (Date & Time)</p>
+                <p className="text-xs font-bold text-[var(--text-main)]">{formatDateTime(localOrder.createdAt || order.createdAt || order.date)}</p>
               </div>
             </div>
 
@@ -231,41 +260,77 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                 </div>
                 <p className="text-sm font-bold text-[var(--text-main)]">{orderStatus}</p>
               </div>
-            </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-[var(--text-main)]">
-                <Truck className="w-4 h-4 text-[#FF1E27]" />
-                <h3 className="text-xs font-black uppercase tracking-wider">Track order</h3>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[var(--text-sub)]">
-                  <span>Progress</span>
-                  <span>{Math.round(progressPercent)}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-[#FF1E27] to-amber-400 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
-                </div>
-              </div>
-
-              <div className="relative mt-6">
-                <div className="absolute left-4 top-5 h-[calc(100%-2rem)] w-0.5 bg-[var(--border-subtle)]" />
-                <div className="space-y-5">
-                  {statusSteps.map((step, index) => (
-                    <div key={`${step.label}-${index}`} className="relative flex items-start gap-4">
-                      <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border ${step.done ? 'border-[#FF1E27] bg-[#FF1E27] text-white' : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)]'}`}>
-                        {step.done ? <BadgeCheck className="w-4 h-4" /> : <span className="text-[10px] font-bold">{index + 1}</span>}
-                      </div>
-                      <div className="pt-1">
-                        <p className="text-xs font-black uppercase text-[var(--text-main)]">{step.label}</p>
-                        <p className="text-[10px] text-[var(--text-sub)]">{step.date || 'In progress'}</p>
-                      </div>
+              {orderStatus === 'Cancelled' && (
+                <div className="rounded-2xl bg-gradient-to-r from-rose-500/15 to-rose-950/30 border border-rose-500/40 p-4 sm:col-span-2 flex items-center justify-between gap-4 shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/40">
+                      <XCircle className="w-5 h-5" />
                     </div>
-                  ))}
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-rose-400 font-heading">ORDER CANCELLED ON</p>
+                      <p className="text-xs font-black text-white font-mono">{formatDateTime(localOrder.cancelledAt || localOrder.updatedAt || new Date().toISOString())}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase font-heading px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                    CANCELLED
+                  </span>
+                </div>
+              )}
+
+              {orderStatus === 'Return Requested' && (
+                <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 to-amber-950/30 border border-amber-500/40 p-4 sm:col-span-2 flex items-center justify-between gap-4 shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/40">
+                      <RotateCcw className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-400 font-heading">RETURN REQUESTED ON</p>
+                      <p className="text-xs font-black text-white font-mono">{formatDateTime(localOrder.returnRequestedAt || localOrder.updatedAt || new Date().toISOString())}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase font-heading px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    RETURN INITIATED
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {!['Cancelled', 'Delivered', 'Return Requested'].includes(orderStatus) && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-[var(--text-main)]">
+                  <Truck className="w-4 h-4 text-[#FF1E27]" />
+                  <h3 className="text-xs font-black uppercase tracking-wider">Track order</h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[var(--text-sub)]">
+                    <span>Progress</span>
+                    <span>{Math.round(progressPercent)}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#FF1E27] to-amber-400 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+                  </div>
+                </div>
+
+                <div className="relative mt-6">
+                  <div className="absolute left-4 top-5 h-[calc(100%-2rem)] w-0.5 bg-[var(--border-subtle)]" />
+                  <div className="space-y-5">
+                    {statusSteps.map((step, index) => (
+                      <div key={`${step.label}-${index}`} className="relative flex items-start gap-4">
+                        <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border ${step.done ? 'border-[#FF1E27] bg-[#FF1E27] text-white' : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)]'}`}>
+                          {step.done ? <BadgeCheck className="w-4 h-4" /> : <span className="text-[10px] font-bold">{index + 1}</span>}
+                        </div>
+                        <div className="pt-1">
+                          <p className="text-xs font-black uppercase text-[var(--text-main)]">{step.label}</p>
+                          <p className="text-[10px] text-[var(--text-sub)]">{step.date || 'In progress'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-[var(--text-main)]">

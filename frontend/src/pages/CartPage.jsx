@@ -35,6 +35,7 @@ export default function CartPage({
   onRemoveItem: propsRemoveItem,
   onUpdateVariant: propsUpdateVariant,
   onNavigateHome,
+  onNavigateSearch,
   onClearCart: propsClearCart,
   onProceedToCheckout,
   onSelectProduct,
@@ -134,10 +135,7 @@ export default function CartPage({
     showToast(`Moved ${item.name} back to Shopping Cart`);
   };
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
+  const showToast = () => {};
 
   // Apply Coupon Code handler
   const handleApplyCoupon = async (codeToApply = couponCode) => {
@@ -286,7 +284,7 @@ export default function CartPage({
               </p>
             </div>
             <button
-              onClick={onNavigateHome}
+              onClick={() => (onNavigateSearch || onNavigateHome)()}
               className="bg-[#C41E24] hover:bg-[#A8191E] active:scale-[0.98] px-8 py-3.5 rounded-xl text-xs font-extrabold uppercase tracking-wider text-white inline-flex items-center gap-2 cursor-pointer shadow-lg"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -318,9 +316,7 @@ export default function CartPage({
                       {selectedItemIds.length === rawCartItems.length ? 'Deselect all items' : 'Select all items'}
                     </button>
                   </div>
-                  <span className="text-xs font-bold text-[var(--text-sub)] uppercase tracking-wider hidden sm:block">
-                    Price
-                  </span>
+
                 </div>
 
                 {/* ITEM CARDS LIST */}
@@ -334,7 +330,7 @@ export default function CartPage({
                     return (
                       <div
                         key={itemIdKey}
-                        className={`p-4 sm:p-5 my-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/30 hover:border-[#FF1E27]/40 transition-all duration-300 shadow-sm space-y-3 ${!isChecked ? 'opacity-50' : ''}`}
+                        className={`p-4 sm:p-5 my-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/20 opacity-80 hover:opacity-100 hover:border-[#FF1E27]/40 transition-all duration-300 shadow-sm space-y-3 ${!isChecked ? 'opacity-40' : ''}`}
                       >
                         <div className="flex items-start gap-3 sm:gap-5">
                           
@@ -466,12 +462,7 @@ export default function CartPage({
                                 </span>
                                 <button
                                   onClick={() => onUpdateQuantity(itemIdKey, item.quantity + 1)}
-                                  disabled={isAtStockLimit}
-                                  className={`px-2.5 py-1 transition-colors ${
-                                    isAtStockLimit
-                                      ? 'text-gray-500 bg-gray-800/30 cursor-not-allowed'
-                                      : 'text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] cursor-pointer'
-                                  }`}
+                                  className="px-2.5 py-1 text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
                                   title="Increase Quantity"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
@@ -512,11 +503,7 @@ export default function CartPage({
                                 <span>Remove</span>
                               </button>
 
-                              {isAtStockLimit && (
-                                <span className="text-[10px] text-[#FF1E27] bg-red-950/60 px-2 py-0.5 rounded border border-[#FF1E27]/30 font-semibold flex items-center gap-1">
-                                  <AlertTriangle className="w-3 h-3" /> Stock Limit Reached
-                                </span>
-                              )}
+
                             </div>
 
                           </div>
@@ -708,7 +695,7 @@ export default function CartPage({
               <button
                 onClick={() => {
                   setCompletedOrder(null);
-                  if (onNavigateHome) onNavigateHome();
+                  if (onNavigateSearch) onNavigateSearch(); else if (onNavigateHome) onNavigateHome();
                 }}
                 className="w-full bg-[#C41E24] hover:bg-[#A8191E] active:scale-[0.98] py-3.5 rounded-xl text-xs font-extrabold uppercase tracking-wider text-white flex items-center justify-center gap-2 cursor-pointer shadow-none"
               >
@@ -720,12 +707,7 @@ export default function CartPage({
         )}
 
         {/* TOAST NOTIFICATION */}
-        {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 bg-[#12121a] border border-[#C41E24] text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-xs font-heading flex items-center gap-2 animate-bounce">
-            <span className="w-2 h-2 rounded-full bg-[#C41E24]" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
+        
 
       </div>
     </div>

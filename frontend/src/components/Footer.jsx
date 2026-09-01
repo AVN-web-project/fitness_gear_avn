@@ -4,7 +4,7 @@ import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
 import Button from './Button';
 
-export default function Footer({ onNavigateSupport, theme, isMobileView = false, activeView = 'home' }) {
+export default function Footer({ onNavigateSupport, onNavigateContact, theme, isMobileView = false, activeView = 'home' }) {
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
   const [isPaused, setIsPaused] = useState(false);
   const scrollRef = useRef(null);
@@ -77,17 +77,22 @@ export default function Footer({ onNavigateSupport, theme, isMobileView = false,
   // 3x Array for infinite scroll buffer in both left and right directions
   const marqueeBadges = [...trustBadges, ...trustBadges, ...trustBadges];
 
-  // Initialize scroll position in center third buffer
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth / 3;
-    }
-  }, [activeView]);
-
-  // Continuous auto-scroll & boundary loop check for both left and right directions
+  // Continuous auto-scroll with automatic initialization on load
   useEffect(() => {
     let animId;
     const container = scrollRef.current;
+
+    // Set initial scroll position once container has scrollWidth
+    if (container) {
+      const initScroll = () => {
+        if (container.scrollWidth > 0 && container.scrollLeft === 0) {
+          container.scrollLeft = container.scrollWidth / 3;
+        }
+      };
+      initScroll();
+      setTimeout(initScroll, 50);
+      setTimeout(initScroll, 200);
+    }
 
     const loop = () => {
       if (container) {
@@ -95,12 +100,13 @@ export default function Footer({ onNavigateSupport, theme, isMobileView = false,
           container.scrollLeft += 1;
         }
 
-        // Both sides infinite loop check
         const oneThird = container.scrollWidth / 3;
-        if (container.scrollLeft >= oneThird * 2) {
-          container.scrollLeft = oneThird;
-        } else if (container.scrollLeft <= 10) {
-          container.scrollLeft = oneThird;
+        if (oneThird > 0) {
+          if (container.scrollLeft >= oneThird * 2) {
+            container.scrollLeft = oneThird;
+          } else if (container.scrollLeft <= 5) {
+            container.scrollLeft = oneThird;
+          }
         }
       }
       animId = requestAnimationFrame(loop);
@@ -108,7 +114,7 @@ export default function Footer({ onNavigateSupport, theme, isMobileView = false,
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isPaused]);
+  }, [isPaused, activeView]);
 
   const handleCardClick = () => {
     setIsPaused((prev) => !prev);
@@ -118,7 +124,7 @@ export default function Footer({ onNavigateSupport, theme, isMobileView = false,
     <footer className={`relative bg-[var(--bg-card-solid)] pb-12 transition-colors duration-300 overflow-hidden ${activeView === 'home' ? 'pt-0 border-t-0' : 'pt-12 sm:pt-16 border-t border-[var(--border-subtle)]'}`}>
       
       {/* Top Guarantee Badges Strip (Auto Scroll on Desktop / Auto + Manual Infinite Scroll on Mobile) */}
-      {activeView === 'home' && (
+      {/* Guarantee Badges Strip */} (
         <div className="pb-6 mb-10 w-full overflow-hidden">
           <div
             ref={scrollRef}
@@ -159,7 +165,6 @@ export default function Footer({ onNavigateSupport, theme, isMobileView = false,
             ))}
           </div>
         </div>
-      )}
 
       <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20">
         {/* Main Footer Sitemap Grid */}
@@ -202,7 +207,8 @@ export default function Footer({ onNavigateSupport, theme, isMobileView = false,
                 <li><a href="#products" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Shop All</a></li>
                 <li><a href="#why-avn" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Why AVN</a></li>
                 <li><a href="#about" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">About Us</a></li>
-                <li><a href="#contact" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Contact</a></li>
+                <li><button type="button" onClick={() => onNavigateContact && onNavigateContact()} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">Contact Us</button></li>
+                <li><button type="button" onClick={() => onNavigateSupport && onNavigateSupport()} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">Support Hub</button></li>
               </ul>
             </div>
 
@@ -251,7 +257,6 @@ export default function Footer({ onNavigateSupport, theme, isMobileView = false,
         <div className="mt-14 pt-8 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between text-sm text-[var(--text-sub)] gap-4 font-normal">
           <p>© {new Date().getFullYear()} AVN Athletics. All rights reserved.</p>
           <div className="flex space-x-8">
-            <button type="button" onClick={() => onNavigateSupport && onNavigateSupport()} className="text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors cursor-pointer font-normal">Athlete Support Hub</button>
             <a href="#" className="hover:text-[var(--text-main)] transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-[var(--text-main)] transition-colors">Terms of Service</a>
             <a href="#" className="hover:text-[var(--text-main)] transition-colors">Shipping Policy</a>
