@@ -1,4 +1,53 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+
+export function getAuthHeaders() {
+  const token = localStorage.getItem('avn-token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+/**
+ * Centralized API Client with Cookie Credentials and 401 Interception
+ */
+export async function apiFetch(endpoint, options = {}) {
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('avn-token') : null;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers
+  };
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include'
+  });
+
+  // Global 401 session expiration interceptor
+  if (response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/register')) {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('avn:auth:unauthorized'));
+    }
+  }
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const error = new Error(data?.message || `Request failed with status ${response.status}`);
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+
+  return data;
+}
 
 /**
  * Fetch products with compound multi-attribute filtering, sorting, & pagination
@@ -47,7 +96,7 @@ export async function fetchProducts(category = '', search = '') {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
-    return data.data;
+    return data.data?.products || (Array.isArray(data.data) ? data.data : []);
   } catch (error) {
     console.warn('Backend API unavailable, using local product data fallback:', error.message);
     return null;
@@ -62,7 +111,7 @@ export async function fetchProductById(idOrSlug) {
     const response = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(idOrSlug)}`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
-    return data.data;
+    return data.data?.product || data.data;
   } catch (error) {
     console.warn(`Backend API failed to fetch product ${idOrSlug}:`, error.message);
     return null;
@@ -224,59 +273,95 @@ export async function fetchOrderById(orderId) {
  * User Auth & Profile Backend API Helpers
  */
 export async function loginUserApi(email, password) {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  return apiFetch('/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    const error = new Error(errorData.message || 'Login failed');
-    error.status = response.status;
-    throw error;
-  }
-  return await response.json();
+}
+
+export async function sendOtpApi(email, purpose = 'login') {
+  return apiFetch('/auth/otp/send', {
+    method: 'POST',
+    body: JSON.stringify({ email, purpose })
+  });
+}
+
+export async function verifyOtpApi(email, otp) {
+  return apiFetch('/auth/otp/verify', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp })
+  });
 }
 
 export async function registerUserApi(userData) {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+  return apiFetch('/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(userData)
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    const error = new Error(errorData.message || 'Registration failed');
-    error.status = response.status;
-    throw error;
-  }
-  return await response.json();
 }
 
+export async function setPasswordApi(password) {
+  return apiFetch('/auth/set-password', {
+    method: 'POST',
+    body: JSON.stringify({ password })
+  });
+}
+
+export async function logoutUserApi() {
+  try {
+    return await apiFetch('/auth/logout', { method: 'POST' });
+  } catch (error) {
+    console.warn('Logout API failed:', error.message);
+    return null;
+  }
+}
+
+export async function fetchUserProfileApi() {
+  try {
+    return await apiFetch('/auth/profile', { method: 'GET' });
+  } catch (error) {
+    console.warn('Fetch profile API failed:', error.message);
+    return null;
+  }
+}
 
 /**
  * Update User Profile API Helper
  */
 export async function updateUserProfileApi(profileData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/user/profile`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+    return await apiFetch('/auth/profile', {
+      method: 'PATCH',
       body: JSON.stringify(profileData)
     });
-    const data = await response.json();
-    if (!response.ok) {
-      const error = new Error(data.message || 'Failed to update profile');
-      error.status = response.status;
-      error.requiresEmailVerification = data.requiresEmailVerification;
-      throw error;
-    }
-    return data;
   } catch (error) {
     if (error.status) throw error;
     console.warn('Update profile API failed:', error.message);
     return null;
   }
+}
+
+/**
+ * User Addresses API Helpers
+ */
+export async function addAddressApi(addressData) {
+  return apiFetch('/auth/addresses', {
+    method: 'POST',
+    body: JSON.stringify(addressData)
+  });
+}
+
+export async function updateAddressApi(addressId, addressData) {
+  return apiFetch(`/auth/addresses/${encodeURIComponent(addressId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(addressData)
+  });
+}
+
+export async function deleteAddressApi(addressId) {
+  return apiFetch(`/auth/addresses/${encodeURIComponent(addressId)}`, {
+    method: 'DELETE'
+  });
 }
 
 

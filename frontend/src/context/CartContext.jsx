@@ -24,7 +24,7 @@ export function CartProvider({ children }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [toastMessage, setToastMessage] = useState(null);
+  // const [toastMessage, setToastMessage] = useState(null);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
 
   // Persist cartItems to localStorage whenever cart changes
@@ -50,9 +50,9 @@ export function CartProvider({ children }) {
   }, []);
 
   // Helper: Trigger Toast Notification
-  const showToast = () => {};
+  // const showToast = () => { };
 
-    // Add Line Item to Cart (Immutable update preventing React StrictMode double increments)
+  // Add Line Item to Cart (Immutable update preventing React StrictMode double increments)
   const addToCart = async (product) => {
     const qtyToAdd = Math.max(1, Number(product.quantity) || 1);
     const size = product.selectedSize || (product.sizes ? product.sizes[0] : 'Standard');
@@ -135,7 +135,7 @@ export function CartProvider({ children }) {
     setAppliedCoupon(null);
     try {
       localStorage.removeItem('avn-cart-items');
-    } catch (e) {}
+    } catch (e) { }
   };
 
   // Coupon Logic
@@ -191,8 +191,6 @@ export function CartProvider({ children }) {
         shippingFee,
         totalAmount,
         totalCartCount,
-        toastMessage,
-        showToast,
         isBackendConnected
       }}
     >

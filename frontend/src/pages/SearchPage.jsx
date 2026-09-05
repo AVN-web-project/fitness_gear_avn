@@ -18,7 +18,6 @@ import {
   Filter
 } from 'lucide-react';
 import ProductGraphic from '../components/ProductGraphic';
-import { fetchSearchProducts } from '../services/api';
 import { PRODUCTS as LOCAL_PRODUCTS, CATEGORIES as LOCAL_CATEGORIES } from '../data/products';
 import { useCart } from '../context/CartContext';
 
@@ -35,7 +34,7 @@ export default function SearchPage({
       .filter((item) => item.id === productId || item.productId === productId)
       .reduce((sum, item) => sum + item.quantity, 0);
 
-    const parseUrlParams = () => {
+  const parseUrlParams = () => {
     if (typeof window === 'undefined') return {};
     const params = new URLSearchParams(window.location.search);
     return {
@@ -66,7 +65,6 @@ export default function SearchPage({
   const [viewLayout, setViewLayout] = useState(initialUrlState.viewMode);
 
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // Sync state to URL search parameters without page reload
@@ -122,38 +120,7 @@ export default function SearchPage({
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // --- 2. Query Payload Fetcher (API with Local Fallback) ---
-  useEffect(() => {
-    let isMounted = true;
-    async function loadSearchResults() {
-      setLoading(true);
-      const res = await fetchSearchProducts({
-        q: searchQuery,
-        category: selectedCategory,
-        ageGroup: selectedAgeGroup,
-        gender: selectedGender,
-        minPrice,
-        maxPrice,
-        discount: discountOnly,
-        sort: sortMode,
-        page: currentPage,
-        limit: 8
-      });
-
-      if (isMounted) {
-        if (res && res.success) {
-          setApiData(res);
-        } else {
-          setApiData(null); // Fallback to client calculations
-        }
-        setLoading(false);
-      }
-    }
-
-    loadSearchResults();
-    return () => { isMounted = false; };
-  }, [searchQuery, selectedCategory, selectedAgeGroup, selectedGender, minPrice, maxPrice, discountOnly, sortMode, currentPage]);
-
+  // --- 2. Client Local Catalog Pipeline Engine ---
   // --- 3. Client Fallback Pipeline Engine ---
   const fallbackResult = useMemo(() => {
     let list = LOCAL_PRODUCTS.filter((p) => p.status !== 'Discontinued');
@@ -232,11 +199,13 @@ export default function SearchPage({
     };
   }, [searchQuery, selectedCategory, selectedAgeGroup, selectedGender, minPrice, maxPrice, discountOnly, sortMode, currentPage]);
 
-  const activeResult = apiData || fallbackResult;
-  const productsList = activeResult.data || [];
-  const totalProductsCount = activeResult.total || 0;
-  const totalPagesCount = activeResult.totalPages || 1;
-  const facetCounts = activeResult.facets || {};
+  const activeResult = fallbackResult;
+  const productsList = Array.isArray(activeResult?.data)
+    ? activeResult.data
+    : (activeResult?.data?.products || activeResult?.products || []);
+  const totalProductsCount = activeResult?.total ?? productsList.length;
+  const totalPagesCount = activeResult?.totalPages ?? 1;
+  const facetCounts = activeResult?.facets || {};
 
   // Handlers for quick actions
   const handleResetFilters = () => {
@@ -260,11 +229,11 @@ export default function SearchPage({
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300">
-      
+
       {/* Search Header Banner */}
       <div className="relative border-b border-[var(--border-subtle)] bg-[var(--bg-main)] py-8 px-6 sm:px-10 lg:px-16 overflow-hidden">
         <div className="max-w-[1536px] mx-auto relative z-10 space-y-6">
-          
+
 
 
           {/* Search Input & Subtitle Centered Container */}
@@ -306,10 +275,10 @@ export default function SearchPage({
 
       {/* Main Body Section */}
       <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 py-8">
-        
+
         {/* Top Control Bar: Active Filter Chips, Sort Dropdown & Layout Mode */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 mb-6 border-b border-[var(--border-subtle)]">
-          
+
           {/* Active Filter Chips */}
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -391,22 +360,20 @@ export default function SearchPage({
             <div className="flex items-center bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl p-1">
               <button
                 onClick={() => setViewLayout('grid')}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  viewLayout === 'grid'
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewLayout === 'grid'
                     ? 'bg-[#FF1E27] text-white shadow-sm'
                     : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
-                }`}
+                  }`}
                 title="Grid View"
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewLayout('list')}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  viewLayout === 'list'
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewLayout === 'list'
                     ? 'bg-[#FF1E27] text-white shadow-sm'
                     : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
-                }`}
+                  }`}
                 title="List View"
               >
                 <List className="w-4 h-4" />
@@ -418,11 +385,11 @@ export default function SearchPage({
 
         {/* Content Layout Grid (Filter Sidebar + Catalog Results) */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
+
           {/* Desktop Filter Sidebar */}
           <aside className="hidden lg:block space-y-6">
             <div className="glass-panel p-6 rounded-2xl border border-[var(--border-subtle)] space-y-6 sticky top-28 shadow-xl">
-              
+
               <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
                 <h3 className="text-sm font-sans font-black italic tracking-wider uppercase text-[var(--text-main)] flex items-center gap-2">
                   <Filter className="w-4 h-4 text-[#FF1E27]" />
@@ -447,11 +414,10 @@ export default function SearchPage({
                       <button
                         key={cat}
                         onClick={() => handleCategorySelect(cat)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold font-heading transition-all cursor-pointer ${
-                          isSelected
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold font-heading transition-all cursor-pointer ${isSelected
                             ? 'bg-[#FF1E27] text-white shadow-md'
                             : 'text-[var(--text-sub)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-main)]'
-                        }`}
+                          }`}
                       >
                         <span className="truncate">{cat}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${isSelected ? 'bg-white/20 text-white' : 'bg-[var(--border-subtle)] text-[var(--text-sub)]'}`}>
@@ -471,11 +437,10 @@ export default function SearchPage({
                     <button
                       key={age}
                       onClick={() => { setSelectedAgeGroup(age); setCurrentPage(1); }}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
-                        selectedAgeGroup === age
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${selectedAgeGroup === age
                           ? 'bg-[#FF1E27] text-white shadow-sm'
                           : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
-                      }`}
+                        }`}
                     >
                       {age}
                     </button>
@@ -491,11 +456,10 @@ export default function SearchPage({
                     <button
                       key={g}
                       onClick={() => { setSelectedGender(g); setCurrentPage(1); }}
-                      className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer text-center ${
-                        selectedGender === g
+                      className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer text-center ${selectedGender === g
                           ? 'bg-[#FF1E27] text-white shadow-sm'
                           : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
-                      }`}
+                        }`}
                     >
                       {g}
                     </button>
@@ -546,14 +510,14 @@ export default function SearchPage({
 
           {/* Catalog Grid Section */}
           <main className="lg:col-span-3 space-y-6">
-            
+
             {loading ? (
               <div className="py-24 text-center space-y-4">
                 <div className="w-12 h-12 border-4 border-[#FF1E27] border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-xs font-bold font-heading text-[var(--text-sub)] tracking-widest uppercase">Querying Product Pipeline...</p>
               </div>
             ) : productsList.length === 0 ? (
-              
+
               /* Empty Search Results State */
               <div className="glass-panel p-12 rounded-3xl border border-[var(--border-subtle)] text-center space-y-6 my-8">
                 <div className="w-20 h-20 rounded-full bg-[#FF1E27]/10 border border-[#FF1E27]/30 flex items-center justify-center mx-auto">
@@ -617,7 +581,7 @@ export default function SearchPage({
                               {product.name}
                             </h3>
                             <p className="text-xs text-[var(--text-sub)] line-clamp-1">{product.tagline}</p>
-                            
+
                             {/* Rating */}
                             <div className="flex items-center gap-1.5 text-xs font-bold text-[#FF1E27] pt-1">
                               <Star className="w-3.5 h-3.5 fill-[#FF1E27] text-[#FF1E27]" />
@@ -646,11 +610,10 @@ export default function SearchPage({
                                 <button
                                   disabled={isOutOfStock}
                                   onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
-                                  className={`px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md transition-all ${
-                                    isOutOfStock
+                                  className={`px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md transition-all ${isOutOfStock
                                       ? 'opacity-50 cursor-not-allowed bg-slate-700 text-white'
                                       : 'btn-glow-red'
-                                  }`}
+                                    }`}
                                 >
                                   {isOutOfStock ? (
                                     <span>OUT OF STOCK</span>
@@ -717,7 +680,7 @@ export default function SearchPage({
                           <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#FF1E27] font-heading">
                             {product.category}
                           </div>
-                          
+
                           <h3
                             onClick={() => onSelectProduct(product)}
                             className="text-xs font-black font-heading uppercase text-[var(--text-main)] line-clamp-1 hover:text-[#FF1E27] transition-colors cursor-pointer"
@@ -752,11 +715,10 @@ export default function SearchPage({
                             <button
                               disabled={isOutOfStock}
                               onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
-                              className={`w-full py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${
-                                isOutOfStock
+                              className={`w-full py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${isOutOfStock
                                   ? 'opacity-50 cursor-not-allowed bg-slate-700'
                                   : 'btn-glow-red'
-                              }`}
+                                }`}
                             >
                               {isOutOfStock ? (
                                 <span>OUT OF STOCK</span>
@@ -801,11 +763,10 @@ export default function SearchPage({
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`w-9 h-9 rounded-xl text-xs font-extrabold font-heading transition-all cursor-pointer ${
-                          currentPage === pageNum
+                        className={`w-9 h-9 rounded-xl text-xs font-extrabold font-heading transition-all cursor-pointer ${currentPage === pageNum
                             ? 'bg-[#FF1E27] text-white shadow-sm'
                             : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </button>
@@ -836,7 +797,7 @@ export default function SearchPage({
             className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
             onClick={() => setMobileFilterOpen(false)}
           />
-          
+
           <div className="relative w-80 max-w-[85vw] bg-[var(--bg-main)] border-r border-[var(--border-subtle)] h-full p-6 overflow-y-auto flex flex-col justify-between shadow-2xl z-10 animate-in slide-in-from-left duration-300 text-[var(--text-main)]">
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
@@ -862,11 +823,10 @@ export default function SearchPage({
                       handleCategorySelect(cat);
                       setMobileFilterOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${
-                      selectedCategory.toUpperCase() === cat.toUpperCase()
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${selectedCategory.toUpperCase() === cat.toUpperCase()
                         ? 'bg-[#FF1E27] text-white'
                         : 'text-[var(--text-sub)] hover:bg-[var(--border-subtle)]'
-                    }`}
+                      }`}
                   >
                     {cat}
                   </button>
@@ -881,9 +841,8 @@ export default function SearchPage({
                     <button
                       key={age}
                       onClick={() => { setSelectedAgeGroup(age); setCurrentPage(1); }}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold text-center ${
-                        selectedAgeGroup === age ? 'bg-[#FF1E27] text-white' : 'bg-[var(--bg-main)] text-[var(--text-sub)]'
-                      }`}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold text-center ${selectedAgeGroup === age ? 'bg-[#FF1E27] text-white' : 'bg-[var(--bg-main)] text-[var(--text-sub)]'
+                        }`}
                     >
                       {age}
                     </button>
@@ -899,9 +858,8 @@ export default function SearchPage({
                     <button
                       key={g}
                       onClick={() => { setSelectedGender(g); setCurrentPage(1); }}
-                      className={`py-2 text-[11px] font-bold text-center rounded-xl ${
-                        selectedGender === g ? 'bg-[#FF1E27] text-white' : 'bg-[var(--bg-main)] text-[var(--text-sub)]'
-                      }`}
+                      className={`py-2 text-[11px] font-bold text-center rounded-xl ${selectedGender === g ? 'bg-[#FF1E27] text-white' : 'bg-[var(--bg-main)] text-[var(--text-sub)]'
+                        }`}
                     >
                       {g}
                     </button>

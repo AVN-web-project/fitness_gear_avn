@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import Footer from './components/Footer';
@@ -16,25 +16,20 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import OrderDetailsPage from './pages/OrderDetailsPage';
 import SupportPage from './pages/SupportPage';
-import ContactPage from './pages/ContactPage';
-import SupportWidget from './components/SupportWidget';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PRODUCTS as LOCAL_PRODUCTS } from './data/products';
-import { fetchProducts, submitOrder } from './services/api';
 import { CartProvider, useCart } from './context/CartContext';
 
 function AppContent() {
-  const { user, isAuthenticated, logout, setRedirectPath, redirectPath } = useAuth();
+  const { user, isAuthenticated, logout, setRedirectPath, redirectPath, addAddress, updateAddress, deleteAddress } = useAuth();
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('avn-theme') || 'dark';
   });
 
   const cart = useCart();
 
-
-
-  // Saved Addresses State & Fallbacks
-  const [savedAddresses, setSavedAddresses] = useState(() => {
+  // Saved Addresses (Single Source of Truth: MongoDB Authenticated vs Guest Fallback)
+  const [localAddresses, setLocalAddresses] = useState(() => {
     try {
       const saved = localStorage.getItem('avn-saved-addresses');
       return saved ? JSON.parse(saved) : [
@@ -44,7 +39,7 @@ function AppContent() {
           phone: '+91 98765 43210',
           houseNo: 'House No. 42-B',
           flatNo: 'Flat 402, 4th Floor',
-          street: 'Pinnacle Heights, Cyber City',
+          area: 'Sector 29, Golf Course Road',
           city: 'Gurugram',
           state: 'Haryana',
           pincode: '122002',
@@ -53,83 +48,110 @@ function AppContent() {
           isDefault: true
         }
       ];
-    } catch (e) {
+    } catch {
       return [];
     }
   });
 
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+
+  const userAddresses = user?.addresses;
+  // Single Source of Truth: derive directly from MongoDB authenticated user or local storage
+  const savedAddresses = useMemo(() => {
+    if (isAuthenticated && userAddresses && userAddresses.length > 0) {
+      return userAddresses.map((addr) => ({
+        id: addr._id || addr.id,
+        fullName: addr.fullName,
+        phone: addr.phone,
+        street: addr.street,
+        houseNo: addr.street,
+        area: addr.street,
+        city: addr.city,
+        state: addr.state,
+        pincode: addr.pincode,
+        country: addr.country || 'India',
+        type: addr.title ? addr.title.toUpperCase() : 'HOME',
+        isDefault: Boolean(addr.isDefault)
+      }));
+    }
+    return localAddresses;
+  }, [isAuthenticated, userAddresses, localAddresses]);
+
+  const userAddress = useMemo(() => {
+    if (savedAddresses.length > 0) {
+      if (selectedAddressId) {
+        const found = savedAddresses.find(a => a.id === selectedAddressId);
+        if (found) return found;
+      }
+      return savedAddresses.find(a => a.isDefault) || savedAddresses[0];
+    }
+    return null;
+  }, [savedAddresses, selectedAddressId]);
+
   // Address Handlers
   const handleSetDefaultAddress = (addressId) => {
-    setSavedAddresses((prev) => {
-      const updated = prev.map(a => ({ ...a, isDefault: a.id === addressId }));
-      const defaultAddress = updated.find(a => a.id === addressId) || updated[0] || null;
-      if (defaultAddress) {
-        setUserAddress(defaultAddress);
-        localStorage.setItem('avn-saved-address', JSON.stringify(defaultAddress));
-      }
-      localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
-      return updated;
-    });
+    setSelectedAddressId(addressId);
+    if (isAuthenticated) {
+      updateAddress(addressId, { isDefault: true }).catch((err) => console.warn('Sync default address failed:', err));
+    } else {
+      setLocalAddresses((prev) => {
+        const updated = prev.map(a => ({ ...a, isDefault: a.id === addressId }));
+        localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+        return updated;
+      });
+    }
   };
 
   const handleDeleteAddress = (addressId) => {
-    setSavedAddresses((prev) => {
-      const updated = prev.filter(a => a.id !== addressId);
-      if (updated.length > 0) {
-        const nextDefault = updated.find(a => a.isDefault) || updated[0];
-        if (nextDefault) {
-          setUserAddress(nextDefault);
-          localStorage.setItem('avn-saved-address', JSON.stringify(nextDefault));
-        } else {
-          setUserAddress(null);
-          localStorage.removeItem('avn-saved-address');
-        }
-      } else {
-        setUserAddress(null);
-        localStorage.removeItem('avn-saved-address');
-      }
-      localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
-      return updated;
-    });
+    if (isAuthenticated) {
+      deleteAddress(addressId).catch((err) => console.warn('Sync delete address failed:', err));
+    } else {
+      setLocalAddresses((prev) => {
+        const updated = prev.filter(a => a.id !== addressId);
+        localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+        return updated;
+      });
+    }
   };
 
   const handleSaveAddress = (addressData) => {
-    const targetId = addressData.id || ('addr-' + Date.now());
-    const isEdit = Boolean(addressData.id);
-
-    setSavedAddresses((prev) => {
-      const isDefault = isEdit
-        ? (addressData.isDefault ?? false)
-        : (prev.length === 0 || addressData.isDefault);
-
-      const savedAddrObj = {
-        ...addressData,
-        id: targetId,
-        isDefault
+    if (isAuthenticated) {
+      const payload = {
+        title: addressData.type || addressData.title || 'Home',
+        fullName: addressData.fullName || user?.name || 'Customer',
+        phone: addressData.phone || user?.phone || '9876543210',
+        street: addressData.street || `${addressData.flatNo || ''} ${addressData.houseNo || ''} ${addressData.area || ''}`.trim() || 'Default Street',
+        city: addressData.city || 'City',
+        state: addressData.state || 'State',
+        pincode: addressData.pincode || '110001',
+        country: addressData.country || 'India',
+        isDefault: Boolean(addressData.isDefault)
       };
-
-      let updated;
-      if (isEdit) {
-        updated = prev.map((a) => (a.id === targetId ? savedAddrObj : a));
+      if (addressData.id && !addressData.id.toString().startsWith('addr-demo')) {
+        updateAddress(addressData.id, payload).catch((err) => console.warn('Sync update address failed:', err));
       } else {
-        updated = [...prev, savedAddrObj];
+        addAddress(payload).catch((err) => console.warn('Sync add address failed:', err));
       }
-
-      if (isDefault || !userAddress || userAddress.id === targetId) {
-        setUserAddress(savedAddrObj);
-        try {
-          localStorage.setItem('avn-saved-address', JSON.stringify(savedAddrObj));
-        } catch (e) {}
-      }
-
-      try {
+    } else {
+      setLocalAddresses((prev) => {
+        let updated;
+        if (addressData.id) {
+          updated = prev.map(a => a.id === addressData.id ? addressData : a);
+        } else {
+          const newObj = { ...addressData, id: 'addr-' + Date.now(), isDefault: prev.length === 0 };
+          updated = [...prev, newObj];
+        }
         localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
-      } catch (e) {}
-      return updated;
-    });
+        return updated;
+      });
+    }
 
-    setEditingAddress(null);
-    const nextView = addressReturnView === 'checkout' ? 'checkout' : (addressReturnView || 'addresses');
+    if (addressData.id) {
+      setSelectedAddressId(addressData.id);
+    }
+
+    const nextView = checkoutData ? 'checkout' : 'addresses';
+    setAddressReturnView(nextView);
     setActiveView(nextView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -208,44 +230,14 @@ function AppContent() {
     return 'home';
   });
   const [currentPdpProduct, setCurrentPdpProduct] = useState(null);
-  const [userAddress, setUserAddress] = useState(() => {
-    try {
-      const saved = localStorage.getItem('avn-saved-address');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
-  });
   const [checkoutData, setCheckoutData] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [addressReturnView, setAddressReturnView] = useState('profile');
-  const [editingAddress, setEditingAddress] = useState(null);
-
-  useEffect(() => {
-    if (savedAddresses.length > 0 && !userAddress) {
-      const defaultAddress = savedAddresses.find(a => a.isDefault) || savedAddresses[0];
-      setUserAddress(defaultAddress);
-      try {
-        localStorage.setItem('avn-saved-address', JSON.stringify(defaultAddress));
-      } catch (e) {}
-    }
-  }, [savedAddresses, userAddress]);
 
 
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-
-  useEffect(() => {
-    async function loadApiProducts() {
-      const apiProducts = await fetchProducts();
-      if (apiProducts && apiProducts.length > 0) {
-        setProducts(apiProducts);
-        setIsBackendConnected(true);
-      }
-    }
-    loadApiProducts();
-  }, []);
 
   const handleSelectProductForPdp = (product) => {
     setCurrentPdpProduct(product);
@@ -321,10 +313,13 @@ function AppContent() {
     ? 'min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col selection:bg-[#FF1E27] selection:text-white transition-colors duration-300 pb-20'
     : 'min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col selection:bg-[#FF1E27] selection:text-white transition-colors duration-300 pb-16 md:pb-0';
 
-    return (
+  const toastContainerClasses = isMobileView
+    ? 'fixed bottom-20 right-4 left-4 z-50 bg-[var(--bg-card-solid)] border border-[#FF1E27]/50 text-white px-5 py-3 rounded-xl shadow-lg font-bold text-xs font-heading flex items-center justify-between gap-2'
+    : 'fixed bottom-6 right-6 z-50 bg-[var(--bg-card-solid)] border border-[#FF1E27]/50 text-white px-5 py-3 rounded-xl shadow-lg font-bold text-xs font-heading flex items-center justify-between gap-2';
+
+  return (
     <div className={mainContainerClasses}>
       <Navbar
-        onNavigateContact={() => { setActiveView('contact'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         cartCount={cart.totalCartCount}
         onOpenCart={handleNavigateCart}
         onNavigateCart={handleNavigateCart}
@@ -407,13 +402,13 @@ function AppContent() {
             onSetDefaultAddress={handleSetDefaultAddress}
             onDeleteAddress={handleDeleteAddress}
             onEditAddress={(addr) => {
-              setEditingAddress(addr);
+              setUserAddress(addr);
               setAddressReturnView('profile');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onAddNewAddress={() => {
-              setEditingAddress(null);
+              setUserAddress(null);
               setAddressReturnView('profile');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -437,13 +432,13 @@ function AppContent() {
             savedAddresses={savedAddresses}
             onBack={() => setActiveView('profile')}
             onAddNewAddress={() => {
-              setEditingAddress(null);
+              setUserAddress(null);
               setAddressReturnView('addresses');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onEditAddress={(addr) => {
-              setEditingAddress(addr);
+              setUserAddress(addr);
               setAddressReturnView('addresses');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -507,23 +502,7 @@ function AppContent() {
             }}
             theme={theme}
           />
-                ) : activeView === 'contact' ? (
-          <ContactPage
-            onBack={() => {
-              setActiveView('home');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onNavigateContact={() => {
-          setActiveView('contact');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onNavigateSupport={() => {
-              setActiveView('support');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            theme={theme}
-          />
-        ) : activeView === 'support' ? (
+                ) : activeView === 'support' ? (
           <SupportPage
             currentUser={user}
             initialOrderId={selectedOrder?.orderId || selectedOrder?.id || ''}
@@ -539,8 +518,7 @@ function AppContent() {
           />
         ) : activeView === 'add-address' ? (
           <AddAddressPage
-            key={editingAddress?.id || "new-address"}
-            userAddress={editingAddress}
+            userAddress={userAddress}
             onSaveAddress={handleSaveAddress}
             onCancel={() => {
               setActiveView(addressReturnView || (checkoutData ? 'checkout' : 'profile'));
@@ -548,17 +526,16 @@ function AppContent() {
             }}
             theme={theme}
             isMobileView={isMobileView}
-            isCheckoutMode={addressReturnView === 'checkout'}
+            isCheckoutMode={!!checkoutData}
           />
         ) : activeView === 'cart' ? (
           <CartPage
             cartItems={cart.cartItems}
             onSelectProduct={handleSelectProductForPdp}
             onUpdateQuantity={cart.updateQuantity}
-            onRemoveItem={cart.removeFromCart}
+            onRemoveItem={cart.removeItem}
             onUpdateVariant={cart.updateVariant}
-            onNavigateHome={handleNavigateSearch}
-            onNavigateSearch={handleNavigateSearch}
+            onNavigateHome={handleNavigateHome}
             onProceedToCheckout={handleProceedToCheckout}
             onClearCart={cart.clearCart}
             theme={theme}
@@ -603,10 +580,6 @@ function AppContent() {
         theme={theme}
         isMobileView={isMobileView}
         activeView={activeView}
-        onNavigateContact={() => {
-          setActiveView('contact');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
         onNavigateSupport={() => {
           setActiveView('support');
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -645,6 +618,20 @@ function AppContent() {
         onOpenSearchPage={handleNavigateSearch}
         isMobileView={isMobileView}
       />
+
+      {cart.toastMessage && (
+        <div className={toastContainerClasses}>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#FF1E27]" />
+            <span>{cart.toastMessage}</span>
+          </div>
+          {(isBackendConnected || cart.isBackendConnected) && (
+            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-1.5 py-0.5 rounded">
+              API SYNC
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -709,9 +696,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
-
-
-
-
-

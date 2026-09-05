@@ -67,7 +67,7 @@ export default function CartPage({
   // Order processing modal state
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [completedOrder, setCompletedOrder] = useState(null);
-  const [toastMessage, setToastMessage] = useState(null);
+  // const [toastMessage, setToastMessage] = useState(null);
 
   // Available Promo Codes List
   const availablePromos = [
@@ -123,7 +123,7 @@ export default function CartPage({
     const itemId = item.id || item.itemId || item.productId;
     onRemoveItem(itemId);
     setSavedForLaterItems((prev) => [...prev, item]);
-    showToast(`Moved ${item.name} to Saved for Later`);
+    // showToast(`Moved ${item.name} to Saved for Later`);
   };
 
   // Move item back to Active Cart
@@ -132,10 +132,10 @@ export default function CartPage({
     setSavedForLaterItems((prev) => prev.filter((i) => (i.id || i.itemId || i.productId) !== itemId));
     if (context.addToCart) context.addToCart(item);
     setSelectedItemIds((prev) => [...prev, itemId]);
-    showToast(`Moved ${item.name} back to Shopping Cart`);
+    // showToast(`Moved ${item.name} back to Shopping Cart`);
   };
 
-  const showToast = () => {};
+  // const showToast = () => { };
 
   // Apply Coupon Code handler
   const handleApplyCoupon = async (codeToApply = couponCode) => {
@@ -293,13 +293,13 @@ export default function CartPage({
           </div>
         ) : (
           <div className={`grid gap-6 items-start ${isMobileView ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-12"}`}>
-            
+
             {/* LEFT MAIN COLUMN: Cart Items & Saved for Later (Cols 1-8) */}
             <div className={`${isMobileView ? "col-span-1" : "lg:col-span-8"} space-y-6`}>
-              
+
               {/* CART ITEMS CONTAINER CARD */}
               <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] space-y-5">
-                
+
                 {/* Header Bar: Title, Select All link & Price Column Header */}
                 <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
                   <div>
@@ -333,7 +333,7 @@ export default function CartPage({
                         className={`p-4 sm:p-5 my-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/20 opacity-80 hover:opacity-100 hover:border-[#FF1E27]/40 transition-all duration-300 shadow-sm space-y-3 ${!isChecked ? 'opacity-40' : ''}`}
                       >
                         <div className="flex items-start gap-3 sm:gap-5">
-                          
+
                           {/* Item Selection Checkbox */}
                           <div className="pt-3">
                             <input
@@ -441,56 +441,56 @@ export default function CartPage({
 
                             {/* Bottom Action Bar: Pill Quantity Selector & Links */}
                             <div className="flex items-center justify-between gap-3 pt-3 flex-wrap text-xs">
-                              
+
                               <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-                              
-                              {/* Compact Pill Quantity Selector */}
-                              <div className="flex items-center border border-[var(--border-subtle)] rounded-lg bg-[var(--bg-main)] overflow-hidden">
-                                <button
-                                  onClick={() => onUpdateQuantity(itemIdKey, item.quantity - 1)}
-                                  className="px-2.5 py-1 text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
-                                  title={item.quantity === 1 ? 'Remove Item' : 'Decrease Quantity'}
-                                >
-                                  {item.quantity === 1 ? (
-                                    <Trash2 className="w-3.5 h-3.5 text-[#C41E24]" />
-                                  ) : (
-                                    <Minus className="w-3.5 h-3.5" />
-                                  )}
-                                </button>
-                                <span className="px-3 text-xs font-extrabold font-heading text-[var(--text-main)] min-w-[28px] text-center">
-                                  {item.quantity}
-                                </span>
-                                <button
-                                  onClick={() => onUpdateQuantity(itemIdKey, item.quantity + 1)}
-                                  className="px-2.5 py-1 text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
-                                  title="Increase Quantity"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
 
-                              <span className="text-[var(--text-sub)] font-mono">|</span>
+                                {/* Compact Pill Quantity Selector */}
+                                <div className="flex items-center border border-[var(--border-subtle)] rounded-lg bg-[var(--bg-main)] overflow-hidden">
+                                  <button
+                                    onClick={() => onUpdateQuantity(itemIdKey, item.quantity - 1)}
+                                    className="px-2.5 py-1 text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
+                                    title={item.quantity === 1 ? 'Remove Item' : 'Decrease Quantity'}
+                                  >
+                                    {item.quantity === 1 ? (
+                                      <Trash2 className="w-3.5 h-3.5 text-[#C41E24]" />
+                                    ) : (
+                                      <Minus className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                  <span className="px-3 text-xs font-extrabold font-heading text-[var(--text-main)] min-w-[28px] text-center">
+                                    {item.quantity}
+                                  </span>
+                                  <button
+                                    onClick={() => onUpdateQuantity(itemIdKey, item.quantity + 1)}
+                                    className="px-2.5 py-1 text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] transition-colors cursor-pointer"
+                                    title="Increase Quantity"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
 
-                              {/* Action Links: Delete, Save for later, Share */}
-                              <button
-                                onClick={() => handleSaveForLater(item)}
-                                className="text-[var(--text-sub)] hover:text-[#FF1E27] hover:underline font-medium cursor-pointer"
-                              >
-                                Save for later
-                              </button>
-                              <span className="text-[var(--text-sub)] font-mono">|</span>
-                              <button
-                                onClick={() => {
-                                  if (navigator.share) {
-                                    navigator.share({ title: item.name, url: window.location.href });
-                                  } else {
-                                    showToast('Copied product link to clipboard!');
-                                  }
-                                }}
-                                className="text-[var(--text-sub)] hover:text-[var(--text-main)] hover:underline font-medium cursor-pointer flex items-center gap-1"
-                              >
-                                <Share2 className="w-3 h-3" /> Share
-                              </button>
+                                <span className="text-[var(--text-sub)] font-mono">|</span>
+
+                                {/* Action Links: Delete, Save for later, Share */}
+                                <button
+                                  onClick={() => handleSaveForLater(item)}
+                                  className="text-[var(--text-sub)] hover:text-[#FF1E27] hover:underline font-medium cursor-pointer"
+                                >
+                                  Save for later
+                                </button>
+                                <span className="text-[var(--text-sub)] font-mono">|</span>
+                                <button
+                                  onClick={() => {
+                                    if (navigator.share) {
+                                      navigator.share({ title: item.name, url: window.location.href });
+                                    } else {
+                                      // showToast('Copied product link to clipboard!');
+                                    }
+                                  }}
+                                  className="text-[var(--text-sub)] hover:text-[var(--text-main)] hover:underline font-medium cursor-pointer flex items-center gap-1"
+                                >
+                                  <Share2 className="w-3 h-3" /> Share
+                                </button>
                               </div>
 
                               {/* Remove Button leveled horizontally with Save for later */}
@@ -574,10 +574,10 @@ export default function CartPage({
 
             {/* RIGHT STICKY ORDER SUMMARY SIDEBAR (Cols 9-12) */}
             <div className={`${isMobileView ? "col-span-1 static" : "lg:col-span-4 sticky top-24"} space-y-5`}>
-              
+
               {/* STICKY SUMMARY CARD (Amazon style primary Checkout box) */}
               <div className="glass-panel p-6 rounded-2xl border border-[var(--border-subtle)] space-y-4 shadow-xl">
-                
+
                 {/* Free Shipping Qualification Notice & Progress Bar */}
                 <div className="space-y-1.5 pb-3 border-b border-[var(--border-subtle)]">
                   <p className="text-xs text-[var(--text-sub)]">
@@ -603,7 +603,7 @@ export default function CartPage({
                     Subtotal ({activeSelectedItems.reduce((a, b) => a + b.quantity, 0)} items):{' '}
                     <span className="text-[#FF1E27] font-mono">₹{finalTotal}</span>
                   </div>
-                  
+
                 </div>
 
                 {/* Gift Option Checkbox */}
@@ -658,7 +658,7 @@ export default function CartPage({
 
               </div>
 
-              
+
             </div>
 
           </div>
@@ -707,12 +707,9 @@ export default function CartPage({
         )}
 
         {/* TOAST NOTIFICATION */}
-        
+
 
       </div>
     </div>
   );
 }
-
-
-

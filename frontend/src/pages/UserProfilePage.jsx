@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, MapPin, PackageCheck, ShieldCheck, ArrowLeft, ChevronRight, Award, LogOut, Plus, Trash2, Edit3, CheckCircle, Mail, Phone, Lock, KeyRound, AlertCircle, X, ShieldAlert } from 'lucide-react';
+import { User, MapPin, PackageCheck, ShieldCheck, ArrowLeft, ChevronRight, Award, LogOut, Plus, Trash2, Edit3, CheckCircle, Mail, Phone, Lock, KeyRound, AlertCircle, X, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,7 +17,7 @@ export default function UserProfilePage({
   onSignOut,
   theme = 'dark'
 }) {
-  const { user: authUser, updateProfile } = useAuth();
+  const { user: authUser, updateProfile, setPassword, sendEmailOtp } = useAuth();
 
   const user = authUser || currentUser || {
     name: 'Not Logged In',
@@ -78,9 +78,66 @@ export default function UserProfilePage({
 
   const isEmailChanged = (formData.email || '').toLowerCase().trim() !== (user.email || '').toLowerCase().trim();
 
-  const handleSendCode = () => {
-    setSentCode('849201');
-    setSuccessMessage(`✓ Verification code sent to ${user.email}! (Simulated Code: 849201)`);
+  const handleSendCode = async () => {
+    try {
+      if (sendEmailOtp && user?.email) {
+        await sendEmailOtp(user.email, 'login');
+      }
+      setSentCode(true);
+      setSuccessMessage(`✓ Verification code sent to ${user.email}! Please check your inbox.`);
+    } catch (err) {
+      setErrorMessage(err.message || 'Failed to send verification code. Please try again.');
+    }
+  };
+
+  // Set / Change Password Modal State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  const openPasswordModal = () => {
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+    setPasswordError('');
+    setPasswordSuccess('');
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleSavePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await setPassword(newPassword);
+      setPasswordSuccess('✓ Password saved successfully!');
+      setTimeout(() => {
+        setIsPasswordModalOpen(false);
+        setPasswordSuccess('');
+      }, 1200);
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to save password. Please try again.');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const handleSaveProfile = async (e) => {
@@ -103,7 +160,7 @@ export default function UserProfilePage({
         },
         {
           currentPassword,
-          verificationCode: verificationCode || (sentCode === verificationCode ? '849201' : '')
+          verificationCode
         }
       );
 
@@ -195,7 +252,7 @@ export default function UserProfilePage({
           {/* Order History & Live Tracking Tile */}
           <div
             onClick={onNavigateOrders}
-            className="glass-panel p-6 rounded-3xl border border-[var(--border-subtle)] hover:border-[#FF1E27] transition-all duration-300 cursor-pointer space-y-4 group shadow-lg md:col-span-2"
+            className="glass-panel p-6 rounded-3xl border border-[var(--border-subtle)] hover:border-[#FF1E27] transition-all duration-300 cursor-pointer space-y-4 group shadow-lg"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -236,12 +293,48 @@ export default function UserProfilePage({
               </div>
             ) : (
               <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs flex items-center justify-between text-[var(--text-sub)]">
-                <span>No active shipments in transit. Click to view order history & past dispatches.</span>
+                <span>No active shipments. Click to view order history.</span>
                 <span className="text-[9px] font-extrabold uppercase font-heading bg-slate-700/40 text-slate-400 px-2 py-0.5 rounded-full">
                   ALL CLEAR
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Account Security & Password Tile */}
+          <div
+            onClick={openPasswordModal}
+            className="glass-panel p-6 rounded-3xl border border-[var(--border-subtle)] hover:border-[#FF1E27] transition-all duration-300 cursor-pointer space-y-4 group shadow-lg"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#FF1E27]/10 text-[#FF1E27] flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black font-heading uppercase text-[var(--text-main)]">
+                    ACCOUNT SECURITY
+                  </h3>
+                  <p className="text-xs text-[var(--text-sub)] font-medium">
+                    Manage password & sign-in credentials
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--text-sub)] group-hover:text-[#FF1E27] transition-colors" />
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs flex items-center justify-between">
+              <span className="text-[var(--text-sub)]">
+                {user.authProvider === 'local' ? 'Password login enabled' : 'Password not configured'}
+              </span>
+              <span className={"text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full " + (
+                user.authProvider === 'local'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+              )}>
+                {user.authProvider === 'local' ? 'CHANGE PASSWORD' : 'SET PASSWORD'}
+              </span>
+            </div>
           </div>
 
         </div>
@@ -268,7 +361,13 @@ export default function UserProfilePage({
 
           {!defaultAddress ? (
             <div className="glass-panel p-8 rounded-3xl border border-[var(--border-subtle)] text-center space-y-3">
-              <p className="text-xs text-[var(--text-sub)] italic">No default address set.</p>
+              <p className="text-xs text-[var(--text-sub)] italic">No default address set. Add a shipping destination.</p>
+              <Button
+                onClick={onAddNewAddress}
+                variant="outline" size="sm" className="w-fit mx-auto"
+              >
+                + Add Address
+              </Button>
             </div>
           ) : (
             <div className="glass-panel p-5 rounded-3xl border-2 border-[#FF1E27] shadow-lg bg-[#FF1E27]/5 flex flex-col justify-between space-y-4">
@@ -305,7 +404,24 @@ export default function UserProfilePage({
                 </div>
               </div>
 
+              <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
+                <button
+                  onClick={() => onAddNewAddress && onAddNewAddress()}
+                  className="text-[10px] font-bold text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors cursor-pointer"
+                >
+                  Add New Address
+                </button>
 
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => onEditAddress && onEditAddress(defaultAddress)}
+                    className="p-1.5 rounded-lg border border-[var(--border-subtle)] hover:border-[#FF1E27] text-[var(--text-main)] transition-colors cursor-pointer"
+                    title="Edit Default Address"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -461,7 +577,7 @@ export default function UserProfilePage({
                         value={verificationCode}
                         onChange={(e) => setVerificationCode(e.target.value)}
                         className="w-full bg-[var(--bg-main)] text-white font-mono tracking-widest text-center text-sm px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
-                        placeholder="Enter 6-digit code (e.g. 849201)"
+                        placeholder="Enter 6-digit verification code"
                       />
                     </div>
                   )}
@@ -494,6 +610,134 @@ export default function UserProfilePage({
         </div>
       )}
 
+      {/* SET / CHANGE PASSWORD MODAL */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md glass-panel p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]">
+              <div>
+                <h2 className="text-xl font-black font-heading italic uppercase text-[var(--text-main)] flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-[#FF1E27]" />
+                  {user.authProvider === 'local' ? 'CHANGE PASSWORD' : 'SET ACCOUNT PASSWORD'}
+                </h2>
+                <p className="text-xs text-[var(--text-sub)] font-medium">
+                  {user.authProvider === 'local'
+                    ? 'Update your password for faster sign-in next time.'
+                    : 'Create a password to sign in without waiting for an email OTP.'}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsPasswordModalOpen(false)}
+                className="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-[#FF1E27] text-[var(--text-sub)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error & Success Messages */}
+            {passwordError && (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+            {passwordSuccess && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                <CheckCircle className="w-4 h-4 shrink-0" />
+                <span>{passwordSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSavePassword} className="space-y-4">
+              
+              {/* New Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub)] flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-[#FF1E27]" /> New Password *
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    autoFocus
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      if (passwordError) setPasswordError('');
+                    }}
+                    className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm pl-4 pr-11 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                    placeholder="At least 6 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3.5 text-[var(--text-sub)] hover:text-[var(--text-main)] cursor-pointer"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub)] flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-[#FF1E27]" /> Confirm Password *
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (passwordError) setPasswordError('');
+                    }}
+                    className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm pl-4 pr-11 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                    placeholder="Re-enter new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3.5 text-[var(--text-sub)] hover:text-[var(--text-main)] cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-[var(--text-sub)] leading-relaxed">
+                Once saved, you will be able to sign in using either your password or 6-digit OTP codes.
+              </p>
+
+              {/* Submit / Cancel CTAs */}
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-[var(--border-subtle)]">
+                <Button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  variant="outline"
+                  size="md"
+                >
+                  CANCEL
+                </Button>
+                <Button
+                  type="submit"
+                  loading={passwordLoading}
+                  variant="primary"
+                  size="md"
+                >
+                  {user.authProvider === 'local' ? 'UPDATE PASSWORD' : 'SAVE PASSWORD'}
+                </Button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+

@@ -1,256 +1,298 @@
-import React, { createContext, useContext, useState } from 'react';
-import { loginUserApi, registerUserApi, updateUserProfileApi } from '../services/api';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  loginUserApi,
+  registerUserApi,
+  logoutUserApi,
+  fetchUserProfileApi,
+  updateUserProfileApi,
+  addAddressApi,
+  updateAddressApi,
+  deleteAddressApi,
+  sendOtpApi,
+  verifyOtpApi,
+  setPasswordApi
+} from '../services/api';
 
 const AuthContext = createContext(null);
-
-const DEFAULT_USERS = [
-  {
-    id: 'usr-cust-202',
-    name: 'Karan Sharma',
-    email: 'customer@avngear.com',
-    password: 'password123',
-    phone: '+91 91234 56789',
-    role: 'customer',
-    tier: 'AVN ATHLETE MEMBER',
-    memberSince: '2024'
-  }
-];
-
-const getStoredUsers = () => {
-  try {
-    const saved = localStorage.getItem('avn-registered-users');
-    return saved ? JSON.parse(saved) : DEFAULT_USERS;
-  } catch (e) {
-    return DEFAULT_USERS;
-  }
-};
-
-const saveStoredUsers = (usersList) => {
-  try {
-    localStorage.setItem('avn-registered-users', JSON.stringify(usersList));
-  } catch (e) {}
-};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('avn-user');
       return saved ? JSON.parse(saved) : null;
-    } catch (e) {
+    } catch {
       return null;
     }
   });
   const [loading, setLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [redirectPath, setRedirectPath] = useState(null);
 
+  // 1. Initial Session Hydration on page load (supports both JWT & HttpOnly cookies)
+  useEffect(() => {
+    let isMounted = true;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('avn-token') : null;
+
+    fetchUserProfileApi()
+      .then((res) => {
+        if (!isMounted) return;
+        const profileUser = res?.data?.user || res?.user;
+        if (profileUser) {
+          setUser(profileUser);
+          localStorage.setItem('avn-user', JSON.stringify(profileUser));
+        }
+      })
+      .catch((err) => {
+        if (token) {
+          console.warn('Session verification notice:', err.message);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsInitializing(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 2. Login with MongoDB backend
   const login = async (email, password) => {
     setLoading(true);
     try {
       const res = await loginUserApi(email, password);
-      if (res.success && res.user) {
-        setUser(res.user);
-        localStorage.setItem('avn-user', JSON.stringify(res.user));
-        return { success: true, user: res.user };
+      const userObj = res?.data?.user || res?.user;
+      const token = res?.data?.token || res?.token;
+
+      if (userObj) {
+        if (token) {
+          localStorage.setItem('avn-token', token);
+        }
+        setUser(userObj);
+        localStorage.setItem('avn-user', JSON.stringify(userObj));
+        return { success: true, user: userObj, token };
       } else {
-        throw new Error(res.message || 'Invalid email or password');
+        throw new Error(res?.message || 'Invalid email or password');
       }
     } catch (err) {
-      if (err.status) {
-        // Backend returned a specific HTTP error response (e.g. 401 Invalid Credentials)
-        throw err;
-      }
-      
-      console.warn('Backend Auth API unreachable, validating against local account registry...');
-      
-      // Strict offline verification
-      const allUsers = getStoredUsers();
-      const matchedUser = allUsers.find(
-        u => u.email.toLowerCase().trim() === (email || '').toLowerCase().trim()
-      );
-
-      if (!matchedUser || matchedUser.password !== password) {
-        throw new Error('Invalid email or password');
-      }
-
-      // Return sanitized user object without password
-      const loggedUser = {
-        id: matchedUser.id,
-        name: matchedUser.name,
-        email: matchedUser.email,
-        phone: matchedUser.phone,
-        role: matchedUser.role,
-        tier: matchedUser.tier,
-        memberSince: matchedUser.memberSince
-      };
-      
-      setUser(loggedUser);
-      localStorage.setItem('avn-user', JSON.stringify(loggedUser));
-      return { success: true, user: loggedUser };
+      // Re-throw with user-friendly backend message preserving status code
+      const error = new Error(err.message || 'Login failed. Please check your credentials.');
+      error.status = err.status || err.data?.statusCode;
+      error.data = err.data;
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
+  // 3. Register with MongoDB backend
   const register = async (userData) => {
     setLoading(true);
     try {
-      const res = await registerUserApi(userData);
-      if (res.success && res.user) {
-        setUser(res.user);
-        localStorage.setItem('avn-user', JSON.stringify(res.user));
-        return { success: true, user: res.user };
+      const payload = {
+        name: userData.name,
+        email: (userData.email || '').trim().toLowerCase(),
+        password: userData.password || undefined,
+        phone: userData.phone || undefined,
+        otp: userData.otp,
+      };
+
+      const res = await registerUserApi(payload);
+      const userObj = res?.data?.user || res?.user;
+      const token = res?.data?.token || res?.token;
+
+      if (userObj) {
+        if (token) {
+          localStorage.setItem('avn-token', token);
+        }
+        setUser(userObj);
+        localStorage.setItem('avn-user', JSON.stringify(userObj));
+        return { success: true, user: userObj, token };
       } else {
-        throw new Error(res.message || 'Registration failed');
+        throw new Error(res?.message || 'Registration failed');
       }
     } catch (err) {
-      if (err.status) {
-        throw err;
-      }
-      console.warn('Backend Auth API unreachable, storing registration locally...');
-      
-      const allUsers = getStoredUsers();
-      if (allUsers.some(u => u.email.toLowerCase() === (userData.email || '').toLowerCase())) {
-        throw new Error('An account with this email already exists.');
-      }
-
-      const newUserObj = {
-        id: 'usr-' + Date.now(),
-        name: userData.name || 'New AVN Athlete',
-        email: userData.email,
-        password: userData.password,
-        phone: userData.phone || '+91 98765 43210',
-        role: 'customer',
-        tier: 'AVN MEMBER',
-        memberSince: new Date().getFullYear().toString()
-      };
-      
-      const updatedUsers = [...allUsers, newUserObj];
-      saveStoredUsers(updatedUsers);
-
-      const loggedUser = {
-        id: newUserObj.id,
-        name: newUserObj.name,
-        email: newUserObj.email,
-        phone: newUserObj.phone,
-        role: newUserObj.role,
-        tier: newUserObj.tier,
-        memberSince: newUserObj.memberSince
-      };
-
-      setUser(loggedUser);
-      localStorage.setItem('avn-user', JSON.stringify(loggedUser));
-      return { success: true, user: loggedUser };
+      const error = new Error(err.message || 'Registration failed. Please try again.');
+      error.status = err.status || err.data?.statusCode;
+      error.data = err.data;
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = async () => {
-    setUser(null);
-    localStorage.removeItem('avn-user');
-    setRedirectPath(null);
-  };
-
-  
-  const updateProfile = async (updatedFields, verificationData = {}) => {
+  // 3.1 Send Email OTP Code
+  const sendEmailOtp = async (email, purpose = 'login') => {
     setLoading(true);
     try {
-      const payload = {
-        id: user?.id,
-        oldEmail: user?.email,
-        name: updatedFields.name,
-        email: updatedFields.email,
-        phone: updatedFields.phone,
-        currentPassword: verificationData.currentPassword,
-        verificationCode: verificationData.verificationCode
-      };
+      const res = await sendOtpApi(email, purpose);
+      return res?.data || res;
+    } catch (err) {
+      const error = new Error(err.message || 'Failed to send OTP. Please check your email address.');
+      error.status = err.status || err.data?.statusCode;
+      error.data = err.data;
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const res = await updateUserProfileApi(payload);
-      if (res && res.success && res.user) {
-        const newUser = { ...user, ...res.user };
-        setUser(newUser);
-        localStorage.setItem('avn-user', JSON.stringify(newUser));
+  // 3.2 Verify Email OTP & Sign In / Register
+  const verifyEmailOtp = async (email, otp) => {
+    setLoading(true);
+    try {
+      const res = await verifyOtpApi(email, otp);
+      const userObj = res?.data?.user || res?.user;
+      const token = res?.data?.token || res?.token;
 
-        const allUsers = getStoredUsers();
-        const updatedUsers = allUsers.map(u => {
-          if (u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase()) {
-            return { ...u, fullName: newUser.name, name: newUser.name, email: newUser.email, phone: newUser.phone };
-          }
-          return u;
-        });
-        saveStoredUsers(updatedUsers);
-
-        return { success: true, user: newUser };
+      if (userObj) {
+        if (token) {
+          localStorage.setItem('avn-token', token);
+        }
+        setUser(userObj);
+        localStorage.setItem('avn-user', JSON.stringify(userObj));
+        return { success: true, user: userObj, token };
+      } else {
+        throw new Error(res?.message || 'Verification failed');
       }
     } catch (err) {
-      if (err.status || err.requiresEmailVerification) {
-        throw err;
-      }
+      const error = new Error(err.message || 'Invalid or expired verification code.');
+      error.status = err.status || err.data?.statusCode;
+      error.data = err.data;
+      throw error;
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Offline fallback for profile update
-    const allUsers = getStoredUsers();
-    const currentAccount = allUsers.find(
-      u => u.id === user?.id || u.email.toLowerCase() === (user?.email || '').toLowerCase()
-    );
-
-    const isEmailChanging = updatedFields.email && updatedFields.email.toLowerCase() !== (user?.email || '').toLowerCase();
-
-    if (isEmailChanging) {
-      const verifyPassword = verificationData.currentPassword;
-      const verifyCode = verificationData.verificationCode;
-
-      if (!verifyPassword && verifyCode !== '849201') {
-        const error = new Error('Current email verification required to change email address');
-        error.requiresEmailVerification = true;
-        throw error;
+  // 3.3 Set Password (for post-registration or profile update)
+  const setPassword = async (password) => {
+    setLoading(true);
+    try {
+      const res = await setPasswordApi(password);
+      if (res?.data?.user) {
+        setUser(res.data.user);
+        localStorage.setItem('avn-user', JSON.stringify(res.data.user));
       }
-
-      if (verifyPassword && currentAccount && currentAccount.password && currentAccount.password !== verifyPassword) {
-        throw new Error('Incorrect password for current email verification');
-      }
-
-      const isTaken = allUsers.some(u => u.id !== user?.id && u.email.toLowerCase() === updatedFields.email.toLowerCase());
-      if (isTaken) {
-        throw new Error('An account with this email address already exists.');
-      }
+      return res;
+    } catch (err) {
+      const error = new Error(err.message || 'Failed to set password.');
+      error.status = err.status || err.data?.statusCode;
+      error.data = err.data;
+      throw error;
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const updatedUserObj = {
-      ...user,
-      name: updatedFields.name || user.name,
-      email: updatedFields.email || user.email,
-      phone: updatedFields.phone || user.phone
+  // 4. Logout
+  const logout = async () => {
+    try {
+      await logoutUserApi();
+    } catch {
+      // Proceed even if network fails
+    } finally {
+      setUser(null);
+      localStorage.removeItem('avn-user');
+      localStorage.removeItem('avn-token');
+      setRedirectPath(null);
+    }
+  };
+
+  // 4.1 Automatic session expiration listener (401 Interceptor)
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
     };
 
-    const updatedUsers = allUsers.map(u => {
-      if (u.id === user?.id || u.email.toLowerCase() === (user?.email || '').toLowerCase()) {
-        return {
-          ...u,
-          name: updatedUserObj.name,
-          fullName: updatedUserObj.name,
-          email: updatedUserObj.email,
-          phone: updatedUserObj.phone
-        };
-      }
-      return u;
-    });
-    saveStoredUsers(updatedUsers);
+    window.addEventListener('avn:auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('avn:auth:unauthorized', handleUnauthorized);
+  }, []);
 
-    setUser(updatedUserObj);
-    localStorage.setItem('avn-user', JSON.stringify(updatedUserObj));
-    return { success: true, user: updatedUserObj };
+  // 5. Update Profile (Name, Phone)
+  const updateProfile = async (updatedFields) => {
+    setLoading(true);
+    try {
+      const payload = {};
+      if (updatedFields.name) payload.name = updatedFields.name;
+      if (updatedFields.phone !== undefined) payload.phone = updatedFields.phone;
+
+      const res = await updateUserProfileApi(payload);
+      const updatedUser = res?.data?.user || res?.user;
+
+      if (updatedUser) {
+        const mergedUser = { ...user, ...updatedUser };
+        setUser(mergedUser);
+        localStorage.setItem('avn-user', JSON.stringify(mergedUser));
+        return { success: true, user: mergedUser };
+      } else {
+        throw new Error(res?.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      throw new Error(err.message || 'Profile update failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 6. Address Management Helpers
+  const addAddress = async (addressData) => {
+    try {
+      const res = await addAddressApi(addressData);
+      const updatedAddresses = res?.data?.addresses || [];
+      const updatedUser = { ...user, addresses: updatedAddresses };
+      setUser(updatedUser);
+      localStorage.setItem('avn-user', JSON.stringify(updatedUser));
+      return { success: true, addresses: updatedAddresses };
+    } catch (err) {
+      throw new Error(err.message || 'Failed to add address');
+    }
+  };
+
+  const updateAddress = async (addressId, addressData) => {
+    try {
+      const res = await updateAddressApi(addressId, addressData);
+      const updatedAddresses = res?.data?.addresses || [];
+      const updatedUser = { ...user, addresses: updatedAddresses };
+      setUser(updatedUser);
+      localStorage.setItem('avn-user', JSON.stringify(updatedUser));
+      return { success: true, addresses: updatedAddresses };
+    } catch (err) {
+      throw new Error(err.message || 'Failed to update address');
+    }
+  };
+
+  const deleteAddress = async (addressId) => {
+    try {
+      const res = await deleteAddressApi(addressId);
+      const updatedAddresses = res?.data?.addresses || [];
+      const updatedUser = { ...user, addresses: updatedAddresses };
+      setUser(updatedUser);
+      localStorage.setItem('avn-user', JSON.stringify(updatedUser));
+      return { success: true, addresses: updatedAddresses };
+    } catch (err) {
+      throw new Error(err.message || 'Failed to delete address');
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      isAuthenticated: Boolean(user), 
-      login, 
-      register, 
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      isInitializing,
+      isAuthenticated: Boolean(user),
+      login,
+      register,
+      sendEmailOtp,
+      verifyEmailOtp,
+      setPassword,
       logout,
       updateProfile,
+      addAddress,
+      updateAddress,
+      deleteAddress,
       redirectPath,
       setRedirectPath,
       setUser

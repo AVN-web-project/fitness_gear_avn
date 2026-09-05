@@ -77,13 +77,13 @@ export default function ProductDetailPage({
   const { cartItems, updateQuantity: updateCartQty } = useCart();
   const inCartQty = cartItems
     ? cartItems
-        .filter(
-          (item) =>
-            (item.id === product?.id || item.productId === product?.id) &&
-            item.selectedSize === selectedSize &&
-            item.selectedColor === (typeof selectedColor === 'string' ? selectedColor : selectedColor?.name)
-        )
-        .reduce((sum, item) => Number(sum) + Number(item.quantity || 0), 0)
+      .filter(
+        (item) =>
+          (item.id === product?.id || item.productId === product?.id) &&
+          item.selectedSize === selectedSize &&
+          item.selectedColor === (typeof selectedColor === 'string' ? selectedColor : selectedColor?.name)
+      )
+      .reduce((sum, item) => Number(sum) + Number(item.quantity || 0), 0)
     : 0;
 
 
@@ -376,10 +376,10 @@ export default function ProductDetailPage({
 
       {/* Main Split PDP Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-        
+
         {/* Left Column: Interactive Media Gallery (6 cols) */}
         <div className="lg:col-span-6 space-y-4 sticky top-24">
-          
+
           {/* Main Visual Frame */}
           <div
             ref={imageFrameRef}
@@ -478,18 +478,17 @@ export default function ProductDetailPage({
                 role="tab"
                 aria-selected={activeGalleryIndex === idx}
                 aria-label={`View ${item.label}`}
-                className={`relative flex-shrink-0 w-20 h-20 rounded-xl border-2 transition-all p-2 bg-[var(--bg-main)] flex flex-col items-center justify-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF1E27] ${
-                  activeGalleryIndex === idx
+                className={`relative flex-shrink-0 w-20 h-20 rounded-xl border-2 transition-all p-2 bg-[var(--bg-main)] flex flex-col items-center justify-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF1E27] ${activeGalleryIndex === idx
                     ? 'border-[#FF1E27] shadow-md scale-105'
                     : 'border-[var(--border-subtle)] opacity-70 hover:opacity-100'
-                }`}
+                  }`}
               >
                 <ProductGraphic
                   image={item.image || product.image}
                   imageLight={item.imageLight || product.imageLight}
                   type={item.type || product.imageType}
                   theme={theme}
-              noGlow
+                  noGlow
                   className="w-full h-full"
                 />
                 <span className="text-[9px] font-bold uppercase truncate max-w-full text-[var(--text-sub)]">
@@ -519,7 +518,7 @@ export default function ProductDetailPage({
 
         {/* Right Column: Buying Info & Configuration (6 cols) */}
         <div className="lg:col-span-6 space-y-6 text-left">
-          
+
           {/* Header & Title */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
@@ -600,11 +599,10 @@ export default function ProductDetailPage({
                     onClick={() => setSelectedColor(color)}
                     aria-label={`Select color ${color.name}`}
                     aria-selected={selectedColor.name === color.name}
-                    className={`group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      selectedColor.name === color.name
+                    className={`group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${selectedColor.name === color.name
                         ? 'border-[#FF1E27] bg-[#FF1E27]/10 text-[var(--text-main)] shadow-md'
                         : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
-                    }`}
+                      }`}
                   >
                     <span
                       className="w-4 h-4 rounded-full border border-white/20 shrink-0 shadow-inner"
@@ -640,11 +638,10 @@ export default function ProductDetailPage({
                     onClick={() => setSelectedSize(size)}
                     aria-label={`Select size ${size}`}
                     aria-selected={selectedSize === size}
-                    className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-heading uppercase transition-all cursor-pointer ${
-                      selectedSize === size
+                    className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-heading uppercase transition-all cursor-pointer ${selectedSize === size
                         ? 'border-[#FF1E27] bg-[#FF1E27] text-white shadow-md'
                         : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:border-gray-500'
-                    }`}
+                      }`}
                   >
                     {size}
                   </button>
@@ -667,11 +664,10 @@ export default function ProductDetailPage({
                     onClick={() => setSelectedPack(pack)}
                     aria-label={`Select pack option ${pack}`}
                     aria-selected={selectedPack === pack}
-                    className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-heading transition-all cursor-pointer ${
-                      selectedPack === pack
+                    className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-heading transition-all cursor-pointer ${selectedPack === pack
                         ? 'border-[#FF1E27] bg-[#FF1E27]/15 text-[#FF1E27] font-extrabold shadow-md'
                         : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
-                    }`}
+                      }`}
                   >
                     {pack}
                   </button>
@@ -680,15 +676,15 @@ export default function ProductDetailPage({
             </div>
           )}
 
-          {/* Quantity Counter (Only displayed when item is in cart) */}
-          {inCartQty > 0 && (
-            <div className="space-y-2.5 animate-fade-in">
-              <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider">
-                QUANTITY IN CART:
-              </label>
-              <div className="flex items-center w-36 border border-[var(--border-subtle)] rounded-xl bg-[var(--bg-main)] p-1">
-                <button
-                  onClick={() => {
+          {/* Quantity Counter */}
+          <div className="space-y-2.5">
+            <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider">
+              QUANTITY{inCartQty > 0 ? ' IN CART' : ''}:
+            </label>
+            <div className="flex items-center w-36 border border-[var(--border-subtle)] rounded-xl bg-[var(--bg-main)] p-1">
+              <button
+                onClick={() => {
+                  if (inCartQty > 0) {
                     const match = cartItems.find(
                       (item) =>
                         (item.id === product?.id || item.productId === product?.id) &&
@@ -697,18 +693,22 @@ export default function ProductDetailPage({
                     );
                     const targetId = match ? (match.id || match.productId) : product.id;
                     updateCartQty(targetId, inCartQty - 1);
-                  }}
-                  disabled={isPurchasingDisabled}
-                  className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
-                  aria-label="Decrease quantity"
-                >
-                  -
-                </button>
-                <span className="flex-1 text-center font-extrabold font-heading text-sm text-[#FF1E27] font-mono">
-                  {inCartQty}
-                </span>
-                <button
-                  onClick={() => {
+                  } else {
+                    setQuantity((prev) => Math.max(1, prev - 1));
+                  }
+                }}
+                disabled={isPurchasingDisabled || (inCartQty > 0 ? inCartQty <= 1 : quantity <= 1)}
+                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
+                aria-label="Decrease quantity"
+              >
+                -
+              </button>
+              <span className="flex-1 text-center font-extrabold font-heading text-sm text-[#FF1E27] font-mono">
+                {inCartQty > 0 ? inCartQty : quantity}
+              </span>
+              <button
+                onClick={() => {
+                  if (inCartQty > 0) {
                     const match = cartItems.find(
                       (item) =>
                         (item.id === product?.id || item.productId === product?.id) &&
@@ -717,32 +717,33 @@ export default function ProductDetailPage({
                     );
                     const targetId = match ? (match.id || match.productId) : product.id;
                     updateCartQty(targetId, inCartQty + 1);
-                  }}
-                  disabled={isPurchasingDisabled}
-                  className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
-              </div>
+                  } else {
+                    setQuantity((prev) => prev + 1);
+                  }
+                }}
+                disabled={isPurchasingDisabled}
+                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Action CTAs */}
           <div className="space-y-3 pt-2">
-            
-            
+
+
 
             <div className="flex items-center gap-3">
               {/* Add to Cart */}
               <button
                 onClick={handleAddToCart}
                 disabled={isPurchasingDisabled}
-                className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all ${
-                  isPurchasingDisabled
+                className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all ${isPurchasingDisabled
                     ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
                     : 'btn-cart-inward-glow cursor-pointer'
-                }`}
+                  }`}
               >
                 {isPurchasingDisabled ? (
                   <span>UNAVAILABLE</span>
@@ -763,11 +764,10 @@ export default function ProductDetailPage({
               <button
                 onClick={handleBuyNow}
                 disabled={isPurchasingDisabled}
-                className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-colors ${
-                  isPurchasingDisabled
+                className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-colors ${isPurchasingDisabled
                     ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
                     : 'bg-white hover:bg-gray-100 text-black cursor-pointer'
-                }`}
+                  }`}
               >
                 <Zap className={`w-5 h-5 fill-current ${isPurchasingDisabled ? 'text-gray-500' : 'text-[#FF1E27]'}`} />
                 <span>BUY NOW</span>
@@ -791,9 +791,8 @@ export default function ProductDetailPage({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsWishlisted(!isWishlisted)}
-                className={`flex-1 py-2.5 px-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
-                  isWishlisted ? 'text-[#FF1E27] border-red-500/40 bg-red-500/5' : 'text-[var(--text-sub)] hover:text-white'
-                }`}
+                className={`flex-1 py-2.5 px-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${isWishlisted ? 'text-[#FF1E27] border-red-500/40 bg-red-500/5' : 'text-[var(--text-sub)] hover:text-white'
+                  }`}
                 aria-label="Add product to wishlist"
               >
                 <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
@@ -836,9 +835,8 @@ export default function ProductDetailPage({
             </form>
 
             {pincodeResult && (
-              <div className={`p-3 rounded-xl text-xs space-y-1 ${
-                pincodeResult.success ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'
-              }`}>
+              <div className={`p-3 rounded-xl text-xs space-y-1 ${pincodeResult.success ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                }`}>
                 {pincodeResult.success ? (
                   <>
                     <div className="font-bold flex items-center gap-1.5">
@@ -874,7 +872,7 @@ export default function ProductDetailPage({
           </div>
 
           <div className="flex flex-col md:flex-row items-center gap-6 justify-between border-t border-[var(--border-subtle)] pt-4">
-            
+
             {/* Products Pair Visual */}
             <div className="flex items-center gap-4 flex-wrap">
               {/* Product 1 */}
@@ -884,7 +882,7 @@ export default function ProductDetailPage({
                   imageLight={product.imageLight}
                   type={product.imageType}
                   theme={theme}
-              noGlow
+                  noGlow
                   className="w-14 h-14 object-contain"
                 />
                 <div>
@@ -902,7 +900,7 @@ export default function ProductDetailPage({
                   imageLight={companionProduct.imageLight}
                   type={companionProduct.imageType}
                   theme={theme}
-              noGlow
+                  noGlow
                   className="w-14 h-14 object-contain"
                 />
                 <div>
@@ -929,9 +927,8 @@ export default function ProductDetailPage({
               <button
                 onClick={handleAddBundle}
                 disabled={isPurchasingDisabled}
-                className={`py-3 px-6 rounded-xl font-bold font-heading text-xs uppercase tracking-wider flex items-center gap-2 ${
-                  isPurchasingDisabled ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'btn-cart-inward-glow cursor-pointer'
-                }`}
+                className={`py-3 px-6 rounded-xl font-bold font-heading text-xs uppercase tracking-wider flex items-center gap-2 ${isPurchasingDisabled ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'btn-cart-inward-glow cursor-pointer'
+                  }`}
               >
                 {bundleAdded ? (
                   <>
@@ -953,7 +950,7 @@ export default function ProductDetailPage({
 
       {/* Tabbed Product Details (Overview, Specs, Usage, Reviews) */}
       <div className="space-y-6">
-        
+
         {/* Tab Headers */}
         <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] overflow-x-auto pb-1 scrollbar-none" role="tablist">
           {[
@@ -967,11 +964,10 @@ export default function ProductDetailPage({
               onClick={() => setActiveTab(tab.id)}
               role="tab"
               aria-selected={activeTab === tab.id}
-              className={`px-5 py-3 rounded-t-xl font-extrabold font-heading text-xs sm:text-sm tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === tab.id
+              className={`px-5 py-3 rounded-t-xl font-extrabold font-heading text-xs sm:text-sm tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${activeTab === tab.id
                   ? 'bg-[#FF1E27] text-white border-b-2 border-white shadow-md'
                   : 'text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)]'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -980,7 +976,7 @@ export default function ProductDetailPage({
 
         {/* Tab Content Panels */}
         <div className="p-6 sm:p-8 rounded-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] text-left min-h-[250px]">
-          
+
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-fade-in">
@@ -1079,11 +1075,11 @@ export default function ProductDetailPage({
                     {product.careInstructions?.map((ins, i) => (
                       <li key={i}>{ins}</li>
                     )) || (
-                      <>
-                        <li>Hand wash cold with mild detergent.</li>
-                        <li>Air dry flat in shade. Do not tumble dry.</li>
-                      </>
-                    )}
+                        <>
+                          <li>Hand wash cold with mild detergent.</li>
+                          <li>Air dry flat in shade. Do not tumble dry.</li>
+                        </>
+                      )}
                   </ul>
                 </div>
               </div>
@@ -1093,7 +1089,7 @@ export default function ProductDetailPage({
           {/* TAB 4: REVIEWS */}
           {activeTab === 'reviews' && (
             <div className="space-y-8 animate-fade-in">
-              
+
               {/* Review Summary Score */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-6 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)]">
                 <div className="md:col-span-4 text-center md:border-r border-[var(--border-subtle)] md:pr-6 space-y-1">
@@ -1298,7 +1294,7 @@ export default function ProductDetailPage({
                     imageLight={item.imageLight}
                     type={item.imageType}
                     theme={theme}
-              noGlow
+                    noGlow
                     className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
@@ -1334,7 +1330,7 @@ export default function ProductDetailPage({
 
 
 
-            {/* Size Chart Modal */}
+      {/* Size Chart Modal */}
       <SizeChartModal
         isOpen={isSizeChartOpen}
         onClose={() => setIsSizeChartOpen(false)}
