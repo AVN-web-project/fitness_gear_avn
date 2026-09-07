@@ -271,14 +271,7 @@ function AppContent() {
         ]);
         if (isMounted) {
           if (Array.isArray(liveCatalog) && liveCatalog.length > 0) {
-            const enrichedCatalog = liveCatalog.map((item) => {
-              if (item.gallery && item.gallery.length > 0) return item;
-              const match = LOCAL_PRODUCTS.find(
-                (lp) => lp.id === item.id || lp.slug === item.slug || lp.name?.toLowerCase() === item.name?.toLowerCase()
-              );
-              return match?.gallery?.length ? { ...item, gallery: match.gallery } : item;
-            });
-            setProducts(enrichedCatalog);
+            setProducts(liveCatalog);
             setIsBackendConnected(true);
           }
           if (Array.isArray(liveCategories) && liveCategories.length > 0) {

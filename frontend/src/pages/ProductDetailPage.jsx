@@ -27,7 +27,6 @@ import SizeChartModal from '../components/SizeChartModal';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { fetchProductReviewsApi, submitReviewApi, markReviewHelpfulApi, fetchMyOrdersApi } from '../services/api';
-import { PRODUCTS as LOCAL_PRODUCTS } from '../data/products';
 
 export default function ProductDetailPage({
   product,
@@ -37,7 +36,6 @@ export default function ProductDetailPage({
   onOpenCart,
   onNavigateCart,
   onNavigateAuth,
-  cartCount = 0,
   theme
 }) {
   const { isAuthenticated, user } = useAuth();
@@ -78,7 +76,6 @@ export default function ProductDetailPage({
   const [pincodeResult, setPincodeResult] = useState(null);
 
   // Add to cart animation feedback
-  const [added, setAdded] = useState(false);
   const [bundleAdded, setBundleAdded] = useState(false);
 
   // Live cart quantity for this product (drives button label + quantity sync)
@@ -276,30 +273,20 @@ export default function ProductDetailPage({
       .catch((err) => console.warn('Live reviews fetch failed:', err));
   }, [targetProdId, user?._id]);
 
-  // Early exit AFTER hooks if product is null
-  if (!product) return null;
-
   // Stock & Availability Evaluation
-  const maxStock = product.stockQuantity || product.stockCount || 10;
-  const isProductActive = product.status ? product.status === 'Active' : product.inStock !== false;
+  const maxStock = product?.stockQuantity || product?.stockCount || 10;
+  const isProductActive = product?.status ? product.status === 'Active' : product?.inStock !== false;
   const isPurchasingDisabled = !isProductActive || maxStock <= 0;
 
-  // Gallery items handling with rich multi-angle fallback
-  const localProductMatch = LOCAL_PRODUCTS.find((p) =>
-    p.id === product?.id ||
-    p.slug === product?.slug ||
-    (p.name && product?.name && p.name.toLowerCase() === product.name.toLowerCase())
-  );
-
-  const galleryItems = product.gallery && product.gallery.length > 0
+  const galleryItems = product?.gallery && product.gallery.length > 0
     ? product.gallery
-    : (localProductMatch?.gallery && localProductMatch.gallery.length > 0)
-      ? localProductMatch.gallery
-      : [{ id: 'front', label: 'Front View', image: product.image, imageLight: product.imageLight, type: product.imageType }];
+    : product?.image
+      ? [{ id: 'front', label: 'Front View', image: product.image, imageLight: product.imageLight, type: product.imageType }]
+      : [];
 
   const currentGalleryItem = galleryItems[activeGalleryIndex] || galleryItems[0];
-  const activeImage = currentGalleryItem?.image || product.image;
-  const activeImageLight = currentGalleryItem?.imageLight || (activeGalleryIndex === 0 ? product.imageLight : null) || currentGalleryItem?.image || product.image;
+  const activeImage = currentGalleryItem?.image || product?.image;
+  const activeImageLight = currentGalleryItem?.imageLight || (activeGalleryIndex === 0 ? product?.imageLight : null) || currentGalleryItem?.image || product?.image;
 
   // Auto-scroll PDP gallery thumbnail into view when activeGalleryIndex changes
   useEffect(() => {
@@ -382,18 +369,6 @@ export default function ProductDetailPage({
     setIsDraggingLightbox(false);
   };
 
-  const handlePrevView = (e) => {
-    if (e) e.stopPropagation();
-    setActiveGalleryIndex((prev) => (prev - 1 + galleryItems.length) % galleryItems.length);
-    handleResetZoom();
-  };
-
-  const handleNextView = (e) => {
-    if (e) e.stopPropagation();
-    setActiveGalleryIndex((prev) => (prev + 1) % galleryItems.length);
-    handleResetZoom();
-  };
-
   // Lock body/html scroll and intercept native wheel to stop background page scrolling while zooming
   useEffect(() => {
     if (!isLightboxOpen) return;
@@ -449,6 +424,8 @@ export default function ProductDetailPage({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isLightboxOpen, galleryItems.length]);
+
+  if (!product) return null;
 
   // Price calculations
   const compareAt = product.compareAtPrice || product.mrp || Math.round(product.price * 1.35);

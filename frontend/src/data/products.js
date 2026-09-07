@@ -7,8 +7,8 @@ export const PRODUCTS = [
     category: 'KNEE SUPPORT',
     price: 899,
     compareAtPrice: 1299,
-    image: '/knee-wrap.png',
-    webpImage: '/knee-wrap.webp',
+    image: null,
+    webpImage: null,
     altText: 'AVN Heavy Duty 79 inch Elastic Knee Wrap for Powerlifting and Squats',
     rating: 4.9,
     reviewsCount: 342,
@@ -32,11 +32,7 @@ export const PRODUCTS = [
       { sku: 'AVN-KW-79-RED', name: 'Crimson Red - Standard 79"', price: 899, compareAtPrice: 1299, stockQuantity: 4, color: 'Crimson Red', size: 'Standard 79"' },
       { sku: 'AVN-KW-79-BLK', name: 'Stealth Black - XL Heavy 90"', price: 999, compareAtPrice: 1399, stockQuantity: 3, color: 'Stealth Black', size: 'XL Heavy 90"' }
     ],
-    gallery: [
-      { id: 'front', label: 'Front View', image: '/knee-wrap.png', type: 'knee-wrap' },
-      { id: 'side', label: 'Angle View', image: '/knee-wrap.png', type: 'knee-wrap' },
-      { id: 'action', label: 'In Action', image: '/athelete-squat.png', type: 'knee-wrap' }
-    ],
+    gallery: [],
     specs: [
       '79 inches length for full coverage',
       'Dual red rubberized grip lines',
@@ -107,8 +103,8 @@ export const PRODUCTS = [
     category: 'KNEE SUPPORT',
     price: 699,
     compareAtPrice: 999,
-    image: '/elbow-wrap.png',
-    webpImage: '/elbow-wrap.webp',
+    image: null,
+    webpImage: null,
     altText: 'AVN Heavy Duty Compression Elbow Wrap for Bench Press',
     rating: 4.8,
     reviewsCount: 215,
@@ -131,11 +127,7 @@ export const PRODUCTS = [
       { sku: 'AVN-EW-01-RED-M', name: 'Crimson Red - Medium', price: 699, compareAtPrice: 999, stockQuantity: 6, color: 'Crimson Red', size: 'Medium' },
       { sku: 'AVN-EW-01-BLK-L', name: 'Stealth Black - Large', price: 749, compareAtPrice: 1049, stockQuantity: 6, color: 'Stealth Black', size: 'Large' }
     ],
-    gallery: [
-      { id: 'front', label: 'Front View', image: '/elbow-wrap.png', type: 'elbow-wrap' },
-      { id: 'angle', label: 'Angle View', image: '/elbow-wrap.png', type: 'elbow-wrap' },
-      { id: 'action', label: 'In Action', image: '/athelete-squat.png', type: 'elbow-wrap' }
-    ],
+    gallery: [],
     specs: [
       'Heavy duty elastic weave',
       'Non-slip interior grip',
@@ -194,8 +186,8 @@ export const PRODUCTS = [
     category: 'WRIST SUPPORT',
     price: 499,
     compareAtPrice: 799,
-    image: '/wrist-wrap.png',
-    webpImage: '/wrist-wrap.webp',
+    image: null,
+    webpImage: null,
     altText: 'AVN 18-inch Competition Grade Heavy Duty Wrist Wraps',
     rating: 4.9,
     reviewsCount: 512,
@@ -219,11 +211,7 @@ export const PRODUCTS = [
       { sku: 'AVN-WW-18-RED', name: 'Crimson Red - 18"', price: 499, compareAtPrice: 799, stockQuantity: 10, color: 'Crimson Red', size: '18 Inch' },
       { sku: 'AVN-WW-24-BLK', name: 'Stealth Black - 24"', price: 549, compareAtPrice: 849, stockQuantity: 8, color: 'Stealth Black', size: '24 Inch' }
     ],
-    gallery: [
-      { id: 'front', label: 'Front View', image: '/wrist-wrap.png', type: 'wrist-wrap' },
-      { id: 'angle', label: 'Angle View', image: '/wrist-wrap.png', type: 'wrist-wrap' },
-      { id: 'action', label: 'In Action', image: '/athelete-squat.png', type: 'wrist-wrap' }
-    ],
+    gallery: [],
     specs: [
       '18-inch competition grade wrist support',
       'Heavy duty thumb loop',
@@ -282,8 +270,8 @@ export const PRODUCTS = [
     category: 'LIFTING ACCESSORIES',
     price: 599,
     compareAtPrice: 899,
-    image: '/lifting-straps.png',
-    webpImage: '/lifting-straps.webp',
+    image: null,
+    webpImage: null,
     altText: 'AVN Padded Cotton Lifting Straps for Deadlifts and Heavy Rows',
     rating: 4.9,
     reviewsCount: 489,
@@ -305,11 +293,7 @@ export const PRODUCTS = [
     variants: [
       { sku: 'AVN-LS-01-RED', name: 'Crimson Red - Padded', price: 599, compareAtPrice: 899, stockQuantity: 15, color: 'Crimson Red', size: 'Standard' }
     ],
-    gallery: [
-      { id: 'front', label: 'Front View', image: '/lifting-straps.png', type: 'lifting-straps' },
-      { id: 'angle', label: 'Angle View', image: '/lifting-straps.png', type: 'lifting-straps' },
-      { id: 'action', label: 'In Action', image: '/athelete-squat.png', type: 'lifting-straps' }
-    ],
+    gallery: [],
     specs: [
       '5mm thick neoprene wrist padding',
       'Extra long 23.5 inch heavy cotton strap',
@@ -369,8 +353,8 @@ export const PRODUCTS = [
     category: 'YOGA ACCESSORIES',
     price: 399,
     compareAtPrice: 599,
-    image: '/yoga-belt.png',
-    webpImage: '/yoga-belt.webp',
+    image: null,
+    webpImage: null,
     altText: 'AVN 8-foot Organic Cotton Yoga Stretching Belt with D-Ring Buckle',
     rating: 4.7,
     reviewsCount: 178,
@@ -393,11 +377,7 @@ export const PRODUCTS = [
     variants: [
       { sku: 'AVN-YB-08-8FT', name: 'Crimson Red - 8 Feet', price: 399, compareAtPrice: 599, stockQuantity: 22, color: 'Crimson Red', size: '8 Feet' }
     ],
-    gallery: [
-      { id: 'front', label: 'Front View', image: '/yoga-belt.png', type: 'yoga-belt' },
-      { id: 'angle', label: 'Angle View', image: '/yoga-belt.png', type: 'yoga-belt' },
-      { id: 'action', label: 'In Action', image: '/athelete-squat.png', type: 'yoga-belt' }
-    ],
+    gallery: [],
     specs: [
       'Solid steel metal D-ring buckle',
       'Non-slip eco cotton webbing',
@@ -444,8 +424,8 @@ export const PRODUCTS = [
     category: 'LIFTING ACCESSORIES',
     price: 3499,
     compareAtPrice: 4999,
-    image: '/knee-wrap.png',
-    webpImage: '/knee-wrap.webp',
+    image: null,
+    webpImage: null,
     altText: 'AVN 10mm Genuine Cowhide Leather Lever Powerlifting Belt',
     rating: 5.0,
     reviewsCount: 142,
@@ -467,9 +447,7 @@ export const PRODUCTS = [
       { sku: 'AVN-WB-10-M', name: 'Stealth Black - Medium', price: 3499, compareAtPrice: 4999, stockQuantity: 4, color: 'Stealth Black', size: 'Medium' },
       { sku: 'AVN-WB-10-L', name: 'Stealth Black - Large', price: 3499, compareAtPrice: 4999, stockQuantity: 4, color: 'Stealth Black', size: 'Large' }
     ],
-    gallery: [
-      { id: 'front', label: 'Front View', image: '/knee-wrap.png', type: 'knee-wrap' }
-    ],
+    gallery: [],
     specs: [
       '10mm thick genuine cowhide leather',
       'Quick release stainless steel lever',
@@ -497,8 +475,8 @@ export const PRODUCTS = [
     category: 'KNEE SUPPORT',
     price: 449,
     compareAtPrice: 649,
-    image: '/elbow-wrap.png',
-    webpImage: '/elbow-wrap.webp',
+    image: null,
+    webpImage: null,
     altText: 'AVN Ankle Compression Sleeve for Injury Recovery',
     rating: 4.6,
     reviewsCount: 88,
@@ -517,7 +495,7 @@ export const PRODUCTS = [
     variants: [
       { sku: 'AVN-AS-04-BLK-S', name: 'Stealth Black - Small', price: 449, compareAtPrice: 649, stockQuantity: 0, color: 'Stealth Black', size: 'Small' }
     ],
-    gallery: [{ id: 'front', label: 'Front View', image: '/elbow-wrap.png', type: 'elbow-wrap' }],
+    gallery: [],
     specs: ['Targeted compression zones', 'Breathable moisture-wicking fabric'],
     fullSpecs: { 'SKU': 'AVN-AS-04' },
     careInstructions: ['Hand wash cold'],
@@ -533,8 +511,8 @@ export const PRODUCTS = [
     category: 'KNEE SUPPORT',
     price: 299,
     compareAtPrice: 599,
-    image: '/knee-wrap.png',
-    webpImage: '/knee-wrap.webp',
+    image: null,
+    webpImage: null,
     altText: 'AVN Legacy Power Wraps',
     rating: 3.5,
     reviewsCount: 12,

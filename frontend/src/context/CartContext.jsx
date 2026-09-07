@@ -74,7 +74,7 @@ export function CartProvider({ children }) {
               selectedColor: bi.selectedColor || 'Crimson Red',
               variantSku: bi.variantSku,
               variantTitle: bi.variantTitle,
-              image: bi.image || '/product-placeholder.png'
+              image: bi.image || null
             }));
             setCartItems(mapped);
             setIsBackendConnected(true);
@@ -172,7 +172,7 @@ export function CartProvider({ children }) {
               selectedColor: bi.selectedColor || 'Crimson Red',
               variantSku: bi.variantSku,
               variantTitle: bi.variantTitle,
-              image: bi.image || '/product-placeholder.png'
+              image: bi.image || null
             }));
             setCartItems(mapped);
             setIsBackendConnected(true);
@@ -250,7 +250,7 @@ export function CartProvider({ children }) {
       selectedColor: color,
       selectedPack: pack,
       variantSku,
-      image: product.image || product.images?.[0]?.url || '/product-placeholder.png',
+      image: product.image || product.images?.[0]?.url || null,
       slug: product.slug || product.id
     };
 

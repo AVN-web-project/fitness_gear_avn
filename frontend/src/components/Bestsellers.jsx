@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { PRODUCTS as DEFAULT_PRODUCTS } from '../data/products';
 import ProductGraphic from './ProductGraphic';
 import { fetchCategoriesApi } from '../services/api';
 
-export default function Bestsellers({ products = DEFAULT_PRODUCTS, categories: propCategories, onNavigateSearch, theme }) {
+export default function Bestsellers({ categories: propCategories, onNavigateSearch, theme }) {
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [activeMobileIndex, setActiveMobileIndex] = useState(0);
   const [dbCategories, setDbCategories] = useState(propCategories || []);
@@ -29,23 +28,11 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, categories: p
   }, [propCategories]);
 
 
-  // Map representative categories dynamically from MongoDB, with resilient offline fallback
+  // Map representative categories dynamically from MongoDB
   const categoryCards = (dbCategories && dbCategories.length > 0)
     ? dbCategories.map((dbCat) => {
         const catNameUpper = (dbCat.name || '').toUpperCase();
-        const matchingProduct = products?.find(
-          (p) =>
-            p.category?.toUpperCase() === catNameUpper ||
-            p.category?.toLowerCase() === dbCat.slug?.toLowerCase()
-        );
-        const fallbackImg =
-          dbCat.slug?.includes('wrist') ? '/wrist-wrap.png' :
-          dbCat.slug?.includes('lifting') ? '/lifting-straps.png' :
-          dbCat.slug?.includes('yoga') ? '/yoga-belt.png' : '/knee-wrap.png';
-
-        const cardImg = (dbCat.image?.url && !dbCat.image.url.includes('yoga-mat'))
-          ? dbCat.image.url
-          : (matchingProduct?.image || fallbackImg);
+        const cardImg = dbCat.image?.url || null;
 
         return {
           id: dbCat.slug || dbCat._id,
@@ -53,7 +40,7 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, categories: p
           name: catNameUpper,
           subtitle: dbCat.description || 'Power & Stability',
           categoryQuery: catNameUpper,
-          imageType: dbCat.slug || 'knee-wrap',
+          imageType: dbCat.slug || 'category',
           sampleImage: cardImg,
           sampleImageLight: cardImg,
         };
@@ -65,9 +52,9 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, categories: p
           name: 'KNEE SUPPORT',
           subtitle: 'Max Compression & Joint Stability',
           categoryQuery: 'KNEE SUPPORT',
-          imageType: 'knee-wrap',
-          sampleImage: products?.find((p) => p.category === 'KNEE SUPPORT')?.image || '/knee-wrap.png',
-          sampleImageLight: products?.find((p) => p.category === 'KNEE SUPPORT')?.imageLight || products?.find((p) => p.category === 'KNEE SUPPORT')?.image || '/knee-wrap.png',
+          imageType: 'knee-support',
+          sampleImage: null,
+          sampleImageLight: null,
         },
         {
           id: 'wrist-support',
@@ -75,9 +62,9 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, categories: p
           name: 'WRIST SUPPORT',
           subtitle: 'Heavy Duty Joint Lock & Wraps',
           categoryQuery: 'WRIST SUPPORT',
-          imageType: 'wrist-wrap',
-          sampleImage: products?.find((p) => p.category === 'WRIST SUPPORT')?.image || '/wrist-wrap.png',
-          sampleImageLight: products?.find((p) => p.category === 'WRIST SUPPORT')?.imageLight || products?.find((p) => p.category === 'WRIST SUPPORT')?.image || '/wrist-wrap.png',
+          imageType: 'wrist-support',
+          sampleImage: null,
+          sampleImageLight: null,
         },
         {
           id: 'lifting-accessories',
@@ -85,9 +72,9 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, categories: p
           name: 'LIFTING ACCESSORIES',
           subtitle: 'Power Straps, Belts & Grip Gear',
           categoryQuery: 'LIFTING ACCESSORIES',
-          imageType: 'lifting-straps',
-          sampleImage: products?.find((p) => p.category === 'LIFTING ACCESSORIES')?.image || '/lifting-straps.png',
-          sampleImageLight: products?.find((p) => p.category === 'LIFTING ACCESSORIES')?.imageLight || products?.find((p) => p.category === 'LIFTING ACCESSORIES')?.image || '/lifting-straps.png',
+          imageType: 'lifting-accessories',
+          sampleImage: null,
+          sampleImageLight: null,
         },
         {
           id: 'yoga-accessories',
@@ -95,9 +82,9 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, categories: p
           name: 'YOGA ACCESSORIES',
           subtitle: 'Stretching Straps & Mobility Belts',
           categoryQuery: 'YOGA ACCESSORIES',
-          imageType: 'yoga-belt',
-          sampleImage: products?.find((p) => p.category === 'YOGA ACCESSORIES')?.image || '/yoga-belt.png',
-          sampleImageLight: products?.find((p) => p.category === 'YOGA ACCESSORIES')?.imageLight || products?.find((p) => p.category === 'YOGA ACCESSORIES')?.image || '/yoga-belt.png',
+          imageType: 'yoga-accessories',
+          sampleImage: null,
+          sampleImageLight: null,
         }
       ];
 

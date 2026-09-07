@@ -21,7 +21,7 @@ export function normalizeProduct(p) {
     (lp) => lp.slug === pSlug || lp.id === pSlug || lp.name.toLowerCase() === (p.name || '').toLowerCase()
   );
 
-  const primaryImage = p.image || p.images?.[0]?.url || localMatch?.image || '/knee-wrap.png';
+  const primaryImage = p.image || p.images?.[0]?.url || null;
   const categoryStr = typeof p.category === 'object' && p.category?.name
     ? p.category.name.toUpperCase()
     : (typeof p.category === 'string' ? p.category.toUpperCase() : (localMatch?.category || 'EQUIPMENT'));

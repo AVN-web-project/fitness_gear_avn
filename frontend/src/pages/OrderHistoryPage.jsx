@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShoppingBag, ArrowLeft, Clock, CheckCircle2, ChevronRight,
-  PackageCheck, AlertCircle, MessageSquarePlus, XCircle, RotateCcw, Truck
+  ArrowLeft, Clock, CheckCircle2,
+  PackageCheck, MessageSquarePlus, XCircle, RotateCcw, Truck, Package
 } from 'lucide-react';
 import Button from '../components/Button';
 import { fetchMyOrdersApi } from '../services/api';
@@ -67,7 +67,7 @@ export default function OrderHistoryPage({
                 variantTitle: item.variantTitle || item.selectedSize || '',
                 qty: item.quantity || item.qty || 1,
                 price: `₹${(item.price ?? item.unitPrice ?? 0).toLocaleString('en-IN')}`,
-                image: item.image || item.webpImage || '/product-placeholder.png',
+                image: item.image || item.webpImage || null,
               })),
               deliveryDate: order.shipmentInfo?.deliveredAt
                 ? new Date(order.shipmentInfo.deliveredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -263,7 +263,13 @@ export default function OrderHistoryPage({
                   <div className="space-y-3">
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-4">
-                        <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-contain bg-[var(--bg-main)] p-1 border border-[var(--border-subtle)]" />
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-contain bg-[var(--bg-main)] p-1 border border-[var(--border-subtle)]" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[var(--bg-main)] p-1 border border-[var(--border-subtle)] text-[var(--text-sub)] shrink-0">
+                            <Package className="w-5 h-5 opacity-40" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <h4 className="text-xs font-black font-heading uppercase text-[var(--text-main)] truncate">{item.name}</h4>
                           <p className="text-[10px] text-[var(--text-sub)]">Qty: {item.qty} {item.variantTitle ? `| Var: ${item.variantTitle}` : ''} | {item.price}</p>
@@ -392,7 +398,13 @@ export default function OrderHistoryPage({
                       {order.items.map((item, idx) => (
                         <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 rounded-2xl bg-[var(--bg-main)]/50 border border-[var(--border-subtle)]">
                           <div className="flex items-center gap-4">
-                            <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-contain bg-[var(--bg-main)] p-1 border border-[var(--border-subtle)]" />
+                            {item.image ? (
+                              <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-contain bg-[var(--bg-main)] p-1 border border-[var(--border-subtle)]" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[var(--bg-main)] p-1 border border-[var(--border-subtle)] text-[var(--text-sub)] shrink-0">
+                                <Package className="w-5 h-5 opacity-40" />
+                              </div>
+                            )}
                             <div>
                               <h4 className="text-xs font-black font-heading uppercase text-[var(--text-main)]">{item.name}</h4>
                               <p className="text-[10px] text-[var(--text-sub)]">Qty: {item.qty} {item.variantTitle ? `| Var: ${item.variantTitle}` : ''} | {item.price}</p>
