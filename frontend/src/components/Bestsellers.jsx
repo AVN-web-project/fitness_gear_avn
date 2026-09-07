@@ -1,54 +1,105 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { PRODUCTS as DEFAULT_PRODUCTS } from '../data/products';
 import ProductGraphic from './ProductGraphic';
+import { fetchCategoriesApi } from '../services/api';
 
-export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSearch, theme }) {
+export default function Bestsellers({ products = DEFAULT_PRODUCTS, categories: propCategories, onNavigateSearch, theme }) {
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [activeMobileIndex, setActiveMobileIndex] = useState(0);
+  const [dbCategories, setDbCategories] = useState(propCategories || []);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
-  const scrollRef = useRef(null);
+  const scrollContainerRef = useRef(null);
 
-  // Map representative categories with valid public image paths
-  const categoryCards = [
-    {
-      id: 'knee-support',
-      name: 'KNEE SUPPORT',
-      subtitle: 'Max Compression & Joint Stability',
-      categoryQuery: 'KNEE SUPPORT',
-      imageType: 'knee-wrap',
-      sampleImage: products?.find(p => p.category === 'KNEE SUPPORT')?.image || '/knee-wrap.png',
-      sampleImageLight: products?.find(p => p.category === 'KNEE SUPPORT')?.imageLight || products?.find(p => p.category === 'KNEE SUPPORT')?.image || '/knee-wrap.png',
-    },
-    {
-      id: 'wrist-support',
-      name: 'WRIST SUPPORT',
-      subtitle: 'Heavy Duty Joint Lock & Wraps',
-      categoryQuery: 'WRIST SUPPORT',
-      imageType: 'wrist-wrap',
-      sampleImage: products?.find(p => p.category === 'WRIST SUPPORT')?.image || '/wrist-wrap.png',
-      sampleImageLight: products?.find(p => p.category === 'WRIST SUPPORT')?.imageLight || products?.find(p => p.category === 'WRIST SUPPORT')?.image || '/wrist-wrap.png',
-    },
-    {
-      id: 'lifting-accessories',
-      name: 'LIFTING ACCESSORIES',
-      subtitle: 'Power Straps, Belts & Grip Gear',
-      categoryQuery: 'LIFTING ACCESSORIES',
-      imageType: 'lifting-straps',
-      sampleImage: products?.find(p => p.category === 'LIFTING ACCESSORIES')?.image || '/lifting-straps.png',
-      sampleImageLight: products?.find(p => p.category === 'LIFTING ACCESSORIES')?.imageLight || products?.find(p => p.category === 'LIFTING ACCESSORIES')?.image || '/lifting-straps.png',
-    },
-    {
-      id: 'yoga-accessories',
-      name: 'YOGA ACCESSORIES',
-      subtitle: 'Non-Slip Mats & Support Blocks',
-      categoryQuery: 'YOGA ACCESSORIES',
-      imageType: 'yoga-mat',
-      sampleImage: products?.find(p => p.category === 'YOGA ACCESSORIES')?.image || '/yoga-mat.png',
-      sampleImageLight: products?.find(p => p.category === 'YOGA ACCESSORIES')?.imageLight || products?.find(p => p.category === 'YOGA ACCESSORIES')?.image || '/yoga-mat.png',
+  useEffect(() => {
+    if (propCategories && propCategories.length > 0) {
+      setDbCategories(propCategories);
+      return;
     }
-  ];
+    let isMounted = true;
+    fetchCategoriesApi().then((cats) => {
+      if (isMounted && cats && cats.length > 0) {
+        setDbCategories(cats);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [propCategories]);
+
+
+  // Map representative categories dynamically from MongoDB, with resilient offline fallback
+  const categoryCards = (dbCategories && dbCategories.length > 0)
+    ? dbCategories.map((dbCat) => {
+        const catNameUpper = (dbCat.name || '').toUpperCase();
+        const matchingProduct = products?.find(
+          (p) =>
+            p.category?.toUpperCase() === catNameUpper ||
+            p.category?.toLowerCase() === dbCat.slug?.toLowerCase()
+        );
+        const fallbackImg =
+          dbCat.slug?.includes('wrist') ? '/wrist-wrap.png' :
+          dbCat.slug?.includes('lifting') ? '/lifting-straps.png' :
+          dbCat.slug?.includes('yoga') ? '/yoga-belt.png' : '/knee-wrap.png';
+
+        const cardImg = (dbCat.image?.url && !dbCat.image.url.includes('yoga-mat'))
+          ? dbCat.image.url
+          : (matchingProduct?.image || fallbackImg);
+
+        return {
+          id: dbCat.slug || dbCat._id,
+          slug: dbCat.slug,
+          name: catNameUpper,
+          subtitle: dbCat.description || 'Power & Stability',
+          categoryQuery: catNameUpper,
+          imageType: dbCat.slug || 'knee-wrap',
+          sampleImage: cardImg,
+          sampleImageLight: cardImg,
+        };
+      })
+    : [
+        {
+          id: 'knee-support',
+          slug: 'knee-support',
+          name: 'KNEE SUPPORT',
+          subtitle: 'Max Compression & Joint Stability',
+          categoryQuery: 'KNEE SUPPORT',
+          imageType: 'knee-wrap',
+          sampleImage: products?.find((p) => p.category === 'KNEE SUPPORT')?.image || '/knee-wrap.png',
+          sampleImageLight: products?.find((p) => p.category === 'KNEE SUPPORT')?.imageLight || products?.find((p) => p.category === 'KNEE SUPPORT')?.image || '/knee-wrap.png',
+        },
+        {
+          id: 'wrist-support',
+          slug: 'wrist-support',
+          name: 'WRIST SUPPORT',
+          subtitle: 'Heavy Duty Joint Lock & Wraps',
+          categoryQuery: 'WRIST SUPPORT',
+          imageType: 'wrist-wrap',
+          sampleImage: products?.find((p) => p.category === 'WRIST SUPPORT')?.image || '/wrist-wrap.png',
+          sampleImageLight: products?.find((p) => p.category === 'WRIST SUPPORT')?.imageLight || products?.find((p) => p.category === 'WRIST SUPPORT')?.image || '/wrist-wrap.png',
+        },
+        {
+          id: 'lifting-accessories',
+          slug: 'lifting-accessories',
+          name: 'LIFTING ACCESSORIES',
+          subtitle: 'Power Straps, Belts & Grip Gear',
+          categoryQuery: 'LIFTING ACCESSORIES',
+          imageType: 'lifting-straps',
+          sampleImage: products?.find((p) => p.category === 'LIFTING ACCESSORIES')?.image || '/lifting-straps.png',
+          sampleImageLight: products?.find((p) => p.category === 'LIFTING ACCESSORIES')?.imageLight || products?.find((p) => p.category === 'LIFTING ACCESSORIES')?.image || '/lifting-straps.png',
+        },
+        {
+          id: 'yoga-accessories',
+          slug: 'yoga-accessories',
+          name: 'YOGA ACCESSORIES',
+          subtitle: 'Stretching Straps & Mobility Belts',
+          categoryQuery: 'YOGA ACCESSORIES',
+          imageType: 'yoga-belt',
+          sampleImage: products?.find((p) => p.category === 'YOGA ACCESSORIES')?.image || '/yoga-belt.png',
+          sampleImageLight: products?.find((p) => p.category === 'YOGA ACCESSORIES')?.imageLight || products?.find((p) => p.category === 'YOGA ACCESSORIES')?.image || '/yoga-belt.png',
+        }
+      ];
 
   const totalCategories = categoryCards.length;
 
@@ -81,6 +132,66 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
     }
     touchStartX.current = 0;
     touchEndX.current = 0;
+  };
+
+  const renderCard = (category, isScrollMode = false) => {
+    const isHovered = hoveredCardId === category.id;
+    const hasAnyHover = hoveredCardId !== null;
+
+    // When no card is hovered, all cards remain 100% normal & equal. Effect triggers ONLY on hover!
+    let cardStateClasses = 'scale-100 z-10 opacity-100 filter blur-none brightness-100';
+    if (hasAnyHover) {
+      if (isHovered) {
+        // Prominently enlarged active card with AVN red border highlight
+        cardStateClasses = 'scale-[1.08] -translate-y-3 z-30 opacity-100 border-2 border-[#FF1E27] shadow-xl filter blur-none';
+      } else {
+        // Inactive cards: Strictly 100% scale (no reduction, no position shift), blurred softly
+        cardStateClasses = 'scale-100 z-10 opacity-75 filter blur-[1.8px]';
+      }
+    }
+
+    return (
+      <div
+        key={category.id}
+        onMouseEnter={() => setHoveredCardId(category.id)}
+        onMouseLeave={() => setHoveredCardId(null)}
+        onClick={() => handleCategoryClick(category.categoryQuery)}
+        className={`red-corner-border bg-[var(--bg-main)] rounded-3xl relative h-[380px] lg:h-[430px] ${
+          isScrollMode ? 'w-[280px] sm:w-[300px] lg:w-[calc((100%-4.5rem)/4)] shrink-0' : ''
+        } overflow-hidden group cursor-pointer transition-all duration-500 ease-out transform-gpu flex flex-col justify-end p-6 shadow-xl ${cardStateClasses}`}
+      >
+        {/* 100% Full-Bleed Product Graphic Background */}
+        <div className="absolute inset-[2px] rounded-[22px] overflow-hidden bg-[var(--bg-main)] flex flex-col justify-between">
+          {/* Product Graphic Center Stage with Seamless Background Blending */}
+          <div className="relative z-10 w-full h-[70%] pt-6 px-6 flex items-center justify-center transform-gpu group-hover:scale-105 transition-transform duration-700 ease-out">
+            <ProductGraphic
+              image={category.sampleImage}
+              imageLight={category.sampleImageLight}
+              type={category.imageType}
+              theme={theme}
+              className="max-w-full max-h-full object-contain filter contrast-105"
+            />
+          </div>
+
+          {/* Soft Gradient Fade for Seamless Card Base Blending */}
+          <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[var(--bg-main)] via-[var(--bg-main)]/75 to-transparent pointer-events-none z-0" />
+        </div>
+
+        {/* Bottom Left Overlay Typography matching reference image */}
+        <div className="relative z-10 space-y-1 text-left">
+          <p className={`text-xs font-bold tracking-widest uppercase font-sans transition-colors duration-300 ${
+            isHovered ? 'text-[#FF1E27]' : 'text-[var(--text-sub)]'
+          }`}>
+            {category.name}
+          </p>
+          <h3 className={`text-xl lg:text-2xl font-sans font-black italic uppercase tracking-wide leading-tight transition-all duration-300 text-[var(--text-main)] ${
+            isHovered ? 'scale-105 origin-left text-[#FF1E27]' : ''
+          }`}>
+            {category.subtitle}
+          </h3>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -191,67 +302,23 @@ export default function Bestsellers({ products = DEFAULT_PRODUCTS, onNavigateSea
         </div>
       </div>
 
-      {/* DESKTOP ONLY (>= 640px): 1-to-1 Match of Reference Design media_1787761038166.png */}
-      <div className="hidden sm:block relative py-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-6 max-w-[1380px] mx-auto px-4 select-none">
-          {categoryCards.map((category) => {
-            const isHovered = hoveredCardId === category.id;
-            const hasAnyHover = hoveredCardId !== null;
-
-            // When no card is hovered, all cards remain 100% normal & equal. Effect triggers ONLY on hover!
-            let cardStateClasses = 'scale-100 z-10 opacity-100 filter blur-none brightness-100';
-            if (hasAnyHover) {
-              if (isHovered) {
-                // Prominently enlarged active card with AVN red border highlight
-                cardStateClasses = 'scale-[1.08] -translate-y-3 z-30 opacity-100 border-2 border-[#FF1E27] shadow-xl filter blur-none';
-              } else {
-                // Inactive cards: Strictly 100% scale (no reduction, no position shift), blurred softly
-                cardStateClasses = 'scale-100 z-10 opacity-75 filter blur-[1.8px]';
-              }
-            }
-
-            return (
-              <div
-                key={category.id}
-                onMouseEnter={() => setHoveredCardId(category.id)}
-                onMouseLeave={() => setHoveredCardId(null)}
-                onClick={() => handleCategoryClick(category.categoryQuery)}
-                className={`red-corner-border bg-[var(--bg-main)] rounded-3xl relative h-[380px] lg:h-[430px] overflow-hidden group cursor-pointer transition-all duration-500 ease-out transform-gpu flex flex-col justify-end p-6 shadow-xl ${cardStateClasses}`}
-              >
-                {/* 100% Full-Bleed Product Graphic Background */}
-                <div className="absolute inset-[2px] rounded-[22px] overflow-hidden bg-[var(--bg-main)] flex flex-col justify-between">
-                  {/* Product Graphic Center Stage with Seamless Background Blending */}
-                  <div className="relative z-10 w-full h-[70%] pt-6 px-6 flex items-center justify-center transform-gpu group-hover:scale-105 transition-transform duration-700 ease-out">
-                    <ProductGraphic
-                      image={category.sampleImage}
-                      imageLight={category.sampleImageLight}
-                      type={category.imageType}
-                      theme={theme}
-                      className="max-w-full max-h-full object-contain filter contrast-105"
-                    />
-                  </div>
-
-                  {/* Soft Gradient Fade for Seamless Card Base Blending */}
-                  <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[var(--bg-main)] via-[var(--bg-main)]/75 to-transparent pointer-events-none z-0" />
-                </div>
-
-                {/* Bottom Left Overlay Typography matching reference image */}
-                <div className="relative z-10 space-y-1 text-left">
-                  <p className={`text-xs font-bold tracking-widest uppercase font-sans transition-colors duration-300 ${
-                    isHovered ? 'text-[#FF1E27]' : 'text-[var(--text-sub)]'
-                  }`}>
-                    {category.name}
-                  </p>
-                  <h3 className={`text-xl lg:text-2xl font-sans font-black italic uppercase tracking-wide leading-tight transition-all duration-300 text-[var(--text-main)] ${
-                    isHovered ? 'scale-105 origin-left text-[#FF1E27]' : ''
-                  }`}>
-                    {category.subtitle}
-                  </h3>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* DESKTOP ONLY (>= 640px): 4-Column Grid for <= 4, Smooth Carousel for > 4 Categories */}
+      <div className="hidden sm:block relative py-2 sm:py-3">
+        {categoryCards.length <= 4 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-6 max-w-[1380px] mx-auto px-4 py-6 sm:py-8 select-none">
+            {categoryCards.map((category) => renderCard(category, false))}
+          </div>
+        ) : (
+          <div className="relative max-w-[1380px] mx-auto select-none">
+            {/* Scrollable Container showing exactly 4 cards in initial view with zero hover clipping */}
+            <div
+              ref={scrollContainerRef}
+              className="flex gap-6 overflow-x-auto no-scrollbar scroll-smooth pt-16 pb-16 px-4"
+            >
+              {categoryCards.map((category) => renderCard(category, true))}
+            </div>
+          </div>
+        )}
       </div>
 
     </section>

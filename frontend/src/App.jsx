@@ -16,9 +16,11 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import OrderDetailsPage from './pages/OrderDetailsPage';
 import SupportPage from './pages/SupportPage';
+import ContactPage from './pages/ContactPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PRODUCTS as LOCAL_PRODUCTS } from './data/products';
 import { CartProvider, useCart } from './context/CartContext';
+import { fetchProducts, fetchCategoriesApi } from './services/api';
 
 function AppContent() {
   const { user, isAuthenticated, logout, setRedirectPath, redirectPath, addAddress, updateAddress, deleteAddress } = useAuth();
@@ -64,8 +66,9 @@ function AppContent() {
         fullName: addr.fullName,
         phone: addr.phone,
         street: addr.street,
-        houseNo: addr.street,
-        area: addr.street,
+        houseNo: addr.houseNo || '',
+        flatNo: addr.flatNo || addr.street || '',
+        area: addr.area || addr.street || '',
         city: addr.city,
         state: addr.state,
         pincode: addr.pincode,
@@ -91,66 +94,99 @@ function AppContent() {
   // Address Handlers
   const handleSetDefaultAddress = (addressId) => {
     setSelectedAddressId(addressId);
-    if (isAuthenticated) {
-      updateAddress(addressId, { isDefault: true }).catch((err) => console.warn('Sync default address failed:', err));
-    } else {
-      setLocalAddresses((prev) => {
-        const updated = prev.map(a => ({ ...a, isDefault: a.id === addressId }));
+    setLocalAddresses((prev) => {
+      const updated = prev.map((a) => ({ ...a, isDefault: a.id === addressId }));
+      try {
         localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
-        return updated;
-      });
+      } catch (e) {}
+      return updated;
+    });
+
+    if (isAuthenticated) {
+      const isBackendAddr = user?.addresses?.some((a) => String(a._id || a.id) === String(addressId));
+      if (isBackendAddr) {
+        updateAddress(addressId, { isDefault: true }).catch((err) => console.warn('Sync default address failed:', err));
+      }
     }
   };
 
   const handleDeleteAddress = (addressId) => {
-    if (isAuthenticated) {
-      deleteAddress(addressId).catch((err) => console.warn('Sync delete address failed:', err));
-    } else {
-      setLocalAddresses((prev) => {
-        const updated = prev.filter(a => a.id !== addressId);
+    setLocalAddresses((prev) => {
+      const updated = prev.filter((a) => a.id !== addressId);
+      try {
         localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
-        return updated;
-      });
+      } catch (e) {}
+      return updated;
+    });
+
+    if (isAuthenticated) {
+      const isBackendAddr = user?.addresses?.some((a) => String(a._id || a.id) === String(addressId));
+      if (isBackendAddr) {
+        deleteAddress(addressId).catch((err) => console.warn('Sync delete address failed:', err));
+      }
     }
   };
 
-  const handleSaveAddress = (addressData) => {
+  const handleSaveAddress = async (addressData) => {
+    let savedId = addressData.id;
+
     if (isAuthenticated) {
+      const combinedStreet = addressData.street
+        ? (addressData.flatNo ? `${addressData.flatNo}, ` : '') + (addressData.houseNo ? `${addressData.houseNo}, ` : '') + addressData.street
+        : `${addressData.flatNo || ''} ${addressData.houseNo || ''} ${addressData.area || ''}`.trim();
+
       const payload = {
         title: addressData.type || addressData.title || 'Home',
         fullName: addressData.fullName || user?.name || 'Customer',
         phone: addressData.phone || user?.phone || '9876543210',
-        street: addressData.street || `${addressData.flatNo || ''} ${addressData.houseNo || ''} ${addressData.area || ''}`.trim() || 'Default Street',
+        street: combinedStreet || 'Default Street',
         city: addressData.city || 'City',
         state: addressData.state || 'State',
         pincode: addressData.pincode || '110001',
         country: addressData.country || 'India',
         isDefault: Boolean(addressData.isDefault)
       };
-      if (addressData.id && !addressData.id.toString().startsWith('addr-demo')) {
-        updateAddress(addressData.id, payload).catch((err) => console.warn('Sync update address failed:', err));
-      } else {
-        addAddress(payload).catch((err) => console.warn('Sync add address failed:', err));
+
+      try {
+        if (addressData.id && !addressData.id.toString().startsWith('addr-demo')) {
+          await updateAddress(addressData.id, payload);
+        } else {
+          const res = await addAddress(payload);
+          if (res?.addresses?.length > 0) {
+            const newest = res.addresses[res.addresses.length - 1];
+            savedId = newest._id || newest.id;
+          }
+        }
+      } catch (err) {
+        console.warn('Sync address failed:', err);
       }
     } else {
+      const localId = addressData.id || 'addr-' + Date.now();
+      savedId = localId;
       setLocalAddresses((prev) => {
         let updated;
         if (addressData.id) {
-          updated = prev.map(a => a.id === addressData.id ? addressData : a);
+          updated = prev.map((a) => (a.id === addressData.id ? { ...addressData, id: localId } : a));
         } else {
-          const newObj = { ...addressData, id: 'addr-' + Date.now(), isDefault: prev.length === 0 };
+          const newObj = { ...addressData, id: localId, isDefault: prev.length === 0 };
           updated = [...prev, newObj];
         }
-        localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+        try {
+          localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
+        } catch (e) {}
         return updated;
       });
     }
 
-    if (addressData.id) {
-      setSelectedAddressId(addressData.id);
+    if (savedId) {
+      setSelectedAddressId(savedId);
     }
+    setEditingAddress(null);
 
-    const nextView = checkoutData ? 'checkout' : 'addresses';
+    const nextView = addressReturnView === 'checkout'
+      ? (addressSourceView === 'addresses' && addressData.id ? 'addresses' : 'checkout')
+      : (addressSourceView || addressReturnView || 'addresses');
+
     setAddressReturnView(nextView);
     setActiveView(nextView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -221,7 +257,43 @@ function AppContent() {
   };
 
   const [products, setProducts] = useState(LOCAL_PRODUCTS);
+  const [categories, setCategories] = useState([]);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
+
+  // Synchronize with live MongoDB Product Catalog & Categories
+  useEffect(() => {
+    let isMounted = true;
+    const loadLiveCatalog = async () => {
+      try {
+        const [liveCatalog, liveCategories] = await Promise.all([
+          fetchProducts(),
+          fetchCategoriesApi(),
+        ]);
+        if (isMounted) {
+          if (Array.isArray(liveCatalog) && liveCatalog.length > 0) {
+            const enrichedCatalog = liveCatalog.map((item) => {
+              if (item.gallery && item.gallery.length > 0) return item;
+              const match = LOCAL_PRODUCTS.find(
+                (lp) => lp.id === item.id || lp.slug === item.slug || lp.name?.toLowerCase() === item.name?.toLowerCase()
+              );
+              return match?.gallery?.length ? { ...item, gallery: match.gallery } : item;
+            });
+            setProducts(enrichedCatalog);
+            setIsBackendConnected(true);
+          }
+          if (Array.isArray(liveCategories) && liveCategories.length > 0) {
+            setCategories(liveCategories);
+          }
+        }
+      } catch (err) {
+        console.warn('Backend catalog fetch failed, using offline fallback catalog:', err);
+      }
+    };
+    loadLiveCatalog();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const [activeView, setActiveView] = useState(() => {
     if (typeof window !== 'undefined' && window.location.search) {
@@ -233,8 +305,8 @@ function AppContent() {
   const [checkoutData, setCheckoutData] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [addressReturnView, setAddressReturnView] = useState('profile');
-
-
+  const [addressSourceView, setAddressSourceView] = useState('addresses');
+  const [editingAddress, setEditingAddress] = useState(null);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
@@ -261,13 +333,39 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleNavigateSearch = (initialQuery = '') => {
+  const handleNavigateSearch = (param = '') => {
     setActiveView('search');
     setIsSearchOpen(false);
-    if (initialQuery && typeof window !== 'undefined') {
+    const paramTrimmed = typeof param === 'string' ? param.trim() : '';
+    const normParam = paramTrimmed.toLowerCase().replace(/-/g, ' ');
+
+    // Match against dynamic categories from MongoDB or standard fallbacks
+    const matchedCategory = categories.find((c) => {
+      const cNameNorm = (c.name || '').toLowerCase().replace(/-/g, ' ');
+      const cSlugNorm = (c.slug || '').toLowerCase().replace(/-/g, ' ');
+      return cNameNorm === normParam || cSlugNorm === normParam;
+    });
+
+    const fallbackCatMatch = [
+      'KNEE SUPPORT', 'WRIST SUPPORT', 'LIFTING ACCESSORIES', 'YOGA ACCESSORIES'
+    ].find((c) => c.toLowerCase().replace(/-/g, ' ') === normParam);
+
+    const targetCategory = matchedCategory?.name?.toUpperCase() || fallbackCatMatch;
+
+    if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
-      url.searchParams.set('q', initialQuery);
+      if (targetCategory) {
+        url.searchParams.set('category', targetCategory);
+        url.searchParams.delete('q');
+      } else if (paramTrimmed) {
+        url.searchParams.set('q', paramTrimmed);
+        url.searchParams.delete('category');
+      } else {
+        url.searchParams.delete('q');
+        url.searchParams.delete('category');
+      }
       window.history.replaceState(null, '', url.pathname + url.search);
+      window.dispatchEvent(new Event('popstate'));
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -275,6 +373,11 @@ function AppContent() {
   const handleNavigateCart = () => {
     setActiveView('cart');
     cart.setIsCartOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavigateContact = () => {
+    setActiveView('contact');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -300,7 +403,9 @@ function AppContent() {
     }
 
     if (!userAddress) {
+      setAddressSourceView('checkout');
       setAddressReturnView('checkout');
+      setEditingAddress(null);
       setActiveView('add-address');
     } else {
       setActiveView('checkout');
@@ -320,6 +425,7 @@ function AppContent() {
   return (
     <div className={mainContainerClasses}>
       <Navbar
+        categories={categories}
         cartCount={cart.totalCartCount}
         onOpenCart={handleNavigateCart}
         onNavigateCart={handleNavigateCart}
@@ -334,6 +440,7 @@ function AppContent() {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onNavigateAddresses={() => {
+          setAddressReturnView('profile');
           setActiveView('addresses');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
@@ -349,6 +456,7 @@ function AppContent() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onNavigateHome={handleNavigateHome}
+        onNavigateContact={handleNavigateContact}
         activeView={activeView}
         isMobileView={isMobileView}
       />
@@ -365,8 +473,15 @@ function AppContent() {
               setActiveView('addresses');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            onPlaceOrder={() => {
+            onPlaceOrder={(order) => {
               cart.clearCart();
+              setCheckoutData(null);
+              setAddressReturnView('profile');
+            }}
+            onViewOrderDetails={(order) => {
+              setSelectedOrder(order);
+              setActiveView('order-details');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateCart={handleNavigateCart}
             onNavigateHome={handleNavigateHome}
@@ -379,7 +494,9 @@ function AppContent() {
               if (redirectPath === 'checkout') {
                 if (setRedirectPath) setRedirectPath(null);
                 if (!userAddress) {
+                  setAddressSourceView('checkout');
                   setAddressReturnView('checkout');
+                  setEditingAddress(null);
                   setActiveView('add-address');
                 } else {
                   setActiveView('checkout');
@@ -402,13 +519,15 @@ function AppContent() {
             onSetDefaultAddress={handleSetDefaultAddress}
             onDeleteAddress={handleDeleteAddress}
             onEditAddress={(addr) => {
-              setUserAddress(addr);
+              setEditingAddress(addr);
+              setAddressSourceView('profile');
               setAddressReturnView('profile');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onAddNewAddress={() => {
-              setUserAddress(null);
+              setEditingAddress(null);
+              setAddressSourceView('profile');
               setAddressReturnView('profile');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -422,7 +541,11 @@ function AppContent() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateAuth={handleNavigateAuth}
-            onOpenAddressManager={() => setActiveView('addresses')}
+            onOpenAddressManager={() => {
+              setAddressReturnView('profile');
+              setActiveView('addresses');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             onBack={handleNavigateHome}
             onSignOut={handleSignOut}
             theme={theme}
@@ -430,16 +553,27 @@ function AppContent() {
         ) : activeView === 'addresses' ? (
           <AddressListPage
             savedAddresses={savedAddresses}
-            onBack={() => setActiveView('profile')}
+            selectedAddressId={selectedAddressId || userAddress?.id}
+            isCheckoutMode={addressReturnView === 'checkout'}
+            onBack={() => {
+              const nextView = addressReturnView === 'checkout' ? 'checkout' : 'profile';
+              setActiveView(nextView);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectAddressForCheckout={(addrId) => {
+              handleSetDefaultAddress(addrId);
+              setActiveView('checkout');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             onAddNewAddress={() => {
-              setUserAddress(null);
-              setAddressReturnView('addresses');
+              setEditingAddress(null);
+              setAddressSourceView('addresses');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onEditAddress={(addr) => {
-              setUserAddress(addr);
-              setAddressReturnView('addresses');
+              setEditingAddress(addr);
+              setAddressSourceView('addresses');
               setActiveView('add-address');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
@@ -502,7 +636,19 @@ function AppContent() {
             }}
             theme={theme}
           />
-                ) : activeView === 'support' ? (
+        ) : activeView === 'contact' ? (
+          <ContactPage
+            onBack={() => {
+              setActiveView('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateSupport={() => {
+              setActiveView('support');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            theme={theme}
+          />
+        ) : activeView === 'support' ? (
           <SupportPage
             currentUser={user}
             initialOrderId={selectedOrder?.orderId || selectedOrder?.id || ''}
@@ -518,15 +664,17 @@ function AppContent() {
           />
         ) : activeView === 'add-address' ? (
           <AddAddressPage
-            userAddress={userAddress}
+            userAddress={editingAddress}
             onSaveAddress={handleSaveAddress}
             onCancel={() => {
-              setActiveView(addressReturnView || (checkoutData ? 'checkout' : 'profile'));
+              setEditingAddress(null);
+              const target = addressSourceView || (addressReturnView === 'checkout' ? 'checkout' : 'addresses');
+              setActiveView(target);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             theme={theme}
             isMobileView={isMobileView}
-            isCheckoutMode={!!checkoutData}
+            isCheckoutMode={addressReturnView === 'checkout'}
           />
         ) : activeView === 'cart' ? (
           <CartPage
@@ -543,6 +691,8 @@ function AppContent() {
           />
         ) : activeView === 'search' ? (
           <SearchPage
+            categories={categories}
+            products={products}
             onSelectProduct={handleSelectProductForPdp}
             onAddToCart={cart.addToCart}
             onOpenCart={handleNavigateCart}
@@ -568,6 +718,7 @@ function AppContent() {
           <HomePage
             theme={theme}
             products={products}
+            categories={categories}
             onExploreClick={handleNavigateSearch}
             onAddToCart={cart.addToCart}
             onSelectProduct={handleSelectProductForPdp}
@@ -578,8 +729,11 @@ function AppContent() {
 
       <Footer
         theme={theme}
+        categories={categories}
+        onNavigateSearch={handleNavigateSearch}
         isMobileView={isMobileView}
         activeView={activeView}
+        onNavigateContact={handleNavigateContact}
         onNavigateSupport={() => {
           setActiveView('support');
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -613,6 +767,7 @@ function AppContent() {
       <SearchModal
         isOpen={isSearchOpen}
         products={products}
+        categories={categories}
         onClose={() => setIsSearchOpen(false)}
         onSelectProduct={handleSelectProductForPdp}
         onOpenSearchPage={handleNavigateSearch}
@@ -688,11 +843,11 @@ class ErrorBoundary extends React.Component {
 export default function App() {
   return (
     <ErrorBoundary>
-      <CartProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <CartProvider>
           <AppContent />
-        </AuthProvider>
-      </CartProvider>
+        </CartProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

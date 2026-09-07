@@ -1,179 +1,165 @@
-# 🏋️ AVN FITNESS GEAR — E-Commerce Full-Stack Application
+# AVN FITNESS GEAR — Full-Stack E-Commerce Platform
 
 > **Built to Support. Designed to Perform.**  
-> Premium e-commerce web application engineered for powerlifters, bodybuilders, and fitness enthusiasts.
+> Commercial-grade e-commerce web application engineered for powerlifters, bodybuilders, and fitness athletes.
 
 ---
 
-## 🌟 Overview
+## ⚡ Architecture Overview
 
-**AVN FITNESS GEAR** is a modern, high-performance e-commerce web application featuring a state-of-the-art dark/light dual theme UI, interactive 3D hero stage, dynamic product filtering, slide-over shopping cart drawer, mobile slide-over navigation sidebar drawer, gated authentication modal, product detail pages (PDP), and a RESTful backend API serving real-time catalog data and order checkout processing.
+**AVN FITNESS GEAR** is a production-ready, full-stack direct-to-consumer (D2C) fitness gear e-commerce platform. It combines a state-of-the-art **React 19** frontend with an enterprise-grade **Express.js & MongoDB** backend API.
 
----
-
-## 🚀 Key Features
-
-- **⚡ Full-Stack Architecture**: Clean separation between `frontend` (React 19 + Vite 8) and `backend` (Node.js + Express).
-- **🌗 Light & Dark Mode Support**: Dynamic theme toggle with custom CSS variable mapping (`--bg-main`, `--bg-card`, `--text-main`, `--border-subtle`), theme persistence (`localStorage`), and dual-themed brand logos.
-- **🛡️ 3D Metallic Hero Stage**: Multi-tier 3D black pedestal cylinder stage featuring a glowing crimson neon arch, 3D perspective logo tilt (`rotateX(10deg)`), multi-layered 3D block extrusion depth, and letter-specific glow highlights.
-- **📱 Slide-Over Mobile Navigation Sidebar**: Responsive mobile drawer (`md:hidden`) containing navigation links (`HOME`, `ABOUT`, `PRODUCTS`, `WHY AVN`, `REVIEWS`, `CONTACT`), active highlight badges, backdrop blur overlay, and quick CTA button (`EXPLORE PRODUCTS`).
-- **📱 Mobile Bottom Navigation Bar**: Fixed bottom bar (`Home` | `Menu` | `Search` | `Profile`) for seamless single-tap mobile access.
-- **📊 Optimized 2-Column Mobile Grids**:
-  - **Quality Features Box**: 2 cards per row on mobile (`grid-cols-2 lg:grid-cols-4`).
-  - **Trust Badges Container**: 2 items per row on mobile (`grid-cols-2 lg:grid-cols-5`), with the 5th feature (`SECURE PAYMENTS`) centered in the 3rd row (`col-span-2 justify-self-center`).
-- **🛒 Direct Seamless Checkout**: Instant order submission drawer allowing users to place orders directly without requiring registration or login steps.
-- **📄 Product Detail Page (PDP)**: Dedicated PDP view (`ProductDetailPage.jsx`) featuring high-resolution image galleries, SKU/slug metadata, spec tables, pack options, stock quantities, and customer reviews.
-- **🖼️ Native Transparent Brand Logos**: High-resolution, 100% transparent RGBA brand emblem PNG assets (`logo-transparent.png` & `logo-red-black.png`).
-- **🎨 Signature Red Corner Borders**: Unified design language (`.red-corner-border`) featuring top silver specular highlights, inverted glass floor mirror reflections (`scale-y-[-0.55] opacity-35 blur-[1px]`), and red corner neon accents across cards and trust containers.
-- **🛒 Cart Drawer & Lightbox Modals**: Live cart drawer with quantity adjustments, free shipping progress indicator, and instant search overlay modal.
-- **🔄 Fail-Safe API Resilience**: Seamless fallback to local dataset if the backend API is offline.
-
----
-
-## 🛠️ Technology Stack
-
-### Frontend
-- **Framework**: [React 19](https://react.dev/)
-- **Build Tool**: [Vite 8](https://vitejs.dev/)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) with Custom CSS Variables
-- **Icons**: [Lucide React](https://lucide.dev/)
-
-### Backend
-- **Runtime**: [Node.js](https://nodejs.org/)
-- **Framework**: [Express.js](https://expressjs.com/)
-- **Middlewares**: CORS, Express JSON Parser, Dotenv
-- **Dev Tool**: Nodemon
-
----
-
-## 📁 Project Structure
-
-```text
-FITNESS GEAR/
-├── package.json                 # Workspace orchestrator (runs frontend & backend)
-├── README.md                    # Project documentation & architecture overview
-├── .gitignore                   # Global gitignore configuration
+```
+AVN/
+├── avn_fitness_frontend/       # React 19 + Vite 8 + Tailwind CSS Client Application
+│   ├── public/                 # High-resolution product renders, photography & logos
+│   └── src/
+│       ├── components/         # 3D Hero stage, Bestsellers, CartDrawer, Modals, Navbars
+│       ├── context/            # AuthContext (JWT/OTP session) & CartContext (MongoDB sync)
+│       ├── pages/              # PDP, Cart, Checkout, OrderHistory, Reviews, Support
+│       └── services/           # Centralized API fetch client with cookie/header credentials
 │
-├── refernce docs/               # Technical specs & reference assets
-│   └── Commercial Fitness Gear E-Com Technical Implementation.docx
-│
-├── frontend/                    # React 19 + Vite 8 Frontend Web Application
-│   ├── package.json             # Frontend dependencies & scripts
-│   ├── vite.config.js           # Vite dev server & build configuration
-│   ├── index.html               # Main HTML entry point & favicon configuration
-│   │
-│   ├── public/                  # Product photography & static assets
-│   │   ├── knee-wrap.png        # Knee wrap product image
-│   │   ├── elbow-wrap.png       # Elbow wrap product image
-│   │   ├── wrist-wrap.png       # Wrist wrap product image
-│   │   ├── lifting-straps.png   # Lifting straps product image
-│   │   ├── yoga-belt.png        # Yoga belt product image
-│   │   ├── athelete-squat.png   # Gym athlete squat background photo
-│   │   └── avn_logo.svg         # AVN SVG Logo asset
-│   │
-│   └── src/                     # React application source code
-│       ├── assets/              # High-resolution native transparent brand logos
-│       │   ├── logo-transparent.png  # White/Red brand logo (Dark Mode)
-│       │   └── logo-red-black.png    # Black/Red brand logo (Light Mode)
-│       │
-│       ├── components/          # Modular React UI components
-│       │   ├── Button.jsx       # Universal brand button component (glow, outline, ghost)
-│       │   ├── Bestsellers.jsx  # Product catalog grid with category filter tabs
-│       │   ├── CartDrawer.jsx   # Slide-over shopping cart drawer
-│       │   ├── CartPage.jsx     # Dedicated full shopping cart page
-│       │   ├── FeatureBar.jsx   # Quality feature cards with 2-column mobile grid
-│       │   ├── Footer.jsx       # Sitemap links & skeletal 5-trust badge container
-│       │   ├── Hero.jsx         # Hero section title & CTA buttons
-│       │   ├── HeroStage3D.jsx  # 3D pedestal stage with neon arch & 3D logo
-│       │   ├── Navbar.jsx       # Header bar, mobile sidebar drawer, theme toggle
-│       │   ├── ProductDetailPage.jsx # Dedicated product detail page (PDP)
-│       │   ├── ProductGraphic.jsx # Dynamic product visual renderer
-│       │   ├── ProductModal.jsx # Product detail lightbox modal
-│       │   ├── SearchModal.jsx  # Instant search overlay modal
-│       │   ├── SearchPage.jsx   # Full search catalog page with compound filters
-│       │   ├── SizeChartModal.jsx # Interactive gear sizing guide modal
-│       │   └── WhyChoose.jsx    # Brand narrative & video preview card
-│       │
-│       ├── services/            # Backend API integration layer
-│       │   └── api.js           # Fetch API client connecting to Express server
-│       │
-│       ├── data/                # Fallback dataset
-│       │   └── products.js      # Local product catalog backup
-│       │
-│       ├── App.jsx              # Main App layout, router view state & cart management
-│       ├── main.jsx             # React DOM entry point
-│       └── index.css            # Custom CSS variables, Tailwind tokens & animations
-│
-└── backend/                     # Node.js + Express REST API Server
-    ├── package.json             # Backend dependencies & dev scripts
-    ├── server.js                # Express API server entry point (Port 5000)
-    ├── .env                     # Environment variables (PORT=5000, CLIENT_URL)
-    │
-    ├── controllers/             # Request controllers
-    │   ├── cartController.js    # Handles cart items, stock validation & coupons
-    │   ├── productController.js # Handles product search pipeline & catalog queries
-    │   └── orderController.js   # Handles checkout order processing
-    │
-    ├── routes/                  # API endpoint definitions
-    │   ├── cartRoutes.js        # Cart management endpoints
-    │   ├── productRoutes.js     # Product & category routes
-    │   └── orderRoutes.js       # Order checkout routes
-    │
-    └── data/                    # Backend database
-        └── products.js          # Extended product catalog dataset (SKUs, variants, reviews)
+└── avn_fitness_backend/        # Node.js + Express + MongoDB RESTful Backend Server
+    ├── scripts/                # Database seeders (products catalog & authentic reviews)
+    ├── tests/                  # Integration test suites & order state machine verification
+    └── src/
+        ├── config/             # Environment, database connection, constants & enums
+        ├── middlewares/        # JWT auth, rate limiting, error handling, activity audit logger
+        ├── models/             # Mongoose schemas (Users, Products, Orders, Carts, Reviews, Support)
+        └── modules/            # Domain controllers & routes (auth, products, cart, checkout, orders)
 ```
 
 ---
 
-## 📋 Getting Started
+## ✨ Key Features
+
+### 🖥️ Frontend (Client Experience)
+- **React 19 & Vite 8**: Blazing-fast hot module reloading and optimized modern JavaScript bundling.
+- **Dynamic Dual Theme**: Smooth instant toggle between Dark Mode (`--bg-main: #0B0B0B`) and Light Mode with custom CSS variables and dual-themed brand logos.
+- **3D Metallic Hero Stage**: Multi-tier metallic black pedestal stage featuring glowing crimson neon arch, 3D perspective logo tilt (`rotateX(10deg)`), and extruded 3D depth.
+- **Responsive Mobile Navigation**: Fixed bottom navigation bar (`Home` | `Menu` | `Search` | `Profile`) and slide-over navigation sidebar with backdrop blur.
+- **Product Detail Page (PDP)**: Dedicated PDP with multi-angle galleries, live stock validation, sizing guides, and authentic athlete customer reviews.
+- **Live Shopping Cart Drawer**: SKU-first cart with quantity adjustments, free shipping progress indicator, and instant proceed-to-checkout redirect.
+- **Direct & Gated Checkout**: Multi-step checkout with address management, order summary, UPI/Card/NetBanking/COD payments, and live confirmation.
+
+### ⚙️ Backend (API & Database)
+- **Node.js & Express REST API**: Modular domain structure running on `http://localhost:5000/api/v1`.
+- **MongoDB & Mongoose ODM**: 9 integrated collections (`users`, `products`, `categories`, `orders`, `reviews`, `carts`, `coupons`, `supporttickets`, `otps`).
+- **Robust Authentication**: Dual auth support with bcrypt password hashing, JWT bearer tokens, and 6-digit email OTP verification.
+- **Dual-Key Lookups**: Seamless lookups supporting both MongoDB ObjectIds and human-readable identifiers (`slug` for products, `orderNumber` like `ORD-YYYYMMDD-XXXX` for orders).
+- **Cart Lifecycle & Cleanup**:
+  - Unauthenticated guests browse with temporary session carts.
+  - Active session carts automatically merge into the authenticated account upon login.
+  - Placed and confirmed orders instantly delete the cart document from MongoDB, ensuring zero orphaned empty carts.
+- **Order State Machine**: Enforces strict lifecycle transitions (`pending_payment` $\rightarrow$ `paid_confirmed` $\rightarrow$ `processing` $\rightarrow$ `shipped` $\rightarrow$ `delivered`).
+- **Reviews & Upvotes**: Authentic athlete reviews registered in MongoDB with verified purchase badges and one-upvote-per-user helpful voting.
+- **Customer Support Ticketing**: Ticket management with automatic category normalization (`return_refund`, `shipping`, `product`, `general`).
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-
-Ensure you have **Node.js** (v18 or higher) and **npm** installed.
+- **Node.js** (v18 or higher)
+- **npm** (v9 or higher)
+- **MongoDB** running locally on `mongodb://127.0.0.1:27017`
 
 ### 1. Installation
-
-Install dependencies for `frontend` and `backend`:
+Install dependencies for both frontend and backend from the root workspace:
 
 ```bash
-# In frontend directory
-cd frontend
-npm install
+# In backend
+cd avn_fitness_backend && npm install
 
-# In backend directory
-cd ../backend
-npm install
+# In frontend
+cd ../avn_fitness_frontend && npm install
 ```
+
+### 2. Environment Configuration
+Ensure `avn_fitness_backend/.env` is configured:
+
+```env
+PORT=5000
+NODE_ENV=development
+MONGO_URI=mongodb://127.0.0.1:27017/avn_fitness
+JWT_SECRET=your_super_secret_jwt_key_here
+JWT_EXPIRES_IN=7d
+CLIENT_URL=http://localhost:5173
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=5000
+```
+
+### 3. Database Seeding
+Populate the AVN product catalog and authentic reviews:
+
+```bash
+cd avn_fitness_backend
+npm run seed                           # Seeds foundational categories
+node scripts/seed_avn_products.js      # Seeds 12 active AVN gear products
+node scripts/register_pdp_reviews.js   # Seeds authentic athlete reviews
+```
+
+### 4. Running the Development Servers
+
+#### Run Fullstack Together (From Root):
+```bash
+npm run dev
+```
+
+#### Or Run Independently:
+```bash
+# Terminal 1 — Backend API Server (Port 5000)
+npm run dev:backend
+
+# Terminal 2 — Frontend Application (Port 5173)
+npm run dev:frontend
+```
+
+Open **`http://localhost:5173`** in your browser to explore the store!
 
 ---
 
-### 2. Development Servers
+## 📡 API Endpoints Reference (`/api/v1`)
 
-#### Option A: Run Backend API Server
-```bash
-cd backend
-npm run dev
-```
-The Express backend server will start on **`http://localhost:5000`**.
-
-#### Option B: Run Frontend Application
-```bash
-cd frontend
-npm run dev
-```
-The Vite frontend server will start on **`http://localhost:5173`**.
+| Module | Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- | :--- |
+| **Auth** | `POST` | `/auth/register` | Register new athlete account with OTP | No |
+| **Auth** | `POST` | `/auth/login` | Email & password login (returns JWT) | No |
+| **Auth** | `POST` | `/auth/otp/send` | Dispatch 6-digit verification code | No |
+| **Auth** | `POST` | `/auth/otp/verify` | Verify OTP code & authenticate | No |
+| **Auth** | `GET` | `/auth/profile` | Retrieve active user profile & addresses | Yes |
+| **Auth** | `POST` | `/auth/addresses` | Add new shipping address | Yes |
+| **Products** | `GET` | `/products` | Filter, sort & search live product catalog | No |
+| **Products** | `GET` | `/products/:slugOrId` | Retrieve single product details & variants | No |
+| **Categories**| `GET` | `/categories` | List active product categories | No |
+| **Cart** | `GET` | `/cart` | Retrieve user/guest cart (no empty persistence) | Optional |
+| **Cart** | `POST` | `/cart/items` | Add product SKU variant to cart | Optional |
+| **Cart** | `PATCH` | `/cart/items/:itemId`| Update quantity of specific cart item | Optional |
+| **Cart** | `DELETE`| `/cart/items/:itemId`| Remove item (deletes cart document if empty) | Optional |
+| **Cart** | `DELETE`| `/cart` | Clear and delete cart from MongoDB | Optional |
+| **Checkout** | `POST` | `/checkout/create-order` | Create confirmed order & delete cart | Yes |
+| **Orders** | `GET` | `/orders` | List logged-in user's order history | Yes |
+| **Orders** | `GET` | `/orders/:idOrNumber` | Retrieve single order details | Yes |
+| **Orders** | `POST` | `/orders/:id/cancel` | Request cancellation & restock items | Yes |
+| **Orders** | `POST` | `/orders/:id/return` | Submit order return request | Yes |
+| **Orders** | `POST` | `/orders/:id/deliver` | Dev simulation: mark delivered & accept | Yes |
+| **Reviews** | `GET` | `/reviews/products/:idOrSlug` | Fetch verified reviews for product | No |
+| **Reviews** | `POST` | `/reviews` | Submit verified purchase review & rating | Yes |
+| **Reviews** | `POST` | `/reviews/:id/helpful` | Upvote review helpfulness (1 per user) | Optional |
+| **Support** | `POST` | `/support` | Create customer care support ticket | Optional |
+| **Support** | `GET` | `/support/my-tickets` | List logged-in user's support tickets | Yes |
 
 ---
 
-## 📡 API Endpoints Reference
+## 🧪 Testing & Verification
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Health check endpoint returning server status |
-| `GET` | `/api/products` | Retrieve all products (Supports `?category=` & `?search=`) |
-| `GET` | `/api/products/:id` | Retrieve single product details by ID |
-| `GET` | `/api/categories` | Retrieve list of available product categories |
-| `POST` | `/api/orders` | Process a new checkout order |
+```bash
+# Run backend foundation verification
+node avn_fitness_backend/scripts/verify_foundation.js
+
+# Run full e2e test suite
+npm run test:backend
+```
 
 ---
 

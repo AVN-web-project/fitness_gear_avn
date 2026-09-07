@@ -26,6 +26,8 @@ import ProductGraphic from '../components/ProductGraphic';
 import SizeChartModal from '../components/SizeChartModal';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { fetchProductReviewsApi, submitReviewApi, markReviewHelpfulApi, fetchMyOrdersApi } from '../services/api';
+import { PRODUCTS as LOCAL_PRODUCTS } from '../data/products';
 
 export default function ProductDetailPage({
   product,
@@ -55,6 +57,12 @@ export default function ProductDetailPage({
 
   // Lightbox & Modal view states
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 });
+  const [isDraggingLightbox, setIsDraggingLightbox] = useState(false);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const lightboxModalRef = useRef(null);
+  const galleryContainerRef = useRef(null);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
   const [isHoveringImage, setIsHoveringImage] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
@@ -101,14 +109,25 @@ export default function ProductDetailPage({
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [reviewAccessMessage, setReviewAccessMessage] = useState('');
 
+  const [liveOrders, setLiveOrders] = useState([]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMyOrdersApi().then((orders) => {
+        if (Array.isArray(orders)) setLiveOrders(orders);
+      }).catch(() => { });
+    }
+  }, [isAuthenticated]);
+
   const productReviewEligible = React.useMemo(() => {
     if (!isAuthenticated || !product) return false;
 
     try {
       const savedOrders = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
+      const combinedOrders = [...savedOrders, ...liveOrders];
       const currentUserEmail = user?.email || JSON.parse(localStorage.getItem('avn-user') || 'null')?.email;
 
-      return savedOrders.some((order) => {
+      return combinedOrders.some((order) => {
         const matchesCustomer = !currentUserEmail || (order.customerEmail || '').toLowerCase() === currentUserEmail.toLowerCase();
         if (!matchesCustomer) return false;
 
@@ -130,8 +149,8 @@ export default function ProductDetailPage({
           ].map((value) => String(value || '').toLowerCase());
 
           const matchesProduct = productKeys.some((key) => itemKeys.includes(key));
-          const isDelivered = item.deliveryStatus === 'delivered' || item.deliveryStatus === 'accepted' || order.status === 'Delivered' || order.status === 'delivered';
-          const isAccepted = Boolean(item.acceptedAtDelivery) || item.deliveryStatus === 'accepted';
+          const isDelivered = item.deliveryStatus === 'delivered' || item.deliveryStatus === 'accepted' || order.status === 'Delivered' || order.status === 'delivered' || order.orderStatus === 'delivered';
+          const isAccepted = Boolean(item.acceptedAtDelivery) || item.deliveryStatus === 'accepted' || order.status === 'Delivered' || order.status === 'delivered' || order.orderStatus === 'delivered';
 
           return matchesProduct && isDelivered && isAccepted;
         });
@@ -140,7 +159,7 @@ export default function ProductDetailPage({
       console.warn('Unable to verify purchase status for review.', e);
       return false;
     }
-  }, [isAuthenticated, product, user]);
+  }, [isAuthenticated, product, user, liveOrders]);
 
   useEffect(() => {
     if (isAuthenticated && user?.name && !newReview.author) {
@@ -160,7 +179,12 @@ export default function ProductDetailPage({
       }
       setQuantity(1);
       setActiveGalleryIndex(0);
-      setReviewsList((product.reviews || []).filter((r) => r.isApproved !== false));
+      setReviewsList(
+        (product.reviews || [])
+          .filter((r) => r.isApproved !== false)
+          .map((r) => ({ ...r, hasVoted: false, helpful: Number(r.helpful) || 0 }))
+      );
+
       setPincodeResult(null);
       setPincode('');
 
@@ -218,6 +242,40 @@ export default function ProductDetailPage({
     }
   }, [product]);
 
+  // Dynamic reviews hydration with user-specific helpful upvote status
+  const targetProdId = product?._id || product?.slug || product?.id;
+  useEffect(() => {
+    if (!targetProdId) return;
+
+    fetchProductReviewsApi(targetProdId)
+      .then((liveReviews) => {
+        if (Array.isArray(liveReviews) && liveReviews.length > 0) {
+          const mapped = liveReviews.map((r) => ({
+            id: r._id || r.id,
+            author: r.user?.name || r.author || 'Verified Athlete',
+            rating: r.rating,
+            title: r.title || 'Great gear!',
+            comment: r.comment,
+            date: r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : 'Recent',
+            verified: Boolean(r.isVerifiedPurchase),
+            isApproved: true,
+            helpful: typeof r.helpful === 'number' ? r.helpful : 0,
+            hasVoted: Boolean(r.hasVoted),
+          }));
+          setReviewsList((prev) => {
+            const merged = [...mapped];
+            prev.forEach((pItem) => {
+              if (!merged.some((m) => m.id === pItem.id || m.comment === pItem.comment)) {
+                merged.push(pItem);
+              }
+            });
+            return merged;
+          });
+        }
+      })
+      .catch((err) => console.warn('Live reviews fetch failed:', err));
+  }, [targetProdId, user?._id]);
+
   // Early exit AFTER hooks if product is null
   if (!product) return null;
 
@@ -226,14 +284,171 @@ export default function ProductDetailPage({
   const isProductActive = product.status ? product.status === 'Active' : product.inStock !== false;
   const isPurchasingDisabled = !isProductActive || maxStock <= 0;
 
-  // Gallery items handling
+  // Gallery items handling with rich multi-angle fallback
+  const localProductMatch = LOCAL_PRODUCTS.find((p) =>
+    p.id === product?.id ||
+    p.slug === product?.slug ||
+    (p.name && product?.name && p.name.toLowerCase() === product.name.toLowerCase())
+  );
+
   const galleryItems = product.gallery && product.gallery.length > 0
     ? product.gallery
-    : [{ id: 'front', label: 'Front View', image: product.image, imageLight: product.imageLight, type: product.imageType }];
+    : (localProductMatch?.gallery && localProductMatch.gallery.length > 0)
+      ? localProductMatch.gallery
+      : [{ id: 'front', label: 'Front View', image: product.image, imageLight: product.imageLight, type: product.imageType }];
 
   const currentGalleryItem = galleryItems[activeGalleryIndex] || galleryItems[0];
   const activeImage = currentGalleryItem?.image || product.image;
-  const activeImageLight = currentGalleryItem?.imageLight || product.imageLight;
+  const activeImageLight = currentGalleryItem?.imageLight || (activeGalleryIndex === 0 ? product.imageLight : null) || currentGalleryItem?.image || product.image;
+
+  // Auto-scroll PDP gallery thumbnail into view when activeGalleryIndex changes
+  useEffect(() => {
+    if (!galleryContainerRef.current) return;
+    const activeBtn = galleryContainerRef.current.querySelector(`[data-gallery-idx="${activeGalleryIndex}"]`);
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [activeGalleryIndex]);
+
+  // Opposite theme for inspect pop-up window
+  const currentTheme = theme || 'dark';
+  const oppositeTheme = currentTheme === 'light' ? 'dark' : 'light';
+  const isOppositeLight = oppositeTheme === 'light';
+
+  // Lightbox Zoom & Navigation Handlers
+  const handleZoomIn = () => {
+    setLightboxZoom((z) => Math.min(3.5, Number((z + 0.5).toFixed(1))));
+  };
+
+  const handleZoomOut = () => {
+    setLightboxZoom((z) => {
+      const next = Math.max(1, Number((z - 0.5).toFixed(1)));
+      if (next === 1) setLightboxPan({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleResetZoom = () => {
+    setLightboxZoom(1);
+    setLightboxPan({ x: 0, y: 0 });
+  };
+
+  const handleToggleZoom = () => {
+    if (lightboxZoom > 1) {
+      handleResetZoom();
+    } else {
+      setLightboxZoom(2.2);
+    }
+  };
+
+  const handleLightboxMouseDown = (e) => {
+    e.preventDefault();
+    if (lightboxZoom <= 1) return;
+    setIsDraggingLightbox(true);
+    setDragStartPos({ x: e.clientX - lightboxPan.x, y: e.clientY - lightboxPan.y });
+  };
+
+  const handleLightboxMouseMove = (e) => {
+    if (!isDraggingLightbox || lightboxZoom <= 1) return;
+    e.preventDefault();
+    const maxPan = (lightboxZoom - 1) * 320;
+    const newX = Math.max(-maxPan, Math.min(maxPan, e.clientX - dragStartPos.x));
+    const newY = Math.max(-maxPan, Math.min(maxPan, e.clientY - dragStartPos.y));
+    setLightboxPan({ x: newX, y: newY });
+  };
+
+  const handleLightboxMouseUp = () => {
+    setIsDraggingLightbox(false);
+  };
+
+  const handleLightboxTouchStart = (e) => {
+    if (lightboxZoom <= 1 || e.touches.length !== 1) return;
+    setIsDraggingLightbox(true);
+    setDragStartPos({
+      x: e.touches[0].clientX - lightboxPan.x,
+      y: e.touches[0].clientY - lightboxPan.y,
+    });
+  };
+
+  const handleLightboxTouchMove = (e) => {
+    if (!isDraggingLightbox || lightboxZoom <= 1 || e.touches.length !== 1) return;
+    const maxPan = (lightboxZoom - 1) * 320;
+    const newX = Math.max(-maxPan, Math.min(maxPan, e.touches[0].clientX - dragStartPos.x));
+    const newY = Math.max(-maxPan, Math.min(maxPan, e.touches[0].clientY - dragStartPos.y));
+    setLightboxPan({ x: newX, y: newY });
+  };
+
+  const handleLightboxTouchEnd = () => {
+    setIsDraggingLightbox(false);
+  };
+
+  const handlePrevView = (e) => {
+    if (e) e.stopPropagation();
+    setActiveGalleryIndex((prev) => (prev - 1 + galleryItems.length) % galleryItems.length);
+    handleResetZoom();
+  };
+
+  const handleNextView = (e) => {
+    if (e) e.stopPropagation();
+    setActiveGalleryIndex((prev) => (prev + 1) % galleryItems.length);
+    handleResetZoom();
+  };
+
+  // Lock body/html scroll and intercept native wheel to stop background page scrolling while zooming
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    // Intercept native wheel with non-passive listener to prevent background page scroll completely
+    const handleNativeWheel = (e) => {
+      e.preventDefault();
+
+      // If wheel occurs inside or over the lightbox modal, zoom the image smoothly
+      if (lightboxModalRef.current && (lightboxModalRef.current === e.target || lightboxModalRef.current.contains(e.target))) {
+        const delta = e.deltaY < 0 ? 0.25 : -0.25;
+        setLightboxZoom((z) => {
+          const next = Math.min(4, Math.max(1, Number((z + delta).toFixed(2))));
+          if (next === 1) setLightboxPan({ x: 0, y: 0 });
+          return next;
+        });
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsLightboxOpen(false);
+        handleResetZoom();
+      } else if (e.key === 'ArrowLeft') {
+        setActiveGalleryIndex((prev) => (prev - 1 + galleryItems.length) % galleryItems.length);
+        handleResetZoom();
+      } else if (e.key === 'ArrowRight') {
+        setActiveGalleryIndex((prev) => (prev + 1) % galleryItems.length);
+        handleResetZoom();
+      } else if (e.key === '+' || e.key === '=') {
+        handleZoomIn();
+      } else if (e.key === '-') {
+        handleZoomOut();
+      }
+    };
+
+    window.addEventListener('wheel', handleNativeWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.touchAction = originalTouchAction;
+      window.removeEventListener('wheel', handleNativeWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isLightboxOpen, galleryItems.length]);
 
   // Price calculations
   const compareAt = product.compareAtPrice || product.mrp || Math.round(product.price * 1.35);
@@ -332,7 +547,8 @@ export default function ProductDetailPage({
       isApproved: true,
       title: newReview.title || 'Great performance gear!',
       comment: newReview.comment,
-      helpful: 0
+      helpful: 0,
+      hasVoted: false
     };
 
     setReviewsList([createdReview, ...reviewsList]);
@@ -341,22 +557,87 @@ export default function ProductDetailPage({
     setShowReviewForm(false);
     setReviewSubmitted(true);
     setTimeout(() => setReviewSubmitted(false), 3500);
+
+    // Persist review to MongoDB via backend API
+    const targetProdId = product._id || product.slug || product.id;
+    submitReviewApi({
+      productId: targetProdId,
+      rating: Number(newReview.rating),
+      title: newReview.title || 'Great performance gear!',
+      comment: newReview.comment
+    }).then((res) => {
+      if (res?.data?.review?._id) {
+        setReviewsList((prev) =>
+          prev.map((r) =>
+            r.id === createdReview.id ? { ...r, id: res.data.review._id } : r
+          )
+        );
+      }
+    }).catch((err) => console.warn('Submit review API error:', err));
   };
 
-  // Upvote review helpfulness
-  const handleHelpfulClick = (reviewId) => {
+  // Upvote / toggle review helpfulness (1 vote per user)
+  const handleHelpfulClick = async (reviewId) => {
+    if (!isAuthenticated) {
+      if (typeof onNavigateAuth === 'function') {
+        onNavigateAuth('helpful');
+      }
+      return;
+    }
+
+    const currentReview = reviewsList.find((r) => r.id === reviewId);
+    if (!currentReview) return;
+
+    const willVote = !currentReview.hasVoted;
+    const optimisticCount = willVote
+      ? (Number(currentReview.helpful) || 0) + 1
+      : Math.max(0, (Number(currentReview.helpful) || 0) - 1);
+
+    // Optimistic UI update
     setReviewsList((prev) =>
       prev.map((r) =>
-        r.id === reviewId ? { ...r, helpful: r.helpful + 1 } : r
+        r.id === reviewId
+          ? { ...r, helpful: optimisticCount, hasVoted: willVote }
+          : r
       )
     );
+
+    try {
+      const res = await markReviewHelpfulApi(reviewId);
+      if (res && res.data) {
+        setReviewsList((prev) =>
+          prev.map((r) =>
+            r.id === reviewId
+              ? {
+                ...r,
+                helpful: typeof res.data.helpful === 'number' ? res.data.helpful : r.helpful,
+                hasVoted: typeof res.data.hasVoted === 'boolean' ? res.data.hasVoted : willVote,
+              }
+              : r
+          )
+        );
+      }
+    } catch (err) {
+      console.warn('Helpful upvote failed:', err);
+      // Revert optimistic update on failure
+      setReviewsList((prev) =>
+        prev.map((r) =>
+          r.id === reviewId
+            ? { ...r, helpful: currentReview.helpful, hasVoted: currentReview.hasVoted }
+            : r
+        )
+      );
+    }
   };
 
   // Frequently bought together companion product
   const companionProduct = allProducts.find(
-    (p) =>
-      p.id !== product.id &&
-      (product.frequentlyBoughtWith?.includes(p.id) || p.category === product.category)
+    (p) => {
+      const pCat = typeof p.category === 'object' ? p.category?.name : p.category;
+      const prodCat = typeof product.category === 'object' ? product.category?.name : product.category;
+      return p.id !== product.id &&
+        (product.frequentlyBoughtWith?.includes(p.id) || (pCat && prodCat && pCat.toUpperCase() === prodCat.toUpperCase()));
+    }
   );
 
   const bundleTotalPrice = companionProduct
@@ -383,7 +664,11 @@ export default function ProductDetailPage({
           {/* Main Visual Frame */}
           <div
             ref={imageFrameRef}
-            className="relative w-full aspect-square rounded-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-6 sm:p-10 flex items-center justify-center overflow-hidden shadow-2xl group cursor-crosshair"
+            onClick={() => {
+              setIsLightboxOpen(true);
+              handleResetZoom();
+            }}
+            className="relative w-full aspect-square rounded-3xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-6 sm:p-10 flex items-center justify-center overflow-hidden shadow-2xl group cursor-zoom-in"
             onMouseEnter={() => {
               if (imageFrameRef.current) {
                 setImageFrameRect(imageFrameRef.current.getBoundingClientRect());
@@ -402,8 +687,6 @@ export default function ProductDetailPage({
               });
             }}
           >
-
-
             {/* Graphic Component — normal, no zoom */}
             <ProductGraphic
               image={activeImage}
@@ -467,31 +750,34 @@ export default function ProductDetailPage({
 
           {/* Gallery Thumbnails Switcher */}
           <div
-            className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none"
+            ref={galleryContainerRef}
+            className="flex items-center gap-3 overflow-x-auto p-1.5 pb-3 scrollbar-none"
             role="tablist"
             aria-label="Product Gallery Thumbnails"
           >
             {galleryItems.map((item, idx) => (
               <button
                 key={item.id || idx}
+                data-gallery-idx={idx}
                 onClick={() => setActiveGalleryIndex(idx)}
                 role="tab"
                 aria-selected={activeGalleryIndex === idx}
                 aria-label={`View ${item.label}`}
                 className={`relative flex-shrink-0 w-20 h-20 rounded-xl border-2 transition-all p-2 bg-[var(--bg-main)] flex flex-col items-center justify-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF1E27] ${activeGalleryIndex === idx
-                    ? 'border-[#FF1E27] shadow-md scale-105'
-                    : 'border-[var(--border-subtle)] opacity-70 hover:opacity-100'
+                  ? 'border-[#FF1E27] shadow-[0_0_12px_rgba(255,30,39,0.35)] ring-1 ring-[#FF1E27]'
+                  : 'border-[var(--border-subtle)] opacity-70 hover:opacity-100 hover:border-[var(--border-strong)]'
                   }`}
               >
                 <ProductGraphic
                   image={item.image || product.image}
-                  imageLight={item.imageLight || product.imageLight}
+                  imageLight={item.imageLight || (idx === 0 ? product.imageLight : null) || item.image}
                   type={item.type || product.imageType}
                   theme={theme}
                   noGlow
                   className="w-full h-full"
                 />
-                <span className="text-[9px] font-bold uppercase truncate max-w-full text-[var(--text-sub)]">
+                <span className={`text-[9px] font-bold uppercase truncate max-w-full transition-colors ${activeGalleryIndex === idx ? 'text-[#FF1E27]' : 'text-[var(--text-sub)]'
+                  }`}>
                   {item.label}
                 </span>
               </button>
@@ -523,7 +809,7 @@ export default function ProductDetailPage({
           <div className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-bold text-[#FF1E27] tracking-widest uppercase font-heading bg-red-500/10 px-2.5 py-0.5 rounded border border-red-500/20">
-                {product.category}
+                {typeof product.category === 'object' ? product.category?.name : product.category}
               </span>
               <span className="text-[11px] text-[var(--text-sub)] font-semibold font-mono bg-white/5 px-2 py-0.5 rounded">
                 SKU: {product.sku || `AVN-${product.id.toUpperCase()}`}
@@ -600,8 +886,8 @@ export default function ProductDetailPage({
                     aria-label={`Select color ${color.name}`}
                     aria-selected={selectedColor.name === color.name}
                     className={`group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${selectedColor.name === color.name
-                        ? 'border-[#FF1E27] bg-[#FF1E27]/10 text-[var(--text-main)] shadow-md'
-                        : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
+                      ? 'border-[#FF1E27] bg-[#FF1E27]/10 text-[var(--text-main)] shadow-md'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
                       }`}
                   >
                     <span
@@ -639,8 +925,8 @@ export default function ProductDetailPage({
                     aria-label={`Select size ${size}`}
                     aria-selected={selectedSize === size}
                     className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-heading uppercase transition-all cursor-pointer ${selectedSize === size
-                        ? 'border-[#FF1E27] bg-[#FF1E27] text-white shadow-md'
-                        : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:border-gray-500'
+                      ? 'border-[#FF1E27] bg-[#FF1E27] text-white shadow-md'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:border-gray-500'
                       }`}
                   >
                     {size}
@@ -665,8 +951,8 @@ export default function ProductDetailPage({
                     aria-label={`Select pack option ${pack}`}
                     aria-selected={selectedPack === pack}
                     className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-heading transition-all cursor-pointer ${selectedPack === pack
-                        ? 'border-[#FF1E27] bg-[#FF1E27]/15 text-[#FF1E27] font-extrabold shadow-md'
-                        : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
+                      ? 'border-[#FF1E27] bg-[#FF1E27]/15 text-[#FF1E27] font-extrabold shadow-md'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
                       }`}
                   >
                     {pack}
@@ -676,15 +962,15 @@ export default function ProductDetailPage({
             </div>
           )}
 
-          {/* Quantity Counter */}
-          <div className="space-y-2.5">
-            <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider">
-              QUANTITY{inCartQty > 0 ? ' IN CART' : ''}:
-            </label>
-            <div className="flex items-center w-36 border border-[var(--border-subtle)] rounded-xl bg-[var(--bg-main)] p-1">
-              <button
-                onClick={() => {
-                  if (inCartQty > 0) {
+          {/* Quantity Counter (Only displayed when item is added to cart) */}
+          {inCartQty > 0 && (
+            <div className="space-y-2.5 animate-in fade-in duration-200">
+              <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider">
+                QUANTITY IN CART:
+              </label>
+              <div className="flex items-center w-36 border border-[var(--border-subtle)] rounded-xl bg-[var(--bg-main)] p-1">
+                <button
+                  onClick={() => {
                     const match = cartItems.find(
                       (item) =>
                         (item.id === product?.id || item.productId === product?.id) &&
@@ -693,22 +979,18 @@ export default function ProductDetailPage({
                     );
                     const targetId = match ? (match.id || match.productId) : product.id;
                     updateCartQty(targetId, inCartQty - 1);
-                  } else {
-                    setQuantity((prev) => Math.max(1, prev - 1));
-                  }
-                }}
-                disabled={isPurchasingDisabled || (inCartQty > 0 ? inCartQty <= 1 : quantity <= 1)}
-                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
-                aria-label="Decrease quantity"
-              >
-                -
-              </button>
-              <span className="flex-1 text-center font-extrabold font-heading text-sm text-[#FF1E27] font-mono">
-                {inCartQty > 0 ? inCartQty : quantity}
-              </span>
-              <button
-                onClick={() => {
-                  if (inCartQty > 0) {
+                  }}
+                  disabled={isPurchasingDisabled || inCartQty <= 1}
+                  className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
+                  aria-label="Decrease quantity"
+                >
+                  -
+                </button>
+                <span className="flex-1 text-center font-extrabold font-heading text-sm text-[#FF1E27] font-mono">
+                  {inCartQty}
+                </span>
+                <button
+                  onClick={() => {
                     const match = cartItems.find(
                       (item) =>
                         (item.id === product?.id || item.productId === product?.id) &&
@@ -717,18 +999,16 @@ export default function ProductDetailPage({
                     );
                     const targetId = match ? (match.id || match.productId) : product.id;
                     updateCartQty(targetId, inCartQty + 1);
-                  } else {
-                    setQuantity((prev) => prev + 1);
-                  }
-                }}
-                disabled={isPurchasingDisabled}
-                className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
-                aria-label="Increase quantity"
-              >
-                +
-              </button>
+                  }}
+                  disabled={isPurchasingDisabled}
+                  className="w-10 h-9 rounded-lg text-lg font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)] flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Action CTAs */}
           <div className="space-y-3 pt-2">
@@ -741,8 +1021,8 @@ export default function ProductDetailPage({
                 onClick={handleAddToCart}
                 disabled={isPurchasingDisabled}
                 className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all ${isPurchasingDisabled
-                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
-                    : 'btn-cart-inward-glow cursor-pointer'
+                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                  : 'btn-cart-inward-glow cursor-pointer'
                   }`}
               >
                 {isPurchasingDisabled ? (
@@ -765,8 +1045,8 @@ export default function ProductDetailPage({
                 onClick={handleBuyNow}
                 disabled={isPurchasingDisabled}
                 className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-colors ${isPurchasingDisabled
-                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
-                    : 'bg-white hover:bg-gray-100 text-black cursor-pointer'
+                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                  : 'bg-white hover:bg-gray-100 text-black cursor-pointer'
                   }`}
               >
                 <Zap className={`w-5 h-5 fill-current ${isPurchasingDisabled ? 'text-gray-500' : 'text-[#FF1E27]'}`} />
@@ -965,8 +1245,8 @@ export default function ProductDetailPage({
               role="tab"
               aria-selected={activeTab === tab.id}
               className={`px-5 py-3 rounded-t-xl font-extrabold font-heading text-xs sm:text-sm tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${activeTab === tab.id
-                  ? 'bg-[#FF1E27] text-white border-b-2 border-white shadow-md'
-                  : 'text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)]'
+                ? 'bg-[#FF1E27] text-white border-b-2 border-white shadow-md'
+                : 'text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--border-subtle)]'
                 }`}
             >
               {tab.label}
@@ -1255,10 +1535,15 @@ export default function ProductDetailPage({
 
                     <div className="pt-1 flex items-center gap-3">
                       <button
+                        type="button"
                         onClick={() => handleHelpfulClick(rev.id)}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors cursor-pointer"
+                        className={`flex items-center gap-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${rev.hasVoted
+                            ? 'text-[#FF1E27] font-bold'
+                            : 'text-[var(--text-sub)] hover:text-[#FF1E27]'
+                          }`}
+                        title={rev.hasVoted ? 'Undo helpful vote' : 'Mark as helpful'}
                       >
-                        <ThumbsUp className="w-3.5 h-3.5" />
+                        <ThumbsUp className={`w-3.5 h-3.5 ${rev.hasVoted ? 'fill-[#FF1E27] text-[#FF1E27]' : ''}`} />
                         <span>Helpful ({rev.helpful})</span>
                       </button>
                     </div>
@@ -1301,7 +1586,7 @@ export default function ProductDetailPage({
 
                 <div className="space-y-2">
                   <span className="text-[10px] font-extrabold text-[#FF1E27] uppercase tracking-wider">
-                    {item.category}
+                    {typeof item.category === 'object' ? item.category?.name : item.category}
                   </span>
                   <h4 className="text-sm font-sans font-black italic uppercase text-[var(--text-main)] truncate">
                     {item.name}
@@ -1336,6 +1621,144 @@ export default function ProductDetailPage({
         onClose={() => setIsSizeChartOpen(false)}
         category={product.category}
       />
+
+      {/* Interactive Lightbox Pop-up with Opposite Theme Background */}
+      {isLightboxOpen && typeof window !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none touch-none"
+          style={{ overscrollBehavior: 'none' }}
+          onClick={() => {
+            setIsLightboxOpen(false);
+            handleResetZoom();
+          }}
+        >
+          {/* Static Pop-up Window Box — Fixed Dimensions, Never Resizes or Moves on Zoom */}
+          <div
+            ref={lightboxModalRef}
+            onClick={(e) => e.stopPropagation()}
+            className={`relative rounded-3xl border shadow-2xl overflow-hidden flex items-center justify-center ${
+              isOppositeLight
+                ? 'bg-white border-zinc-200 shadow-[0_20px_70px_rgba(0,0,0,0.4)]'
+                : 'bg-[#0D0E12] border-zinc-800 shadow-[0_20px_70px_rgba(0,0,0,0.85)]'
+            }`}
+            style={{
+              width: 'min(92vw, 720px)',
+              height: 'min(85vh, 720px)',
+              maxWidth: '720px',
+              maxHeight: '720px',
+              flexShrink: 0,
+              transform: 'none',
+            }}
+          >
+            {/* Minimalist Close Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsLightboxOpen(false);
+                handleResetZoom();
+              }}
+              aria-label="Close"
+              title="Close (Esc)"
+              className={`absolute top-4 right-4 z-30 p-2.5 rounded-full transition-colors cursor-pointer ${
+                isOppositeLight
+                  ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-black shadow-sm'
+                  : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white shadow-sm'
+              }`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Static Image Viewport */}
+            <div
+              className="w-full h-full relative overflow-hidden flex items-center justify-center select-none"
+              onDoubleClick={handleToggleZoom}
+              onMouseDown={handleLightboxMouseDown}
+              onMouseMove={handleLightboxMouseMove}
+              onMouseUp={handleLightboxMouseUp}
+              onMouseLeave={handleLightboxMouseUp}
+              onTouchStart={handleLightboxTouchStart}
+              onTouchMove={handleLightboxTouchMove}
+              onTouchEnd={handleLightboxTouchEnd}
+            >
+              {/* Scalable & Pannable Image Wrapper */}
+              <div
+                style={{
+                  transform: `scale(${lightboxZoom}) translate(${lightboxPan.x / lightboxZoom}px, ${lightboxPan.y / lightboxZoom}px)`,
+                  transformOrigin: 'center center',
+                  transition: isDraggingLightbox ? 'none' : 'transform 0.12s cubic-bezier(0.2, 0, 0, 1)',
+                  cursor: lightboxZoom > 1 ? (isDraggingLightbox ? 'grabbing' : 'grab') : 'zoom-in',
+                }}
+                className="w-full h-full flex items-center justify-center p-8 sm:p-12 pointer-events-none"
+              >
+                <img
+                  src={
+                    (oppositeTheme === 'light' && currentGalleryItem?.imageLight)
+                      ? currentGalleryItem.imageLight
+                      : ((oppositeTheme === 'light' && activeGalleryIndex === 0 && product.imageLight)
+                        ? product.imageLight
+                        : (currentGalleryItem?.image || product.image))
+                  }
+                  alt={currentGalleryItem?.label || product.name}
+                  draggable={false}
+                  className="max-w-full max-h-full object-contain select-none pointer-events-none drop-shadow-sm"
+                />
+              </div>
+            </div>
+
+            {/* Synced Angle Tabs Matching PDP Below the Image */}
+            {galleryItems.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-2xl bg-black/20 dark:bg-white/10 backdrop-blur-md max-w-[92%] overflow-x-auto scrollbar-none">
+                {galleryItems.map((item, idx) => {
+                  const isActive = activeGalleryIndex === idx;
+                  const itemThumbSrc = (oppositeTheme === 'light' && item.imageLight)
+                    ? item.imageLight
+                    : ((oppositeTheme === 'light' && idx === 0 && product.imageLight)
+                      ? product.imageLight
+                      : (item.image || product.image));
+
+                  return (
+                    <button
+                      key={item.id || idx}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveGalleryIndex(idx);
+                        handleResetZoom();
+                      }}
+                      role="tab"
+                      aria-selected={isActive}
+                      title={item.label}
+                      className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none focus:outline-none ${
+                        isActive
+                          ? 'border-[#FF1E27] bg-[#FF1E27]/15 shadow-[0_0_12px_rgba(255,30,39,0.35)] ring-1 ring-[#FF1E27]'
+                          : isOppositeLight
+                            ? 'border-zinc-200/90 bg-white/80 hover:bg-white hover:border-zinc-300 text-zinc-700 shadow-sm'
+                            : 'border-zinc-700/80 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-300 shadow-sm'
+                      }`}
+                    >
+                      {/* Mini Thumbnail */}
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg overflow-hidden flex items-center justify-center bg-transparent shrink-0">
+                        <img
+                          src={itemThumbSrc}
+                          alt={item.label}
+                          className="w-full h-full object-contain pointer-events-none"
+                        />
+                      </div>
+                      {/* Angle Tab Label */}
+                      <span className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wide whitespace-nowrap ${
+                        isActive ? 'text-[#FF1E27]' : isOppositeLight ? 'text-zinc-800' : 'text-zinc-200'
+                      }`}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

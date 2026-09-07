@@ -5,6 +5,8 @@ import Button from './Button';
 export default function SizeChartModal({ isOpen, onClose, category }) {
   if (!isOpen) return null;
 
+  const catUpper = (typeof category === 'object' ? category?.name : category || '').toUpperCase();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-lg bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-2xl text-[var(--text-main)] p-6 space-y-6">
@@ -44,7 +46,7 @@ export default function SizeChartModal({ isOpen, onClose, category }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-subtle)] font-medium text-[var(--text-sub)]">
-                {category?.includes('KNEE') || category?.includes('ELBOW') ? (
+                {catUpper.includes('KNEE') || catUpper.includes('ELBOW') ? (
                   <>
                     <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
                       <td className="p-3 font-bold text-[var(--text-main)]">Standard (79") / Medium</td>

@@ -7,6 +7,7 @@ import WhyChoose from '../components/WhyChoose';
 export default function HomePage({
   theme,
   products,
+  categories,
   onExploreClick,
   onAddToCart,
   onSelectProduct,
@@ -19,8 +20,10 @@ export default function HomePage({
       <Bestsellers
         products={products}
         theme={theme}
+        categories={categories}
         onAddToCart={onAddToCart}
         onSelectProduct={onSelectProduct}
+        onNavigateSearch={onExploreClick}
         isMobileView={isMobileView}
       />
       <WhyChoose isMobileView={isMobileView} />

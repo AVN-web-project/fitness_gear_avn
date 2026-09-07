@@ -33,21 +33,26 @@ export default function SupportPage({
     setLoadingTickets(true);
     try {
       const localTickets = JSON.parse(localStorage.getItem('avn-support-tickets') || '[]');
-      const userEmail = user?.email || JSON.parse(localStorage.getItem('avn-user') || 'null')?.email;
-      let apiTickets = [];
-      if (userEmail) {
-        apiTickets = await fetchSupportTicketsApi(userEmail);
+      if (user) {
+        const apiTickets = await fetchSupportTicketsApi();
+        if (Array.isArray(apiTickets) && apiTickets.length > 0) {
+          const normalized = apiTickets.map((t) => ({
+            id: t.ticketNumber || t._id || t.id,
+            userEmail: t.user?.email || user.email,
+            userName: t.user?.name || user.name,
+            subject: t.subject,
+            category: t.category,
+            orderId: t.order?.orderNumber || t.orderId || 'N/A',
+            message: t.initialMessage || t.message || '',
+            status: t.status ? t.status.charAt(0).toUpperCase() + t.status.slice(1) : 'Open',
+            createdAt: t.createdAt
+          }));
+          setMyTickets(normalized);
+          return;
+        }
       }
 
-      // Combine local and API tickets without duplicates
-      const merged = [...localTickets];
-      apiTickets.forEach((t) => {
-        if (!merged.some((m) => m.id === t.id)) {
-          merged.push(t);
-        }
-      });
-
-      setMyTickets(merged);
+      setMyTickets(localTickets);
     } catch (e) {
       console.warn('Unable to load tickets', e);
     } finally {
@@ -73,8 +78,25 @@ export default function SupportPage({
 
     setIsSubmitting(true);
 
+    let createdTicketNumber = 'TCK-' + Math.floor(1000 + Math.random() * 9000);
+    if (user) {
+      try {
+        const res = await submitSupportTicketApi({
+          subject: ticketForm.subject || 'Support Ticket',
+          category: ticketForm.category,
+          orderId: ticketForm.orderId || null,
+          message: ticketForm.message
+        });
+        if (res?.data?.ticket?.ticketNumber) {
+          createdTicketNumber = res.data.ticket.ticketNumber;
+        }
+      } catch (err) {
+        console.warn('Backend ticket submission failed:', err);
+      }
+    }
+
     const ticketObj = {
-      id: 'TCK-' + Math.floor(1000 + Math.random() * 9000),
+      id: createdTicketNumber,
       userEmail: user?.email || 'customer@avngear.com',
       userName: user?.name || 'AVN Athlete',
       subject: ticketForm.subject || 'Support Ticket',
@@ -86,7 +108,7 @@ export default function SupportPage({
     };
 
     // 1. Update state immediately
-    setMyTickets((prev) => [ticketObj, ...prev]);
+    setMyTickets((prev) => [ticketObj, ...prev.filter(t => t.id !== ticketObj.id)]);
 
     // 2. Persist to localStorage
     try {
@@ -98,16 +120,6 @@ export default function SupportPage({
     setSuccessMsg(`✓ Ticket submitted successfully! Reference ID: ${ticketObj.id}`);
     setTicketForm({ subject: '', category: 'Exchange', orderId: '', message: '' });
     setIsSubmitting(false);
-
-    // 3. Sync to API in background
-    submitSupportTicketApi({
-      userEmail: ticketObj.userEmail,
-      userName: ticketObj.userName,
-      subject: ticketObj.subject,
-      category: ticketObj.category,
-      orderId: ticketObj.orderId,
-      message: ticketObj.message
-    });
   };
 
   const faqList = [

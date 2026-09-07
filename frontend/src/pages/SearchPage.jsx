@@ -22,6 +22,8 @@ import { PRODUCTS as LOCAL_PRODUCTS, CATEGORIES as LOCAL_CATEGORIES } from '../d
 import { useCart } from '../context/CartContext';
 
 export default function SearchPage({
+  products: propProducts,
+  categories: propCategories,
   onSelectProduct,
   onAddToCart,
   onOpenCart,
@@ -120,10 +122,11 @@ export default function SearchPage({
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // --- 2. Client Local Catalog Pipeline Engine ---
-  // --- 3. Client Fallback Pipeline Engine ---
+  // --- 2. Live MongoDB & Client Catalog Pipeline Engine ---
+  const activeProductsSource = (Array.isArray(propProducts) && propProducts.length > 0) ? propProducts : LOCAL_PRODUCTS;
+
   const fallbackResult = useMemo(() => {
-    let list = LOCAL_PRODUCTS.filter((p) => p.status !== 'Discontinued');
+    let list = activeProductsSource.filter((p) => p.status !== 'Discontinued' && p.status !== 'discontinued');
 
     if (searchQuery.trim()) {
       const qLower = searchQuery.trim().toLowerCase();
@@ -132,13 +135,16 @@ export default function SearchPage({
           p.name?.toLowerCase().includes(qLower) ||
           p.tagline?.toLowerCase().includes(qLower) ||
           p.description?.toLowerCase().includes(qLower) ||
-          p.category?.toLowerCase().includes(qLower) ||
+          (typeof p.category === 'object' ? p.category?.name?.toLowerCase().includes(qLower) : p.category?.toLowerCase().includes(qLower)) ||
           (Array.isArray(p.specs) && p.specs.some((s) => s.toLowerCase().includes(qLower)))
       );
     }
 
     if (selectedCategory && selectedCategory.toUpperCase() !== 'ALL PRODUCTS' && selectedCategory.toUpperCase() !== 'ALL') {
-      list = list.filter((p) => p.category.toUpperCase() === selectedCategory.toUpperCase());
+      list = list.filter((p) => {
+        const catName = typeof p.category === 'object' ? p.category?.name : p.category;
+        return (catName || '').toUpperCase() === selectedCategory.toUpperCase();
+      });
     }
 
     if (selectedAgeGroup && selectedAgeGroup !== 'ALL') {

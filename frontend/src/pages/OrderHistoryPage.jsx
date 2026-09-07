@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, ArrowLeft, Clock, CheckCircle2, ChevronRight, PackageCheck, AlertCircle, MessageSquarePlus, XCircle, RotateCcw, Truck } from 'lucide-react';
+import {
+  ShoppingBag, ArrowLeft, Clock, CheckCircle2, ChevronRight,
+  PackageCheck, AlertCircle, MessageSquarePlus, XCircle, RotateCcw, Truck
+} from 'lucide-react';
 import Button from '../components/Button';
-import { fetchOrdersByEmail } from '../services/api';
+import { fetchMyOrdersApi } from '../services/api';
 
 export default function OrderHistoryPage({
   onBack,
@@ -10,7 +13,7 @@ export default function OrderHistoryPage({
   onViewOrderDetails,
   theme = 'dark'
 }) {
-  const [activeTab, setActiveTab] = useState('active'); // 'active' (IN PROGRESS) | 'completed' (PREVIOUSLY ORDERED)
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'completed'
   const [userOrders, setUserOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -18,99 +21,94 @@ export default function OrderHistoryPage({
     const loadOrderHistory = async () => {
       setIsLoading(true);
       try {
-        const userEmail = currentUser?.email || JSON.parse(localStorage.getItem('avn-user') || 'null')?.email;
+        // Fetch from backend using authenticated API endpoint (MongoDB)
+        const backendOrders = await fetchMyOrdersApi();
+        const genuineOrders = [];
 
-        let backendOrders = [];
-        if (userEmail) {
-          backendOrders = await fetchOrdersByEmail(userEmail);
-        }
+        if (Array.isArray(backendOrders) && backendOrders.length > 0) {
+          backendOrders.forEach((order) => {
+            const orderKey = order.orderNumber || order._id || order.id;
+            let rawStatus = String(order.orderStatus || order.status || 'processing').toLowerCase().trim();
+            if (rawStatus === 'pending_payment') {
+              rawStatus = 'processing';
+            }
+            const totalPayable = order.pricing?.totalPayable ?? order.totalPayable ?? order.financials?.totalAmount ?? 0;
+            const paymentProvider = String(
+              order.paymentInfo?.provider || order.paymentDetails?.provider || order.paymentMethod || order.paymentMethodType || 'COD'
+            ).toUpperCase();
+            const isCod = paymentProvider.includes('COD') || paymentProvider.includes('CASH');
+            const isDelivered = rawStatus === 'delivered';
+            const wasEverDelivered = isDelivered || rawStatus === 'return_requested' || rawStatus === 'returned' || rawStatus === 'refunded' || order.acceptedAtDelivery || order.statusHistory?.some(h => h.status === 'delivered') || !!order.deliveredAt;
+            const rawPaymentStatus = String(order.paymentInfo?.paymentStatus || order.paymentStatus || '').toLowerCase();
+            const isCancelled = rawStatus === 'cancelled';
+            const isPaymentPending = isCancelled ? false : (wasEverDelivered ? false : (isCod ? rawPaymentStatus !== 'captured' : (rawPaymentStatus === 'pending')));
 
-        let savedLocalOrders = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
-        
-        // Filter out temporary test artifact orders
-        savedLocalOrders = savedLocalOrders.filter(o => {
-          const id = String(o.orderId || o.id || '');
-          return !id.includes('1788256') && !id.includes('1788257');
-        });
-        try {
-          localStorage.setItem('avn-user-orders', JSON.stringify(savedLocalOrders));
-        } catch (e) {}
-
-        if (backendOrders.length > 0) {
-          const mapped = backendOrders.map((order) => {
-            const targetIdStr = String(order.orderId || order.id || '').toLowerCase();
-            const localMatch = savedLocalOrders.find((l) => String(l.orderId || l.id || '').toLowerCase() === targetIdStr);
-            const finalStatus = localMatch ? localMatch.status : (order.status || 'Processing');
-            const finalTimeline = localMatch && localMatch.statusTimeline ? localMatch.statusTimeline : (order.statusTimeline || []);
-
-            return {
-              id: order.orderId || order.id,
-              orderId: order.orderId || order.id,
-              transactionId: order.transactionId || `AVN-TXN-${order.orderId || order.id}`,
-              date: new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              total: `₹${order.financials?.totalAmount || 0}`,
-              status: finalStatus,
+            genuineOrders.push({
+              id: order._id || order.id || orderKey,
+              orderId: orderKey,
+              orderNumber: orderKey,
+              transactionId: order.paymentInfo?.transactionId || order.paymentDetails?.transactionId || order.transactionId || `TXN-${orderKey}`,
+              date: order.createdAt
+                ? new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : 'Recent',
+              total: `₹${Number(totalPayable).toLocaleString('en-IN')}`,
+              status: rawStatus,
+              orderStatus: rawStatus,
+              isPaymentPending,
+              wasEverDelivered,
+              isCod,
+              paymentProvider,
+              paymentInfo: order.paymentInfo || { provider: paymentProvider, paymentStatus: isPaymentPending ? 'pending' : 'captured' },
+              paymentStatus: isPaymentPending ? 'pending' : 'captured',
               items: (order.items || []).map((item) => ({
-                ...item,
-                qty: item.quantity || 1,
-                price: `₹${item.price || 0}`,
-                slug: item.slug || item.productId || item.id,
-                image: item.image || '/product-placeholder.png',
-                acceptedAtDelivery: Boolean(item.acceptedAtDelivery)
+                productId: item.productId || item.product?._id || item.product || item.id,
+                sku: item.variantSku || item.sku || '',
+                name: item.name || item.title || 'AVN Gear',
+                variantTitle: item.variantTitle || item.selectedSize || '',
+                qty: item.quantity || item.qty || 1,
+                price: `₹${(item.price ?? item.unitPrice ?? 0).toLocaleString('en-IN')}`,
+                image: item.image || item.webpImage || '/product-placeholder.png',
               })),
-              deliveryDate: new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              deliveryDate: order.shipmentInfo?.deliveredAt
+                ? new Date(order.shipmentInfo.deliveredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : order.fulfillmentDetails?.deliveredAt
+                  ? new Date(order.fulfillmentDetails.deliveredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  : order.createdAt
+                    ? new Date(new Date(order.createdAt).getTime() + 3 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    : 'Pending',
               address: order.shippingAddress || order.address || null,
-              paymentMethod: order.paymentMethod || 'UPI',
-              financials: order.financials || { subtotal: 0, discountAmount: 0, shippingFee: 0, totalAmount: 0 },
-              customerName: order.customerName || 'AVN Customer',
+              paymentMethod: paymentProvider,
+              financials: {
+                subtotal: order.pricing?.subtotal ?? order.subtotal ?? totalPayable,
+                discountAmount: order.pricing?.discount ?? order.pricing?.discountAmount ?? order.discountAmount ?? 0,
+                shippingFee: order.pricing?.shippingFee ?? order.shippingFee ?? 0,
+                totalAmount: totalPayable
+              },
+              cancellation: order.cancellation || null,
+              returnRequest: order.returnRequest || null,
+              cancelledAt: order.cancellation?.cancelledAt || order.cancelledAt || null,
+              cancelReason: order.cancellation?.reason || order.cancelReason || null,
+              returnReason: order.returnRequest?.reason || order.returnReason || null,
               createdAt: order.createdAt,
-              statusTimeline: finalTimeline
-            };
+              rawOrder: order
+            });
           });
-
-          setUserOrders(mapped);
-          return;
         }
 
-        if (savedLocalOrders.length > 0) {
-          const filtered = savedLocalOrders.filter((order) => {
-            if (!userEmail) return true;
-            return (order.customerEmail || '').toLowerCase() === userEmail.toLowerCase();
-          });
-
-          const normalized = (filtered.length > 0 ? filtered : savedLocalOrders).map((order) => ({
-            id: order.orderId || order.id,
-            orderId: order.orderId || order.id,
-            transactionId: order.transactionId || `AVN-TXN-${order.orderId || order.id}`,
-            date: order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (order.date || 'Recent'),
-            total: order.total || `₹${order.financials?.totalAmount || 0}`,
-            status: order.status || 'Processing',
-            items: (order.items || []).map((item) => ({
-              ...item,
-              qty: item.quantity || item.qty || 1,
-              price: item.price ? (String(item.price).startsWith('₹') ? item.price : `₹${item.price}`) : '₹0',
-              slug: item.slug || item.productId || item.id,
-              image: item.image || '/product-placeholder.png',
-              acceptedAtDelivery: Boolean(item.acceptedAtDelivery)
-            })),
-            deliveryDate: order.deliveryDate || 'Recent',
-            address: order.address || order.shippingAddress || null,
-            paymentMethod: order.paymentMethod || 'UPI',
-            financials: order.financials || { subtotal: 0, discountAmount: 0, shippingFee: 0, totalAmount: 0 },
-            customerName: order.customerName || 'AVN Customer',
-            createdAt: order.createdAt,
-            statusTimeline: order.statusTimeline || []
-          }));
-
-          setUserOrders(normalized);
-          return;
+        setUserOrders(genuineOrders);
+        if (genuineOrders.length > 0) {
+          localStorage.setItem('avn-user-orders', JSON.stringify(genuineOrders));
+        } else {
+          localStorage.removeItem('avn-user-orders');
         }
-
-        setUserOrders([]);
-
       } catch (e) {
-        console.warn('Unable to load saved order history', e);
-        setUserOrders([]);
+        console.warn('Unable to load order history from database', e);
+        try {
+          const localSaved = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
+          setUserOrders(Array.isArray(localSaved) ? localSaved.filter(o => o.orderNumber?.startsWith('ORD-') || o.id?.startsWith('ORD-')) : []);
+        } catch (err) {
+          setUserOrders([]);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -119,41 +117,48 @@ export default function OrderHistoryPage({
     loadOrderHistory();
   }, [currentUser]);
 
-  // Read local status overrides
-  const savedLocalOrders = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
-    } catch (e) {
-      return [];
-    }
-  })();
+  // Live database orders are the single source of truth
+  const allCombinedOrders = userOrders;
 
-  const allCombinedOrders = userOrders.map((order) => {
-    const targetIdStr = String(order.orderId || order.id || '').toLowerCase();
-    const localMatch = savedLocalOrders.find((l) => String(l.orderId || l.id || '').toLowerCase() === targetIdStr);
-    if (localMatch && localMatch.status) {
-      return {
-        ...order,
-        status: localMatch.status,
-        statusTimeline: localMatch.statusTimeline || order.statusTimeline || order.steps
-      };
-    }
-    return order;
-  });
-
-  const normalizeStatus = (status) => String(status || '').trim();
+  const getReadableStatus = (status) => {
+    const map = {
+      'pending_payment': 'Processing',
+      'paid': 'Processing',
+      'paid_confirmed': 'Confirmed',
+      'processing': 'Processing',
+      'shipped': 'Shipped',
+      'delivered': 'Delivered',
+      'cancelled': 'Cancelled',
+      'return_requested': 'Return Requested',
+      'returned': 'Returned',
+      'refunded': 'Refunded',
+      'payment_failed': 'Payment Failed'
+    };
+    return map[String(status).toLowerCase()] || status;
+  };
 
   const isOrderActive = (status) => {
-    const normalized = normalizeStatus(status);
-    const activeStatuses = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'In Transit', 'Pending Dispatch'];
-    return activeStatuses.includes(normalized);
+    const s = String(status || '').toLowerCase();
+    return ['pending_payment', 'paid', 'paid_confirmed', 'processing', 'shipped'].includes(s);
   };
 
   const getOrderProgressPercent = (status) => {
-    const orderState = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
-    const index = orderState.indexOf(status);
-    if (index === -1) return 0;
-    return ((index + 1) / orderState.length) * 100;
+    const s = String(status || '').toLowerCase();
+    if (s === 'pending_payment') return 10;
+    if (s === 'paid' || s === 'paid_confirmed') return 25;
+    if (s === 'processing') return 50;
+    if (s === 'shipped') return 75;
+    if (s === 'delivered') return 100;
+    return 0;
+  };
+
+  const getMilestoneIndex = (status) => {
+    const s = String(status || '').toLowerCase();
+    if (s === 'pending_payment' || s === 'paid' || s === 'paid_confirmed') return 0; // Confirmed
+    if (s === 'processing') return 1;
+    if (s === 'shipped') return 2;
+    if (s === 'delivered') return 4;
+    return 0;
   };
 
   const inProgressOrders = allCombinedOrders.filter((order) => isOrderActive(order.status));
@@ -162,14 +167,9 @@ export default function OrderHistoryPage({
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] py-10 px-4 sm:px-8 lg:px-16 transition-colors duration-300">
       <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* Header */}
+
         <div className="flex items-center gap-3 pb-6 border-b border-[var(--border-subtle)]">
-          <Button
-            onClick={onBack}
-            variant="icon"
-            title="Back to Profile"
-          >
+          <Button onClick={onBack} variant="icon" title="Back to Profile">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -182,7 +182,6 @@ export default function OrderHistoryPage({
           </div>
         </div>
 
-        {/* Tab Selector */}
         <div className="grid grid-cols-2 p-1 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] max-w-md">
           <button
             type="button"
@@ -206,7 +205,6 @@ export default function OrderHistoryPage({
           </button>
         </div>
 
-        {/* Tab Content */}
         {activeTab === 'active' ? (
           <div className="space-y-6">
             {isLoading ? (
@@ -235,38 +233,45 @@ export default function OrderHistoryPage({
                       onViewOrderDetails?.(order);
                     }
                   }}
-                  className="glass-panel p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-6 shadow-xl cursor-pointer hover:border-[#FF1E27]/60 transition-colors"
+                  className="glass-panel p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-6 shadow-xl cursor-pointer hover:border-[#FF1E27]/60 transition-colors animate-in fade-in slide-in-from-bottom-4"
                 >
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
                     <div>
                       <span className="text-[10px] font-black uppercase tracking-widest text-[#FF1E27] font-heading">
-                        ORDER {order.orderId || order.id}
+                        ORDER {order.orderNumber}
                       </span>
                       <p className="text-xs text-[var(--text-sub)] font-medium">Placed on {order.date}</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5 flex-wrap sm:justify-end">
                       <span className="text-xs font-black font-mono text-[var(--text-main)]">{order.total}</span>
+                      {order.isPaymentPending ? (
+                        <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-extrabold font-heading uppercase flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> COD • Due on Delivery
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold font-heading uppercase flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> {order.isCod ? 'Paid on Delivery' : 'Paid Online'}
+                        </span>
+                      )}
                       <span className="px-3 py-1 rounded-full bg-[#FF1E27]/10 text-[#FF1E27] border border-[#FF1E27]/30 text-[10px] font-extrabold font-heading uppercase flex items-center gap-1.5">
-                        <Clock className="w-3 h-3" /> {order.status}
+                        <Truck className="w-3 h-3" /> {getReadableStatus(order.status)}
                       </span>
                     </div>
                   </div>
 
-                  {/* Items list */}
                   <div className="space-y-3">
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-4">
                         <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-contain bg-[var(--bg-main)] p-1 border border-[var(--border-subtle)]" />
                         <div className="flex-1 min-w-0">
                           <h4 className="text-xs font-black font-heading uppercase text-[var(--text-main)] truncate">{item.name}</h4>
-                          <p className="text-[10px] text-[var(--text-sub)]">Qty: {item.qty} | {item.price}</p>
+                          <p className="text-[10px] text-[var(--text-sub)]">Qty: {item.qty} {item.variantTitle ? `| Var: ${item.variantTitle}` : ''} | {item.price}</p>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Track Order Milestone Flow */}
                   <div className="space-y-3 pt-3 border-t border-[var(--border-subtle)]">
                     <div className="flex items-center justify-between text-[11px] font-extrabold font-heading uppercase">
                       <span className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
@@ -275,7 +280,6 @@ export default function OrderHistoryPage({
                       <span className="text-[#FF1E27] font-mono">{Math.round(getOrderProgressPercent(order.status))}%</span>
                     </div>
 
-                    {/* Progress Bar */}
                     <div className="w-full h-2 rounded-full bg-[var(--bg-main)] border border-[var(--border-subtle)] overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-[#FF1E27] to-amber-400 rounded-full transition-all duration-500"
@@ -283,26 +287,22 @@ export default function OrderHistoryPage({
                       />
                     </div>
 
-                    {/* Milestone Flow Steps */}
                     <div className="grid grid-cols-5 gap-1 pt-2 text-center">
-                      {['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'].map((stepName, stepIdx) => {
-                        const orderStateList = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
-                        const currentIdx = orderStateList.indexOf(order.status);
-                        const isCompleted = stepIdx <= (currentIdx >= 0 ? currentIdx : 0);
+                      {['Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'].map((stepName, stepIdx) => {
+                        const currentIdx = getMilestoneIndex(order.status);
+                        const isCompleted = stepIdx <= currentIdx;
                         const isCurrent = stepIdx === currentIdx;
 
                         return (
                           <div key={stepName} className="flex flex-col items-center gap-1">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center border text-[10px] font-bold transition-all ${
-                              isCompleted
-                                ? 'bg-[#FF1E27] border-[#FF1E27] text-white shadow-[0_0_10px_rgba(255,30,39,0.5)]'
-                                : 'bg-[var(--bg-main)] border-[var(--border-subtle)] text-[var(--text-sub)]'
-                            }`}>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center border text-[10px] font-bold transition-all ${isCompleted
+                              ? 'bg-[#FF1E27] border-[#FF1E27] text-white shadow-[0_0_10px_rgba(255,30,39,0.5)]'
+                              : 'bg-[var(--bg-main)] border-[var(--border-subtle)] text-[var(--text-sub)]'
+                              }`}>
                               {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : stepIdx + 1}
                             </div>
-                            <span className={`text-[9px] font-heading uppercase leading-tight font-extrabold ${
-                              isCurrent ? 'text-[#FF1E27]' : isCompleted ? 'text-[var(--text-main)]' : 'text-[var(--text-sub)]'
-                            }`}>
+                            <span className={`text-[9px] font-heading uppercase leading-tight font-extrabold ${isCurrent ? 'text-[#FF1E27]' : isCompleted ? 'text-[var(--text-main)]' : 'text-[var(--text-sub)]'
+                              }`}>
                               {stepName}
                             </span>
                           </div>
@@ -315,7 +315,6 @@ export default function OrderHistoryPage({
             )}
           </div>
         ) : (
-          /* PREVIOUSLY ORDERED TAB (Includes Delivered, Cancelled, and Returned Orders) */
           <div className="space-y-6">
             {isLoading ? (
               <div className="glass-panel p-12 rounded-3xl border border-[var(--border-subtle)] text-center text-xs text-[var(--text-sub)] animate-pulse">
@@ -332,8 +331,11 @@ export default function OrderHistoryPage({
               </div>
             ) : (
               pastOrders.map((order) => {
-                const isCancelled = order.status === 'Cancelled';
-                const isReturned = order.status === 'Return Requested';
+                const s = String(order.status || '').toLowerCase();
+                const isCancelled = s === 'cancelled';
+                const isReturned = s === 'return_requested' || s === 'returned';
+                const isFailed = s === 'payment_failed';
+                const isDelivered = s === 'delivered';
 
                 return (
                   <div
@@ -347,42 +349,45 @@ export default function OrderHistoryPage({
                         onViewOrderDetails?.(order);
                       }
                     }}
-                    className={"glass-panel p-6 sm:p-8 rounded-3xl border space-y-6 shadow-xl cursor-pointer transition-colors " + (
-                      isCancelled
+                    className={"glass-panel p-6 sm:p-8 rounded-3xl border space-y-6 shadow-xl cursor-pointer transition-colors animate-in fade-in slide-in-from-bottom-4 " + (
+                      isCancelled || isFailed
                         ? 'border-rose-500/30 hover:border-rose-500 bg-rose-500/5'
                         : isReturned
-                        ? 'border-amber-500/30 hover:border-amber-500 bg-amber-500/5'
-                        : 'border-[var(--border-subtle)] hover:border-[#FF1E27]/60'
+                          ? 'border-amber-500/30 hover:border-amber-500 bg-amber-500/5'
+                          : 'border-[var(--border-subtle)] hover:border-[#FF1E27]/60'
                     )}
                   >
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
                       <div>
                         <span className="text-[10px] font-black uppercase tracking-widest text-[#FF1E27] font-heading">
-                          ORDER {order.orderId || order.id}
+                          ORDER {order.orderNumber}
                         </span>
                         <p className="text-xs text-[var(--text-sub)] font-medium">Placed on {order.date}</p>
                       </div>
 
                       <div className="flex items-center gap-3">
                         <span className="text-xs font-black font-mono text-[var(--text-main)]">{order.total}</span>
-                        
-                        {isCancelled ? (
+
+                        {isCancelled || isFailed ? (
                           <span className="px-3 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 text-[10px] font-extrabold font-heading uppercase flex items-center gap-1.5">
-                            <XCircle className="w-3.5 h-3.5" /> CANCELLED
+                            <XCircle className="w-3.5 h-3.5" /> {getReadableStatus(order.status)}
                           </span>
                         ) : isReturned ? (
                           <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] font-extrabold font-heading uppercase flex items-center gap-1.5">
-                            <RotateCcw className="w-3.5 h-3.5" /> RETURN REQUESTED
+                            <RotateCcw className="w-3.5 h-3.5" /> {getReadableStatus(order.status)}
+                          </span>
+                        ) : isDelivered ? (
+                          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold font-heading uppercase flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> DELIVERED ({order.deliveryDate})
                           </span>
                         ) : (
-                          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold font-heading uppercase flex items-center gap-1.5">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> DELIVERED ({order.deliveryDate || 'Aug 27'})
+                          <span className="px-3 py-1 rounded-full bg-[#FF1E27]/10 text-[#FF1E27] border border-[#FF1E27]/30 text-[10px] font-extrabold font-heading uppercase flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" /> {getReadableStatus(order.status)}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Items list */}
                     <div className="space-y-4">
                       {order.items.map((item, idx) => (
                         <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 rounded-2xl bg-[var(--bg-main)]/50 border border-[var(--border-subtle)]">
@@ -390,11 +395,11 @@ export default function OrderHistoryPage({
                             <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-contain bg-[var(--bg-main)] p-1 border border-[var(--border-subtle)]" />
                             <div>
                               <h4 className="text-xs font-black font-heading uppercase text-[var(--text-main)]">{item.name}</h4>
-                              <p className="text-[10px] text-[var(--text-sub)]">Qty: {item.qty || 1} | {item.price}</p>
+                              <p className="text-[10px] text-[var(--text-sub)]">Qty: {item.qty} {item.variantTitle ? `| Var: ${item.variantTitle}` : ''} | {item.price}</p>
                             </div>
                           </div>
 
-                          {!isCancelled && !isReturned && (
+                          {!isCancelled && !isReturned && !isFailed && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -411,6 +416,19 @@ export default function OrderHistoryPage({
                       ))}
                     </div>
 
+                    {isCancelled && (order.cancellation?.reason || order.cancelReason) && (
+                      <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 flex items-start gap-2">
+                        <span className="font-bold uppercase text-[10px] tracking-wider text-rose-400 shrink-0 mt-0.5">Cancellation Reason:</span>
+                        <span className="italic">"{order.cancellation?.reason || order.cancelReason}"</span>
+                      </div>
+                    )}
+
+                    {isReturned && (order.returnRequest?.reason || order.returnReason) && (
+                      <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-start gap-2">
+                        <span className="font-bold uppercase text-[10px] tracking-wider text-amber-400 shrink-0 mt-0.5">Return Reason:</span>
+                        <span className="italic">"{order.returnRequest?.reason || order.returnReason}"</span>
+                      </div>
+                    )}
                   </div>
                 );
               })

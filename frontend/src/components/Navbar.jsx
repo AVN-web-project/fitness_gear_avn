@@ -5,10 +5,12 @@ import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
 
 export default function Navbar({
+  categories = [],
   cartCount = 0,
   onOpenCart,
   onOpenSearch,
   onNavigateSearch,
+  onNavigateContact,
   theme = 'dark',
   onToggleTheme,
   onNavigateHome,
@@ -61,6 +63,15 @@ export default function Navbar({
       onNavigateHome();
     } else if (label === 'PRODUCTS' && onNavigateSearch) {
       onNavigateSearch();
+    } else if (label === 'CONTACT') {
+      if (onNavigateContact) {
+        onNavigateContact();
+      } else {
+        const element = document.querySelector(href) || document.querySelector('#contact') || document.querySelector('footer');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
     } else {
       const element = document.querySelector(href);
       if (element) {
@@ -366,7 +377,7 @@ export default function Navbar({
                     key={item.label}
                     href={item.href}
                     onClick={(e) => {
-                      if (item.label === 'HOME') e.preventDefault();
+                      e.preventDefault();
                       setMobileMenuOpen(false);
                       handleNavClick(item.label, item.href);
                     }}

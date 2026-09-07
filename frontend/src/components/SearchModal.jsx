@@ -6,9 +6,11 @@ import ProductGraphic from './ProductGraphic';
 export default function SearchModal({
   isOpen,
   products = DEFAULT_PRODUCTS,
+  categories = [],
   onClose,
   onSelectProduct,
-  onOpenSearchPage
+  onOpenSearchPage,
+  theme
 }) {
   const [query, setQuery] = useState('');
 
@@ -59,6 +61,31 @@ export default function SearchModal({
           </button>
         </div>
 
+        {/* Quick Categories Filter Bar */}
+        {categories && categories.length > 0 && (
+          <div className="px-4 py-2.5 bg-[var(--bg-card-solid)] border-b border-[var(--border-subtle)] flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#FF1E27] font-heading shrink-0">
+              CATEGORIES:
+            </span>
+            {categories.map((cat) => {
+              const catName = cat.name || cat;
+              return (
+                <button
+                  key={cat.slug || cat._id || catName}
+                  type="button"
+                  onClick={() => {
+                    if (onOpenSearchPage) onOpenSearchPage(catName);
+                    onClose();
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-[var(--bg-main)] hover:bg-[#FF1E27] hover:text-white border border-[var(--border-subtle)] text-[11px] font-bold text-[var(--text-sub)] transition-colors whitespace-nowrap cursor-pointer shrink-0"
+                >
+                  {catName}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Results List */}
         <div className="max-h-[50vh] overflow-y-auto p-4 space-y-3">
           {results.length === 0 ? (
@@ -79,7 +106,9 @@ export default function SearchModal({
                     <h4 className="text-xs font-sans font-black italic tracking-wider uppercase text-[var(--text-main)]">
                       {product.name}
                     </h4>
-                    <p className="text-[10px] text-[var(--text-sub)]">{product.category}</p>
+                    <p className="text-[10px] text-[var(--text-sub)]">
+                      {typeof product.category === 'object' ? product.category?.name : product.category}
+                    </p>
                   </div>
                 </div>
 

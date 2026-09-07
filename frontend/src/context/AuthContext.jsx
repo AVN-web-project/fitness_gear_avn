@@ -128,7 +128,20 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await sendOtpApi(email, purpose);
-      return res?.data || res;
+      const payload = res?.data || res;
+      const devOtp = payload?.devOtp || res?.data?.devOtp || res?.devOtp;
+      if (devOtp) {
+        payload.devOtp = devOtp;
+        console.log([
+          '=========================================',
+          '⚡ [AVN ATHLETICS OTP VERIFICATION]',
+          `📩 Recipient: ${email}`,
+          `🔑 Verification Code: ${devOtp}`,
+          '⏰ Valid for: 5 minutes',
+          '=========================================',
+        ].join('\n'));
+      }
+      return payload;
     } catch (err) {
       const error = new Error(err.message || 'Failed to send OTP. Please check your email address.');
       error.status = err.status || err.data?.statusCode;

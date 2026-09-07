@@ -1,3 +1,5 @@
+import { PRODUCTS as LOCAL_PRODUCTS } from '../data/products';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
 
 export function getAuthHeaders() {
@@ -10,17 +12,105 @@ export function getAuthHeaders() {
 }
 
 /**
+ * Normalizes backend MongoDB product document to frontend component expectations
+ */
+export function normalizeProduct(p) {
+  if (!p) return null;
+  const pSlug = p.slug || p.id || '';
+  const localMatch = LOCAL_PRODUCTS.find(
+    (lp) => lp.slug === pSlug || lp.id === pSlug || lp.name.toLowerCase() === (p.name || '').toLowerCase()
+  );
+
+  const primaryImage = p.image || p.images?.[0]?.url || localMatch?.image || '/knee-wrap.png';
+  const categoryStr = typeof p.category === 'object' && p.category?.name
+    ? p.category.name.toUpperCase()
+    : (typeof p.category === 'string' ? p.category.toUpperCase() : (localMatch?.category || 'EQUIPMENT'));
+
+  const price = p.variants?.[0]?.price ?? p.price ?? localMatch?.price ?? 0;
+  const compareAtPrice = p.variants?.[0]?.compareAtPrice ?? p.compareAtPrice ?? localMatch?.compareAtPrice ?? 0;
+
+  return {
+    ...localMatch,
+    ...p,
+    _id: p._id || localMatch?._id,
+    id: p.slug || p._id || localMatch?.id,
+    productId: p._id || p.slug || localMatch?.id,
+    slug: p.slug || localMatch?.slug,
+    name: p.name || localMatch?.name,
+    category: categoryStr,
+    tagline: p.tagline || localMatch?.tagline || '',
+    badge: p.badge || localMatch?.badge || '',
+    description: p.description || localMatch?.description || '',
+    price,
+    compareAtPrice,
+    image: primaryImage,
+    webpImage: p.webpImage || localMatch?.webpImage || primaryImage,
+    imageLight: p.imageLight || localMatch?.imageLight || primaryImage,
+    images: p.images && p.images.length > 0 ? p.images : (localMatch?.images || [{ url: primaryImage, altText: p.name, isPrimary: true }]),
+    rating: p.ratingsAverage ?? p.rating ?? localMatch?.rating ?? 4.8,
+    reviewsCount: p.ratingsCount ?? p.reviewsCount ?? localMatch?.reviewsCount ?? 100,
+    stockQuantity: p.totalStock ?? p.stockQuantity ?? (p.variants?.reduce((sum, v) => sum + (v.stockQuantity || 0), 0)) ?? localMatch?.stockQuantity ?? 10,
+    status: (p.status || 'Active').charAt(0).toUpperCase() + (p.status || 'Active').slice(1).toLowerCase(),
+    sizes: p.sizes || (p.variants ? [...new Set(p.variants.map((v) => v.size || v.title).filter(Boolean))] : localMatch?.sizes) || ['Standard'],
+    colors: p.colors || (p.variants ? p.variants.filter((v) => v.color).map((v) => ({ name: v.color, hex: '#FF1E27' })) : localMatch?.colors) || [{ name: 'Crimson Red', hex: '#FF1E27' }],
+    variants: (p.variants && p.variants.length > 0) ? p.variants.map((v) => ({
+      ...v,
+      id: v._id || v.sku,
+      name: v.title || v.name || `${p.name} - ${v.size || v.color || 'Standard'}`,
+      price: v.price || price,
+      compareAtPrice: v.compareAtPrice || compareAtPrice,
+      stockQuantity: v.stockQuantity || 10,
+    })) : (localMatch?.variants || []),
+    specs: (Array.isArray(p.specifications) && p.specifications.length > 0)
+      ? p.specifications.map((s) => typeof s === 'string' ? s : `${s.key}: ${s.value}`)
+      : (localMatch?.specs || []),
+    fullSpecs: p.fullSpecs || localMatch?.fullSpecs || {},
+    careInstructions: p.careInstructions || localMatch?.careInstructions || [],
+    reviews: p.reviews || localMatch?.reviews || [],
+  };
+}
+
+/**
  * Centralized API Client with Cookie Credentials and 401 Interception
  */
+export function getGuestId() {
+  if (typeof window === 'undefined') return 'guest-default';
+  let guestId = sessionStorage.getItem('avn-guest-id');
+  if (!guestId) {
+    guestId = `gst_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    sessionStorage.setItem('avn-guest-id', guestId);
+  }
+  return guestId;
+}
+
+export function clearGuestCartOnExitBeacon() {
+  if (typeof window === 'undefined') return;
+  const token = localStorage.getItem('avn-token');
+  const guestId = sessionStorage.getItem('avn-guest-id');
+  if (!token && guestId) {
+    const url = `${API_BASE_URL}/cart/guest/${encodeURIComponent(guestId)}`;
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url);
+    } else {
+      fetch(url, { method: 'DELETE', keepalive: true }).catch(() => { });
+    }
+  }
+}
+
 export async function apiFetch(endpoint, options = {}) {
   const url = endpoint.startsWith('http')
     ? endpoint
     : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('avn-token') : null;
+  // Always include active guestId from sessionStorage so backend can migrate guest cart on login
+  const guestId = typeof window !== 'undefined'
+    ? (sessionStorage.getItem('avn-guest-id') || (!token ? getGuestId() : null))
+    : null;
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(guestId ? { 'x-guest-id': guestId } : {}),
     ...options.headers
   };
 
@@ -56,6 +146,7 @@ export async function fetchSearchProducts(filters = {}) {
   try {
     const queryParams = new URLSearchParams();
     if (filters.q) queryParams.append('q', filters.q);
+    if (filters.search) queryParams.append('search', filters.search);
     if (filters.category && filters.category.toUpperCase() !== 'ALL PRODUCTS') {
       queryParams.append('category', filters.category);
     }
@@ -76,6 +167,15 @@ export async function fetchSearchProducts(filters = {}) {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
+    if (data?.data?.products) {
+      return {
+        ...data,
+        data: {
+          ...data.data,
+          products: data.data.products.map(normalizeProduct),
+        },
+      };
+    }
     return data;
   } catch (error) {
     console.warn('Backend API search query failed:', error.message);
@@ -89,17 +189,21 @@ export async function fetchSearchProducts(filters = {}) {
 export async function fetchProducts(category = '', search = '') {
   try {
     const queryParams = new URLSearchParams();
-    if (category) queryParams.append('category', category);
+    if (category && category !== 'ALL PRODUCTS') queryParams.append('category', category);
     if (search) queryParams.append('search', search);
 
     const url = `${API_BASE_URL}/products${queryParams.toString() ? `?${queryParams}` : ''}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
-    return data.data?.products || (Array.isArray(data.data) ? data.data : []);
+    const rawProducts = data.data?.products || (Array.isArray(data.data) ? data.data : []);
+    if (rawProducts.length > 0) {
+      return rawProducts.map(normalizeProduct);
+    }
+    return LOCAL_PRODUCTS;
   } catch (error) {
     console.warn('Backend API unavailable, using local product data fallback:', error.message);
-    return null;
+    return LOCAL_PRODUCTS;
   }
 }
 
@@ -111,15 +215,50 @@ export async function fetchProductById(idOrSlug) {
     const response = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(idOrSlug)}`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
-    return data.data?.product || data.data;
+    const raw = data.data?.product || data.data;
+    return normalizeProduct(raw);
   } catch (error) {
     console.warn(`Backend API failed to fetch product ${idOrSlug}:`, error.message);
-    return null;
+    const local = LOCAL_PRODUCTS.find((p) => p.slug === idOrSlug || p.id === idOrSlug);
+    return local || null;
   }
 }
 
 export async function fetchProductBySlug(slug) {
   return fetchProductById(slug);
+}
+
+/**
+ * Fetch all categories from backend API
+ */
+export async function fetchCategoriesApi() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/categories`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    if (Array.isArray(data?.data?.categories)) return data.data.categories;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.categories)) return data.categories;
+    return [];
+  } catch (error) {
+    console.warn('Fetch categories API failed:', error.message);
+    return [];
+  }
+}
+
+/**
+ * Fetch a single category by its slug from backend API
+ */
+export async function fetchCategoryBySlugApi(slug) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/categories/${encodeURIComponent(slug)}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data?.data || null;
+  } catch (error) {
+    console.warn('Fetch category by slug API failed:', error.message);
+    return null;
+  }
 }
 
 
@@ -129,10 +268,8 @@ export async function fetchProductBySlug(slug) {
 export async function fetchCart(couponCode = '') {
   try {
     const queryParams = couponCode ? `?couponCode=${encodeURIComponent(couponCode)}` : '';
-    const response = await fetch(`${API_BASE_URL}/cart${queryParams}`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    return data.data;
+    const res = await apiFetch(`/cart${queryParams}`);
+    return res?.data?.cart || res?.data || null;
   } catch (error) {
     console.warn('Cart API fetch failed:', error.message);
     return null;
@@ -144,16 +281,13 @@ export async function fetchCart(couponCode = '') {
  */
 export async function addToCartApi(itemData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/cart`, {
+    return await apiFetch('/cart/items', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(itemData)
     });
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.warn('Add to cart API failed:', error.message);
-    return { success: false, message: 'Server offline' };
+    return { success: false, message: error.message };
   }
 }
 
@@ -162,16 +296,13 @@ export async function addToCartApi(itemData) {
  */
 export async function updateCartItemApi(itemId, updateData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/cart/${encodeURIComponent(itemId)}`, {
+    return await apiFetch(`/cart/items/${encodeURIComponent(itemId)}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData)
     });
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.warn('Update cart API failed:', error.message);
-    return { success: false, message: 'Server offline' };
+    return { success: false, message: error.message };
   }
 }
 
@@ -180,14 +311,41 @@ export async function updateCartItemApi(itemId, updateData) {
  */
 export async function removeCartItemApi(itemId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/cart/${encodeURIComponent(itemId)}`, {
+    return await apiFetch(`/cart/items/${encodeURIComponent(itemId)}`, {
       method: 'DELETE'
     });
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.warn('Remove cart item API failed:', error.message);
-    return { success: false, message: 'Server offline' };
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Clear the entire cart in backend
+ */
+export async function clearCartApi() {
+  try {
+    return await apiFetch('/cart', {
+      method: 'DELETE'
+    });
+  } catch (error) {
+    console.warn('Clear cart API failed:', error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Apply coupon to backend cart
+ */
+export async function applyCartCouponApi(code) {
+  try {
+    return await apiFetch('/cart/apply-coupon', {
+      method: 'POST',
+      body: JSON.stringify({ code })
+    });
+  } catch (error) {
+    console.warn('Apply cart coupon API failed:', error.message);
+    return { success: false, message: error.message };
   }
 }
 
@@ -196,76 +354,131 @@ export async function removeCartItemApi(itemId) {
  */
 export async function validateCartApi(items, couponCode = '') {
   try {
-    const response = await fetch(`${API_BASE_URL}/cart/validate`, {
+    const res = await apiFetch('/cart/apply-coupon', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, couponCode })
+      body: JSON.stringify({ code: couponCode })
     });
-    const data = await response.json();
-    return data;
+    return res;
   } catch (error) {
     console.warn('Validate cart API failed:', error.message);
-    return { success: false, message: 'Server offline' };
+    return { success: false, message: error.message };
   }
 }
 
 /**
- * Create checkout order (generates pending_payment order state)
+ * Create checkout order (persists order to MongoDB via authenticated API)
  */
 export async function createCheckoutOrderApi(orderPayload) {
   try {
-    const response = await fetch(`${API_BASE_URL}/checkout/create-order`, {
+    return await apiFetch('/checkout/create-order', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderPayload)
     });
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.warn('Create checkout order API failed:', error.message);
-    return { success: false, message: 'Server offline' };
+    return { success: false, message: error.message };
   }
 }
 
-/**
- * Submit checkout order to backend API (legacy)
- */
-export async function submitOrder(cartItems, totalAmount) {
+export async function verifyPaymentApi(paymentData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders`, {
+    return await apiFetch('/checkout/verify-payment', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cartItems, totalAmount })
+      body: JSON.stringify(paymentData)
     });
-    const data = await response.json();
-    return data;
   } catch (error) {
-    console.error('Failed to submit order to API:', error);
-    return { success: false, message: 'Server offline' };
+    console.warn('Verify payment API failed:', error.message);
+    return { success: false, message: error.message };
   }
 }
 
-export async function fetchOrdersByEmail(email) {
+export async function fetchMyOrdersApi() {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders?email=${encodeURIComponent(email || '')}`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    return data.data || [];
+    const data = await apiFetch('/orders');
+    return data?.data?.orders || (Array.isArray(data?.data) ? data.data : []);
   } catch (error) {
     console.warn('Orders API fetch failed:', error.message);
     return [];
   }
 }
 
+export const fetchOrdersByEmail = fetchMyOrdersApi;
+
 export async function fetchOrderById(orderId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    return data.data || null;
+    const data = await apiFetch(`/orders/${encodeURIComponent(orderId)}`);
+    return data?.data?.order || data?.data || null;
   } catch (error) {
     console.warn('Order API fetch failed:', error.message);
     return null;
+  }
+}
+
+export async function cancelOrderApi(orderId, reason) {
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!trimmedReason) {
+    return { success: false, message: 'Please provide a reason for cancellation.' };
+  }
+  try {
+    return await apiFetch(`/orders/${encodeURIComponent(orderId)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: trimmedReason })
+    });
+  } catch (error) {
+    console.warn('Cancel order API failed:', error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+export async function requestOrderReturnApi(orderId, reason) {
+  const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!trimmedReason) {
+    return { success: false, message: 'Please provide a reason for your return request.' };
+  }
+  try {
+    return await apiFetch(`/orders/${encodeURIComponent(orderId)}/return`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: trimmedReason })
+    });
+  } catch (error) {
+    console.warn('Request return API failed:', error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Product Reviews API Helpers
+ */
+export async function fetchProductReviewsApi(productId) {
+  try {
+    const data = await apiFetch(`/reviews/products/${encodeURIComponent(productId)}`);
+    return data?.data?.reviews || [];
+  } catch (error) {
+    console.warn('Fetch product reviews API failed:', error.message);
+    return [];
+  }
+}
+
+export async function submitReviewApi(reviewData) {
+  try {
+    return await apiFetch('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(reviewData)
+    });
+  } catch (error) {
+    console.warn('Submit review API failed:', error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+export async function markReviewHelpfulApi(reviewId) {
+  try {
+    return await apiFetch(`/reviews/${encodeURIComponent(reviewId)}/helpful`, {
+      method: 'POST'
+    });
+  } catch (error) {
+    console.warn('Mark review helpful API failed:', error.message);
+    throw error;
   }
 }
 
@@ -364,47 +577,25 @@ export async function deleteAddressApi(addressId) {
   });
 }
 
-
-export async function updateOrderStatusApi(orderId, statusData) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(typeof statusData === 'string' ? { status: statusData } : statusData)
-    });
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.warn('Update order status API failed:', error.message);
-    return null;
-  }
-}
-
-
 /**
  * Customer Support API Helpers
  */
 export async function submitSupportTicketApi(ticketData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/support/tickets`, {
+    return await apiFetch('/support', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ticketData)
     });
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.warn('Submit support ticket API failed:', error.message);
-    return { success: false, message: 'Server offline' };
+    return { success: false, message: error.message || 'Server offline' };
   }
 }
 
-export async function fetchSupportTicketsApi(email = '') {
+export async function fetchSupportTicketsApi() {
   try {
-    const response = await fetch(`${API_BASE_URL}/support/tickets?email=${encodeURIComponent(email)}`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    return data.data || [];
+    const data = await apiFetch('/support/my-tickets');
+    return data?.data?.tickets || [];
   } catch (error) {
     console.warn('Fetch support tickets API failed:', error.message);
     return [];

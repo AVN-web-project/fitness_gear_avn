@@ -358,9 +358,20 @@ export default function AddAddressPage({
 
           {/* Submit Action Button */}
           <div className="pt-4 flex items-center gap-4">
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                className="w-1/3 py-4"
+              >
+                Cancel
+              </Button>
+            )}
             <Button
               type="submit"
-              variant="primary" fullWidth
+              variant="primary"
+              className={onCancel ? 'w-2/3 py-4' : 'w-full py-4'}
             >
               <CheckCircle2 className="w-5 h-5" />
               <span>{isCheckoutMode ? 'SAVE ADDRESS & PROCEED TO CHECKOUT' : 'SAVE ADDRESS DETAILS'}</span>

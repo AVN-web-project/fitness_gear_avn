@@ -46,11 +46,14 @@ export default function AuthPage({
   const [loginOtpStep, setLoginOtpStep] = useState('request'); // 'request' | 'verify'
   const [loginOtpCode, setLoginOtpCode] = useState('');
   const [loginOtpTimer, setLoginOtpTimer] = useState(0);
+  const [loginDevOtpHint, setLoginDevOtpHint] = useState('');
 
   // Create Account Flow State (with email OTP verification & optional password creation)
   const [signUpStep, setSignUpStep] = useState('form'); // 'form' | 'verify' | 'password'
   const [signUpOtp, setSignUpOtp] = useState('');
   const [signUpTimer, setSignUpTimer] = useState(0);
+  const [signUpDevOtpHint, setSignUpDevOtpHint] = useState('');
+  const activeDevOtp = loginDevOtpHint || signUpDevOtpHint;
   const [registeredUser, setRegisteredUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -97,6 +100,7 @@ export default function AuthPage({
     setSignUpStep('form');
     setErrorMessage('');
     setSuccessMessage('');
+    setSignUpDevOtpHint('');
   };
 
   const switchToSignIn = () => {
@@ -104,6 +108,7 @@ export default function AuthPage({
     setErrorMessage('');
     setSuccessMessage('');
     setLoginOtpStep('request');
+    setLoginDevOtpHint('');
   };
 
   // 1. Password Sign-In Handler
@@ -152,6 +157,10 @@ export default function AuthPage({
 
     try {
       const res = await sendEmailOtp(targetEmail, 'login');
+      const devOtp = res?.devOtp || res?.data?.devOtp;
+      if (devOtp) {
+        setLoginDevOtpHint(devOtp);
+      }
       setLoginOtpStep('verify');
       setLoginOtpTimer(60);
       setSuccessMessage(`✓ 6-digit code sent to ${targetEmail}`);
@@ -216,12 +225,19 @@ export default function AuthPage({
     setIsSubmitting(true);
     try {
       const res = await sendEmailOtp(formData.email, 'register');
+      const devOtp = res?.devOtp || res?.data?.devOtp;
+      if (devOtp) {
+        setSignUpDevOtpHint(devOtp);
+      }
       setSignUpStep('verify');
       setSignUpTimer(60);
       setSuccessMessage(`✓ 6-digit verification code sent to ${formData.email}`);
     } catch (err) {
       if (err.status === 409 || err.message?.toLowerCase().includes('already exists')) {
-        setErrorMessage('An account with this email already exists. Please switch to Sign In.');
+        setErrorMessage('Account exists! Switched to Sign In with Email OTP.');
+        setIsSignUp(false);
+        setSignInMethod('otp');
+        setLoginOtpStep('request');
       } else {
         setErrorMessage(err.message || 'Failed to send verification code. Please try again.');
       }
@@ -312,8 +328,8 @@ export default function AuthPage({
               {signUpStep === 'password'
                 ? 'CREATE PASSWORD'
                 : isSignUp
-                ? 'JOIN AVN ATHLETICS'
-                : 'ATHLETE SIGN IN'}
+                  ? 'JOIN AVN ATHLETICS'
+                  : 'ATHLETE SIGN IN'}
             </h1>
             <p className="text-xs text-[var(--text-sub)] font-medium mt-0.5">
               {signUpStep === 'password'
@@ -337,6 +353,7 @@ export default function AuthPage({
             <span>{errorMessage}</span>
           </div>
         )}
+
 
         {/* Top Mode Switcher: Only for Sign In / Sign Up */}
         {signUpStep !== 'password' && (
@@ -528,7 +545,10 @@ export default function AuthPage({
                         </div>
                         <button
                           type="button"
-                          onClick={() => setLoginOtpStep('request')}
+                          onClick={() => {
+                            setLoginOtpStep('request');
+                            setLoginDevOtpHint('');
+                          }}
                           className="text-[10px] font-bold text-[#FF1E27] hover:underline cursor-pointer"
                         >
                           Change Email
@@ -687,6 +707,7 @@ export default function AuthPage({
                       type="button"
                       onClick={() => {
                         setSignUpStep('form');
+                        setSignUpDevOtpHint('');
                         setErrorMessage('');
                       }}
                       className="text-[10px] font-bold text-[#FF1E27] hover:underline cursor-pointer"
@@ -694,7 +715,6 @@ export default function AuthPage({
                       Edit Details
                     </button>
                   </div>
-
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-[var(--text-sub)] uppercase">ENTER 6-DIGIT OTP *</label>

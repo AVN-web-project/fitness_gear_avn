@@ -37,10 +37,9 @@ export default function UserProfilePage({
       const userOrders = saved.filter(
         (o) => !userEmail || (o.customerEmail || '').toLowerCase() === userEmail
       );
-      const activeStatuses = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'In Transit', 'Pending Dispatch'];
+      const activeStatuses = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'In Transit', 'Pending Dispatch', 'Paid & Confirmed', 'paid_confirmed'];
       const activeMatch = userOrders.find((o) => activeStatuses.includes(o.status));
-      if (activeMatch) return activeMatch;
-      return userOrders[userOrders.length - 1] || null;
+      return activeMatch || null;
     } catch (e) {
       return null;
     }
@@ -401,25 +400,6 @@ export default function UserProfilePage({
                   {defaultAddress.landmark && (
                     <p className="text-[10px] font-semibold text-[var(--text-main)] pt-0.5">Landmark: {defaultAddress.landmark}</p>
                   )}
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
-                <button
-                  onClick={() => onAddNewAddress && onAddNewAddress()}
-                  className="text-[10px] font-bold text-[var(--text-sub)] hover:text-[#FF1E27] transition-colors cursor-pointer"
-                >
-                  Add New Address
-                </button>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => onEditAddress && onEditAddress(defaultAddress)}
-                    className="p-1.5 rounded-lg border border-[var(--border-subtle)] hover:border-[#FF1E27] text-[var(--text-main)] transition-colors cursor-pointer"
-                    title="Edit Default Address"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                  </button>
                 </div>
               </div>
             </div>

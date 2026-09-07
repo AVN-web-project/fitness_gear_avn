@@ -3,11 +3,37 @@ import { ArrowRight } from 'lucide-react';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
 import Button from './Button';
+import { fetchCategoriesApi } from '../services/api';
 
-export default function Footer({ onNavigateSupport, onNavigateContact, theme, isMobileView = false, activeView = 'home' }) {
+export default function Footer({
+  onNavigateSupport,
+  onNavigateContact,
+  onNavigateSearch,
+  categories: propCategories,
+  theme,
+  isMobileView = false,
+  activeView = 'home'
+}) {
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
   const [isPaused, setIsPaused] = useState(false);
   const scrollRef = useRef(null);
+  const [categoriesList, setCategoriesList] = useState(propCategories || []);
+
+  useEffect(() => {
+    if (propCategories && propCategories.length > 0) {
+      setCategoriesList(propCategories);
+      return;
+    }
+    let isMounted = true;
+    fetchCategoriesApi().then((cats) => {
+      if (isMounted && cats && cats.length > 0) {
+        setCategoriesList(cats);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [propCategories]);
 
   const trustBadges = [
     {
@@ -121,11 +147,11 @@ export default function Footer({ onNavigateSupport, onNavigateContact, theme, is
   };
 
   return (
-    <footer className={`relative bg-[var(--bg-card-solid)] pb-12 transition-colors duration-300 overflow-hidden ${activeView === 'home' ? 'pt-0 border-t-0' : 'pt-12 sm:pt-16 border-t border-[var(--border-subtle)]'}`}>
+    <footer id="contact" className={`relative bg-[var(--bg-card-solid)] pb-12 transition-colors duration-300 overflow-hidden border-t-0 ${activeView === 'home' ? 'pt-0' : 'pt-12 sm:pt-16'}`}>
       
       {/* Top Guarantee Badges Strip (Auto Scroll on Desktop / Auto + Manual Infinite Scroll on Mobile) */}
-      {/* Guarantee Badges Strip */} (
-        <div className="pb-6 mb-10 w-full overflow-hidden">
+      {/* Guarantee Badges Strip */}
+      <div className="pb-6 mb-10 w-full overflow-hidden">
           <div
             ref={scrollRef}
             onMouseEnter={() => setIsPaused(true)}
@@ -207,7 +233,7 @@ export default function Footer({ onNavigateSupport, onNavigateContact, theme, is
                 <li><a href="#products" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Shop All</a></li>
                 <li><a href="#why-avn" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Why AVN</a></li>
                 <li><a href="#about" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">About Us</a></li>
-                <li><button type="button" onClick={() => onNavigateContact && onNavigateContact()} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">Contact Us</button></li>
+                <li><button type="button" onClick={() => { if (onNavigateContact) onNavigateContact(); else if (onNavigateSupport) onNavigateSupport(); }} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">Contact Us</button></li>
                 <li><button type="button" onClick={() => onNavigateSupport && onNavigateSupport()} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">Support Hub</button></li>
               </ul>
             </div>
@@ -218,10 +244,35 @@ export default function Footer({ onNavigateSupport, onNavigateContact, theme, is
                 CATEGORIES
               </h4>
               <ul className="space-y-3 text-sm sm:text-base text-[var(--text-sub)] font-normal">
-                <li><a href="#products" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Knee Support Wraps</a></li>
-                <li><a href="#products" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Wrist Support Wraps</a></li>
-                <li><a href="#products" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Lifting Straps</a></li>
-                <li><a href="#products" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Yoga Accessories</a></li>
+                {(categoriesList.length > 0
+                  ? categoriesList
+                  : [
+                      { name: 'Knee Support Wraps', query: 'KNEE SUPPORT' },
+                      { name: 'Wrist Support Wraps', query: 'WRIST SUPPORT' },
+                      { name: 'Lifting Straps', query: 'LIFTING ACCESSORIES' },
+                      { name: 'Yoga Accessories', query: 'YOGA ACCESSORIES' },
+                    ]
+                ).map((cat, idx) => {
+                  const label = cat.name || cat;
+                  const query = cat.query || cat.name || cat;
+                  return (
+                    <li key={cat.slug || cat._id || idx}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onNavigateSearch) {
+                            onNavigateSearch(query);
+                          } else if (typeof window !== 'undefined') {
+                            window.location.href = `/search?category=${encodeURIComponent(query)}`;
+                          }
+                        }}
+                        className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left capitalize"
+                      >
+                        {label}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>
