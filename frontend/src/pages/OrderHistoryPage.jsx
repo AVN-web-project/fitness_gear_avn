@@ -34,9 +34,10 @@ export default function OrderHistoryPage({
             }
             const totalPayable = order.pricing?.totalPayable ?? order.totalPayable ?? order.financials?.totalAmount ?? 0;
             const paymentProvider = String(
-              order.paymentInfo?.provider || order.paymentDetails?.provider || order.paymentMethod || order.paymentMethodType || 'COD'
+              order.paymentInfo?.method || order.paymentDetails?.method || order.paymentInfo?.provider || order.paymentDetails?.provider || order.paymentMethod || order.paymentMethodType || 'COD'
             ).toUpperCase();
-            const isCod = paymentProvider.includes('COD') || paymentProvider.includes('CASH');
+            const providerType = String(order.paymentInfo?.provider || order.paymentDetails?.provider || paymentProvider).toUpperCase();
+            const isCod = providerType.includes('COD') || providerType.includes('CASH') || paymentProvider === 'COD';
             const isDelivered = rawStatus === 'delivered';
             const wasEverDelivered = isDelivered || rawStatus === 'return_requested' || rawStatus === 'returned' || rawStatus === 'refunded' || order.acceptedAtDelivery || order.statusHistory?.some(h => h.status === 'delivered') || !!order.deliveredAt;
             const rawPaymentStatus = String(order.paymentInfo?.paymentStatus || order.paymentStatus || '').toLowerCase();
@@ -58,7 +59,7 @@ export default function OrderHistoryPage({
               wasEverDelivered,
               isCod,
               paymentProvider,
-              paymentInfo: order.paymentInfo || { provider: paymentProvider, paymentStatus: isPaymentPending ? 'pending' : 'captured' },
+              paymentInfo: order.paymentInfo || { provider: providerType, method: paymentProvider, paymentStatus: isPaymentPending ? 'pending' : 'captured' },
               paymentStatus: isPaymentPending ? 'pending' : 'captured',
               items: (order.items || []).map((item) => ({
                 productId: item.productId || item.product?._id || item.product || item.id,

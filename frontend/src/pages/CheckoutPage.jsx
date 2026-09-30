@@ -65,12 +65,14 @@ export default function CheckoutPage({
     checkoutData?.discountAmount || 0
   );
 
-  const totalAmount =
+  const baseTotalAmount =
     Number(checkoutData?.totalAmount) ||
     Math.max(
       0,
       subtotal - discountAmount + shippingFee
     );
+  const codSurcharge = selectedPaymentMethod === 'cod' ? 50 : 0;
+  const totalAmount = baseTotalAmount + codSurcharge;
 
   /**
    * Converts the frontend address representation into
@@ -180,9 +182,8 @@ export default function CheckoutPage({
        * authenticated user's cart, Product/Variant records,
        * stock and coupon state.
        *
-       * paymentProvider:
-       *   - cod
-       *   - razorpay
+      * Online methods use the backend's development-only mock provider
+      * until a payment gateway is configured.
        *
        * paymentMethod:
        *   - upi
@@ -196,7 +197,7 @@ export default function CheckoutPage({
         paymentProvider:
           selectedPaymentMethod === 'cod'
             ? 'cod'
-            : 'razorpay',
+            : 'mock',
 
         paymentMethod:
           selectedPaymentMethod
@@ -235,33 +236,33 @@ export default function CheckoutPage({
       let finalizedOrder =
         createdOrder;
 
-      /*
-       * Step 2:
-       *
-       * COD does not require online payment verification.
-       *
-       * For online payment, the real Razorpay payment
-       * response must eventually be supplied here.
-       *
-       * Do NOT generate fake payment IDs/signatures
-       * in production.
-       */
       if (
         selectedPaymentMethod !== 'cod'
       ) {
-        /*
-         * At this stage the backend/order flow may return
-         * payment information needed to open Razorpay.
-         *
-         * The current project does not yet have the complete
-         * Razorpay browser SDK flow wired into this component.
-         *
-         * Therefore we do not manufacture a fake payment
-         * verification request.
-         */
-        throw new Error(
-          'Online payment is not yet connected to the payment gateway. Please select Cash on Delivery or complete the Razorpay integration before enabling online payment.'
-        );
+        const orderId = createdOrder.orderId || createdOrder._id || createdOrder.id;
+        const paymentId = `mock_pay_${Date.now()}`;
+        const verificationResponse = await verifyPaymentApi({
+          orderId,
+          paymentId,
+          signature: `mock_signature_${Date.now()}`,
+          status: 'success'
+        });
+
+        if (!verificationResponse?.success || !verificationResponse?.data?.order) {
+          throw new Error(verificationResponse?.message || 'Simulated payment could not be verified.');
+        }
+
+        const verifiedOrder = verificationResponse.data.order;
+        finalizedOrder = {
+          ...createdOrder,
+          ...verifiedOrder,
+          id: verifiedOrder._id || orderId,
+          orderId: verifiedOrder._id || orderId,
+          orderNumber: verifiedOrder.orderNumber || createdOrder.orderNumber,
+          status: verifiedOrder.orderStatus,
+          paymentStatus: verifiedOrder.paymentInfo?.paymentStatus,
+          paymentMethod: verifiedOrder.paymentInfo?.method || selectedPaymentMethod
+        };
       }
 
       /*
@@ -676,6 +677,12 @@ export default function CheckoutPage({
 
               </div>
 
+              {selectedPaymentMethod !== 'cod' && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-3 text-xs text-amber-200">
+                  Test mode: this payment will be simulated and marked paid. No money will be charged.
+                </div>
+              )}
+
               {selectedPaymentMethod === 'upi' && (
                 <div className="p-4 rounded-xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-2 animate-in slide-in-from-top-2">
 
@@ -850,6 +857,13 @@ export default function CheckoutPage({
 
                 </div>
 
+                {codSurcharge > 0 && (
+                  <div className="flex items-center justify-between text-[var(--text-sub)]">
+                    <span>Cash on Delivery fee</span>
+                    <span className="font-mono font-bold text-[var(--text-main)]">₹{codSurcharge}</span>
+                  </div>
+                )}
+
                 <div className="border-t border-[var(--border-subtle)] pt-3 flex items-center justify-between text-base font-black font-heading text-[var(--text-main)]">
 
                   <span>
@@ -896,7 +910,7 @@ export default function CheckoutPage({
                     <Lock className="w-4 h-4" />
 
                     <span>
-                      PLACE ORDER • ₹
+                      {selectedPaymentMethod === 'cod' ? 'PLACE COD ORDER' : 'SIMULATE PAYMENT'} • ₹
                       {totalAmount}
                     </span>
                   </>

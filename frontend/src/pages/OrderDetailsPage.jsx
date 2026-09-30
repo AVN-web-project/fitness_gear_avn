@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ShoppingBag, CreditCard, Truck, MapPin, ReceiptText, BadgeCheck, PackageCheck, Download, XCircle, RotateCcw, Clock, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, CreditCard, Truck, MapPin, ReceiptText, BadgeCheck, PackageCheck, Download, XCircle, RotateCcw, Clock, CheckCircle2, AlertCircle, X, QrCode, Building2 } from 'lucide-react';
 import Button from '../components/Button';
 import { cancelOrderApi, requestOrderReturnApi } from '../services/api';
 
@@ -25,6 +25,13 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [returnReason, setReturnReason] = useState('');
+  const [refundAccountDetails, setRefundAccountDetails] = useState({
+    method: '',
+    upiId: '',
+    accountHolderName: '',
+    accountNumber: '',
+    ifscCode: ''
+  });
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const [actionError, setActionError] = useState('');
 
@@ -69,9 +76,10 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
   const wasDelivered = isDelivered || isReturnRequested || isRefunded || localOrder.acceptedAtDelivery || localOrder.statusHistory?.some(h => h.status === 'delivered') || !!localOrder.deliveredAt;
 
   const paymentProvider = String(
-    localOrder.paymentInfo?.provider || localOrder.paymentMethod || localOrder.paymentMethodType || 'COD'
+    localOrder.paymentInfo?.method || localOrder.paymentMethod || localOrder.paymentMethodType || localOrder.paymentInfo?.provider || 'COD'
   ).toUpperCase();
-  const isCod = paymentProvider.includes('COD') || paymentProvider.includes('CASH');
+  const providerType = String(localOrder.paymentInfo?.provider || paymentProvider).toUpperCase();
+  const isCod = providerType.includes('COD') || providerType.includes('CASH') || paymentProvider === 'COD';
   const rawPaymentStatus = String(localOrder.paymentInfo?.paymentStatus || localOrder.paymentStatus || '').toLowerCase().trim();
 
   // Online payments are confirmed upon order placement.
@@ -222,6 +230,7 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
 
   const openReturnModal = () => {
     setReturnReason('');
+    setRefundAccountDetails({ method: '', upiId: '', accountHolderName: '', accountNumber: '', ifscCode: '' });
     setActionError('');
     setShowReturnModal(true);
   };
@@ -235,6 +244,26 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
     if (finalReason.length < 5) {
       setActionError('Please provide a reason with at least 5 characters.');
       return;
+    }
+    if (isCod) {
+      if (refundAccountDetails.method === 'upi') {
+        const upiId = refundAccountDetails.upiId.trim();
+        if (upiId.length > 100 || !/^[a-z0-9][a-z0-9._-]{1,}@[a-z0-9][a-z0-9.-]{1,}[a-z0-9]$/i.test(upiId)) {
+          setActionError('Enter a valid UPI ID.');
+          return;
+        }
+      } else if (refundAccountDetails.method === 'bank') {
+        const { accountHolderName, accountNumber, ifscCode } = refundAccountDetails;
+        const trimmedHolderName = accountHolderName.trim();
+        const validHolderName = /^[\p{L}\p{M}]+(?:[ .'-][\p{L}\p{M}]+)*$/u.test(trimmedHolderName);
+        if (trimmedHolderName.length < 2 || trimmedHolderName.length > 100 || !validHolderName || !/^\d{6,34}$/.test(accountNumber.trim()) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.trim().toUpperCase())) {
+          setActionError('Enter a valid account holder name, bank account number, and IFSC code.');
+          return;
+        }
+      } else {
+        setActionError('Choose UPI or bank transfer for your COD refund.');
+        return;
+      }
     }
 
     setIsSubmittingAction(true);
@@ -292,7 +321,16 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
     setActionError('');
     try {
       const targetId = localOrder.orderNumber || localOrder._id || localOrder.orderId || localOrder.id;
-      const res = await requestOrderReturnApi(targetId, finalReason);
+      const res = await requestOrderReturnApi(targetId, finalReason, isCod ? {
+        method: refundAccountDetails.method,
+        ...(refundAccountDetails.method === 'upi'
+          ? { upiId: refundAccountDetails.upiId.trim() }
+          : {
+              accountHolderName: refundAccountDetails.accountHolderName.trim(),
+              accountNumber: refundAccountDetails.accountNumber.trim(),
+              ifscCode: refundAccountDetails.ifscCode.trim().toUpperCase()
+            })
+      } : undefined);
       if (res && res.success === false) {
         setActionError(res.message || 'Unable to request return');
         setIsSubmittingAction(false);
@@ -310,7 +348,8 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
           isRequested: true,
           reason: finalReason,
           requestedAt: nowIso,
-          status: 'pending'
+          status: 'pending',
+          refundAccountDetails: isCod ? refundAccountDetails : undefined
         },
         returnRequestedAt: localOrder.returnRequestedAt || nowIso,
         returnReason: finalReason,
@@ -849,7 +888,7 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                     if (actionError) setActionError('');
                   }}
                   placeholder="Please type your return reason here (e.g. Defective stitch, wrong size delivered, missing parts)..."
-                  className="w-full rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-3.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors resize-none leading-relaxed"
+                  className="w-full rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-3.5 text-xs text-[var(--text-main)] placeholder:text-[var(--text-sub)] focus:outline-none focus:border-amber-500 transition-colors resize-none leading-relaxed"
                 />
                 <div className="flex items-center justify-between text-[11px] text-[var(--text-sub)] mt-1.5 px-1">
                   <span>Please describe your reason directly (required)</span>
@@ -858,6 +897,97 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                   </span>
                 </div>
               </div>
+
+              {isCod && (
+                <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/60 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-zinc-300">Choose COD refund method</p>
+                  <p className="text-[11px] text-[var(--text-sub)]">The ₹50 COD fee is non-refundable.</p>
+                  <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="COD refund method">
+                    {[
+                      { value: 'upi', label: 'UPI', Icon: QrCode },
+                      { value: 'bank', label: 'Bank transfer', Icon: Building2 }
+                    ].map(({ value, label, Icon }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={refundAccountDetails.method === value}
+                        onClick={() => setRefundAccountDetails({ ...refundAccountDetails, method: value })}
+                        className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${refundAccountDetails.method === value ? 'border-amber-500 bg-amber-500/15 text-amber-500' : 'border-[var(--border-subtle)] text-[var(--text-main)] hover:border-amber-500/60'}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {refundAccountDetails.method === 'upi' && (
+                    <label className="block text-xs font-semibold text-zinc-300">
+                      UPI ID
+                      <input
+                        type="text"
+                        autoComplete="off"
+                        maxLength={100}
+                        pattern="[A-Za-z0-9][A-Za-z0-9._-]{1,}@[A-Za-z0-9][A-Za-z0-9.-]{1,}[A-Za-z0-9]"
+                        title="Enter a valid UPI ID, such as name@upi"
+                        value={refundAccountDetails.upiId}
+                        onChange={(e) => setRefundAccountDetails({ ...refundAccountDetails, upiId: e.target.value })}
+                        placeholder="name@upi"
+                        required
+                        className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-2.5 text-sm text-[var(--text-main)] placeholder:text-[var(--text-sub)] focus:border-amber-500 focus:outline-none"
+                      />
+                    </label>
+                  )}
+
+                  {refundAccountDetails.method === 'bank' && (
+                    <div className="space-y-3">
+                      <label className="block text-xs font-semibold text-zinc-300">
+                        Account holder name
+                        <input
+                          type="text"
+                          autoComplete="name"
+                          minLength={2}
+                          maxLength={100}
+                          value={refundAccountDetails.accountHolderName}
+                          onChange={(e) => setRefundAccountDetails({ ...refundAccountDetails, accountHolderName: e.target.value })}
+                          className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-2.5 text-sm text-[var(--text-main)] focus:border-amber-500 focus:outline-none"
+                        />
+                      </label>
+                      <label className="block text-xs font-semibold text-zinc-300">
+                        Bank account number
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          minLength={6}
+                          maxLength={34}
+                          pattern="[0-9]{6,34}"
+                          title="Use 6 to 34 digits"
+                          value={refundAccountDetails.accountNumber}
+                          onChange={(e) => setRefundAccountDetails({ ...refundAccountDetails, accountNumber: e.target.value.replace(/\D/g, '').slice(0, 34) })}
+                          required
+                          className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-2.5 text-sm text-[var(--text-main)] focus:border-amber-500 focus:outline-none"
+                        />
+                      </label>
+                      <label className="block text-xs font-semibold text-zinc-300">
+                        IFSC code
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          maxLength={11}
+                          minLength={11}
+                          pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}"
+                          title="Use the 11-character IFSC format, such as HDFC0001234"
+                          value={refundAccountDetails.ifscCode}
+                          onChange={(e) => setRefundAccountDetails({ ...refundAccountDetails, ifscCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) })}
+                          required
+                          className="mt-1.5 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 py-2.5 text-sm uppercase text-[var(--text-main)] focus:border-amber-500 focus:outline-none"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] text-amber-300/80 leading-relaxed">
                 ℹ️ <strong>AVN 10-Day Guarantee:</strong> Equipment must be unused and in original packaging. Once submitted, our operations team will review your request within 24-48 hours and coordinate reverse pickup.

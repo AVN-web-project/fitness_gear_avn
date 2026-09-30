@@ -430,7 +430,7 @@ export async function cancelOrderApi(orderId, reason) {
   }
 }
 
-export async function requestOrderReturnApi(orderId, reason) {
+export async function requestOrderReturnApi(orderId, reason, refundAccountDetails) {
   const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
   if (!trimmedReason) {
     return { success: false, message: 'Please provide a reason for your return request.' };
@@ -438,7 +438,7 @@ export async function requestOrderReturnApi(orderId, reason) {
   try {
     return await apiFetch(`/orders/${encodeURIComponent(orderId)}/return`, {
       method: 'POST',
-      body: JSON.stringify({ reason: trimmedReason })
+      body: JSON.stringify({ reason: trimmedReason, refundAccountDetails })
     });
   } catch (error) {
     console.warn('Request return API failed:', error.message);
