@@ -88,13 +88,21 @@ export default function Navbar({
     }
   };
 
+  const isLightTheme = theme === 'light';
+
   return (
     <>
-      {/* Latest Committed Desktop Header: Transparent when at top, Translucent Blur on Scroll */}
-      <header className={`sticky top-0 z-40 w-full transition-all duration-300 isolate ${
-        (activeView === 'home' || activeView === 'search') && !isScrolled
-          ? 'bg-transparent border-b border-transparent backdrop-blur-none shadow-none'
-          : 'bg-[var(--bg-navbar)] backdrop-blur-md border-b border-[var(--border-subtle)] shadow-sm'
+      {/* Mobile Light Theme: Fixed, Static 90% Opaque with no border line; Dark Theme: Exact original sticky scroll */}
+      <header className={`z-40 w-full transition-all duration-300 isolate ${
+        isLightTheme
+          ? 'fixed lg:sticky top-0 bg-[var(--bg-main)]/90 backdrop-blur-md border-b-0 shadow-none ' +
+            ((activeView === 'home' || activeView === 'search') && !isScrolled
+              ? 'lg:bg-[var(--bg-navbar)] lg:border-transparent lg:backdrop-blur-md lg:shadow-none'
+              : 'lg:bg-[var(--bg-navbar)] lg:backdrop-blur-md lg:border-b lg:border-[var(--border-subtle)] lg:shadow-sm')
+          : 'sticky top-0 ' +
+            ((activeView === 'home' || activeView === 'search') && !isScrolled
+              ? 'bg-transparent border-b border-transparent backdrop-blur-none shadow-none'
+              : 'bg-[var(--bg-navbar)] backdrop-blur-md border-b border-[var(--border-subtle)] shadow-sm')
       }`}>
         <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 h-20 flex items-center justify-between">
 

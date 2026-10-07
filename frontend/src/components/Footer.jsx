@@ -16,8 +16,22 @@ export default function Footer({
 }) {
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
   const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
   const scrollRef = useRef(null);
   const [categoriesList, setCategoriesList] = useState(propCategories || []);
+
+  const togglePause = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setIsPaused((prev) => {
+      const next = !prev;
+      isPausedRef.current = next;
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   useEffect(() => {
     if (propCategories && propCategories.length > 0) {
@@ -107,8 +121,9 @@ export default function Footer({
   useEffect(() => {
     let animId;
     const container = scrollRef.current;
+    const speed = isMobileView ? 2.5 : 1;
 
-    // Set initial scroll position once container has scrollWidth
+    // Set initial scroll position instantly once container has scrollWidth
     if (container) {
       const initScroll = () => {
         if (container.scrollWidth > 0 && container.scrollLeft === 0) {
@@ -116,14 +131,13 @@ export default function Footer({
         }
       };
       initScroll();
-      setTimeout(initScroll, 50);
-      setTimeout(initScroll, 200);
+      requestAnimationFrame(initScroll);
     }
 
     const loop = () => {
       if (container) {
-        if (!isPaused) {
-          container.scrollLeft += 1;
+        if (!isPausedRef.current) {
+          container.scrollLeft += speed;
         }
 
         const oneThird = container.scrollWidth / 3;
@@ -140,11 +154,7 @@ export default function Footer({
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isPaused, activeView]);
-
-  const handleCardClick = () => {
-    setIsPaused((prev) => !prev);
-  };
+  }, [activeView, isMobileView]);
 
   return (
     <footer id="contact" className={`relative bg-[var(--bg-card-solid)] pb-12 transition-colors duration-300 overflow-hidden border-t-0 ${activeView === 'home' ? 'pt-0' : 'pt-12 sm:pt-16'}`}>
@@ -154,15 +164,16 @@ export default function Footer({
       <div className="pb-6 mb-10 w-full overflow-hidden">
           <div
             ref={scrollRef}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            className="flex items-center gap-5 sm:gap-6 px-4 py-4 overflow-x-auto sm:overflow-x-hidden no-scrollbar scroll-smooth cursor-default select-none"
+            onClick={togglePause}
+            onMouseEnter={() => { isPausedRef.current = true; setIsPaused(true); }}
+            onMouseLeave={() => { isPausedRef.current = false; setIsPaused(false); }}
+            className="flex items-center gap-5 sm:gap-6 px-4 py-4 overflow-x-auto sm:overflow-x-hidden no-scrollbar cursor-pointer select-none"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {marqueeBadges.map((badge, idx) => (
               <div
                 key={idx}
-                onClick={handleCardClick}
+                onClick={togglePause}
                 className="shrink-0 w-72 sm:w-80 red-corner-border rounded-2xl p-5 group text-left relative bg-[var(--bg-main)] border border-[var(--border-subtle)] hover:border-[#FF1E27] transition-all duration-300 transform hover:-translate-y-2 hover:shadow-xl cursor-pointer"
               >
                 {/* Icon Container with Glass Floor Mirror Reflection */}

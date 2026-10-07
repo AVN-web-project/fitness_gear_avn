@@ -35,7 +35,7 @@
     --bg-main: #ffffff;
     --bg-card: #ffffff;
     --bg-card-solid: #ffffff;
-    --bg-navbar: rgba(255, 255, 255, 0.75);
+    --bg-navbar: rgba(255, 255, 255, 0.1);
     --text-main: #0f172a;
     --text-sub: #475569;
     --text-muted: #64748b;
@@ -196,6 +196,29 @@ html.light ::-webkit-scrollbar-thumb {
 }
 
 /* ── Product Image Blend Mode ── */
+@media (max-width: 1023px) {
+  .hero-mobile-edge-fade {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 4%, #000 96%, transparent 100%), linear-gradient(to bottom, transparent 0%, #000 9%, #000 91%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 4%, #000 96%, transparent 100%), linear-gradient(to bottom, transparent 0%, #000 9%, #000 91%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+
+  .hero-mobile-cover {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .hero-mobile-cover-top {
+    background: linear-gradient(to bottom, var(--bg-main) 0%, transparent 100%);
+  }
+
+  .hero-mobile-cover-bottom {
+    background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 100%);
+  }
+}
+
 /* screen removes black background in dark mode */
 .dark-blend {
   mix-blend-mode: screen;
