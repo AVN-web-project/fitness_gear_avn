@@ -196,6 +196,20 @@ html.light ::-webkit-scrollbar-thumb {
 }
 
 /* ── Product Image Blend Mode ── */
+.hero-mobile-cover {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.hero-mobile-cover-top {
+  background: linear-gradient(to bottom, var(--bg-main) 0%, transparent 100%);
+}
+
+.hero-mobile-cover-bottom {
+  background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 100%);
+}
+
 @media (max-width: 1023px) {
   .hero-mobile-edge-fade {
     -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 4%, #000 96%, transparent 100%), linear-gradient(to bottom, transparent 0%, #000 9%, #000 91%, transparent 100%);
@@ -204,19 +218,6 @@ html.light ::-webkit-scrollbar-thumb {
     mask-composite: intersect;
   }
 
-  .hero-mobile-cover {
-    position: absolute;
-    z-index: 20;
-    pointer-events: none;
-  }
-
-  .hero-mobile-cover-top {
-    background: linear-gradient(to bottom, var(--bg-main) 0%, transparent 100%);
-  }
-
-  .hero-mobile-cover-bottom {
-    background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 100%);
-  }
 }
 
 /* screen removes black background in dark mode */

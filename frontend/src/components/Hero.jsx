@@ -4,7 +4,6 @@ import { ArrowRight } from 'lucide-react';
 export default function Hero({ onExploreClick, theme }) {
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const videoRef = useRef(null);
   const heroImageRef = useRef(null);
   const heroCoverRef = useRef(null);
   const heroBottomCoverRef = useRef(null);
@@ -49,20 +48,30 @@ export default function Hero({ onExploreClick, theme }) {
       const renderedHeight = image.naturalHeight * fitScale;
       const scaleX = image.offsetWidth ? imageRect.width / image.offsetWidth : 1;
       const scaleY = image.offsetHeight ? imageRect.height / image.offsetHeight : 1;
+      const [objectPositionX = '50%', objectPositionY = '50%'] = getComputedStyle(image).objectPosition.split(/\s+/);
+      const getObjectOffset = (space, position, start, end) => {
+        if (position === start) return 0;
+        if (position === end) return space;
+        if (position === 'center') return space / 2;
+        if (position.endsWith('%')) return space * (Number.parseFloat(position) / 100);
+        const pixelOffset = Number.parseFloat(position);
+        return Number.isFinite(pixelOffset) ? pixelOffset : space / 2;
+      };
 
-      const coverLeft = imageRect.left - containerRect.left + ((image.clientWidth - renderedWidth) / 2) * scaleX;
-      const coverTop = imageRect.top - containerRect.top + ((image.clientHeight - renderedHeight) / 2) * scaleY;
+      const coverLeft = imageRect.left - containerRect.left + getObjectOffset(image.clientWidth - renderedWidth, objectPositionX, 'left', 'right') * scaleX;
+      const coverTop = imageRect.top - containerRect.top + getObjectOffset(image.clientHeight - renderedHeight, objectPositionY, 'top', 'bottom') * scaleY;
       const coverWidth = renderedWidth * scaleX;
       const imageHeight = renderedHeight * scaleY;
       const topCoverHeight = imageHeight * 0.4;
       const bottomCoverHeight = imageHeight * 0.3;
+      const topEdgeBleed = 2;
 
       [cover, bottomCover].forEach((element) => {
         element.style.left = `${coverLeft}px`;
         element.style.width = `${coverWidth}px`;
       });
-      cover.style.top = `${coverTop}px`;
-      cover.style.height = `${topCoverHeight}px`;
+      cover.style.top = `${coverTop - topEdgeBleed}px`;
+      cover.style.height = `${topCoverHeight + topEdgeBleed}px`;
       bottomCover.style.top = `${coverTop + imageHeight - bottomCoverHeight}px`;
       bottomCover.style.height = `${bottomCoverHeight}px`;
     };
@@ -84,7 +93,7 @@ export default function Hero({ onExploreClick, theme }) {
   const scrollRatio = Math.min(1, Math.max(0, scrollY / 300));
 
   return (
-    <section id="home" className={`relative min-h-[100dvh] lg:min-h-screen ${isLight ? 'pt-[80px] sm:pt-24 lg:-mt-20 lg:pt-24 xl:pt-28' : '-mt-20 pt-20 sm:pt-24 lg:pt-24 xl:pt-28'} pb-12 sm:pb-16 lg:pb-16 flex items-start lg:items-center overflow-hidden bg-[var(--bg-main)]`}>
+    <section id="home" className={`relative min-h-[88dvh] lg:min-h-screen ${isLight ? 'pt-[80px] sm:pt-24 lg:-mt-20 lg:pt-24 xl:pt-28' : '-mt-20 pt-20 sm:pt-24 lg:pt-24 xl:pt-28'} pb-6 sm:pb-8 lg:pb-16 flex items-start lg:items-center overflow-hidden bg-[var(--bg-main)]`}>
       {/* 1. Background Layer */}
       {isLight ? (
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-[var(--bg-main)]">
@@ -104,7 +113,7 @@ export default function Hero({ onExploreClick, theme }) {
               alt="AVN Hero Light Stage & Logo"
               className="hero-mobile-edge-fade w-full h-full object-contain object-center lg:object-right origin-center lg:origin-right scale-100 lg:scale-[1.02] xl:scale-[1.05] translate-y-0 lg:translate-x-1 xl:translate-x-0 transform-gpu opacity-100 mix-blend-multiply filter contrast-[1.06] saturate-[1.06] transition-all duration-700 pointer-events-none"
             />
-            <div ref={heroCoverRef} className="hero-mobile-cover hero-mobile-cover-top lg:hidden" />
+            <div ref={heroCoverRef} className="hero-mobile-cover hero-mobile-cover-top" />
             <div ref={heroBottomCoverRef} className="hero-mobile-cover hero-mobile-cover-bottom lg:hidden" />
           </div>
 
@@ -125,19 +134,7 @@ export default function Hero({ onExploreClick, theme }) {
               />
             </div>
 
-            {/* Top Video Layer: Blazing Video Effect (Playing directly ON TOP of the stage image with mix-blend-screen) */}
-            <video
-              ref={videoRef}
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="auto"
-              className="absolute inset-0 w-full h-full object-cover object-center scale-[1.08] transform-gpu z-30 mix-blend-screen opacity-85 filter brightness-[1.1] contrast-[1.15] saturate-[1.25] pointer-events-none"
-            >
-              <source src="/blazing-effect.mp4" type="video/mp4" />
-            </video>
-            <div ref={heroCoverRef} className="hero-mobile-cover hero-mobile-cover-top lg:hidden" />
+            <div ref={heroCoverRef} className="hero-mobile-cover hero-mobile-cover-top" />
             <div ref={heroBottomCoverRef} className="hero-mobile-cover hero-mobile-cover-bottom lg:hidden" />
 
           </div>

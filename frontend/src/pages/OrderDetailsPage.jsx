@@ -46,6 +46,8 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
   const subtotal = Number(financials.subtotal || 0);
   const discountAmount = Number(financials.discountAmount || 0);
   const shippingFee = Number(financials.shippingFee || 0);
+  const handlingFee = Number(localOrder.pricing?.handlingFee || financials.handlingFee || localOrder.handlingFee || 0);
+  const codSurcharge = Number(localOrder.pricing?.codSurcharge || financials.codSurcharge || localOrder.codSurcharge || 0);
 
   const normStatus = String(localOrder.orderStatus || localOrder.status || 'processing').toLowerCase().trim();
 
@@ -80,6 +82,7 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
   ).toUpperCase();
   const providerType = String(localOrder.paymentInfo?.provider || paymentProvider).toUpperCase();
   const isCod = providerType.includes('COD') || providerType.includes('CASH') || paymentProvider === 'COD';
+  const refundableAfterFees = Math.max(0, totalAmount - handlingFee - (isCod ? codSurcharge : 0));
   const rawPaymentStatus = String(localOrder.paymentInfo?.paymentStatus || localOrder.paymentStatus || '').toLowerCase().trim();
 
   // Online payments are confirmed upon order placement.
@@ -699,10 +702,30 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                   <span>Shipping</span>
                   <span className="font-bold text-[var(--text-main)]">₹{shippingFee}</span>
                 </div>
+                {handlingFee > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span>Handling fee (non-refundable)</span>
+                    <span className="font-bold text-[var(--text-main)]">₹{handlingFee}</span>
+                  </div>
+                )}
+                {codSurcharge > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span>COD fee (non-refundable)</span>
+                    <span className="font-bold text-[var(--text-main)]">₹{codSurcharge}</span>
+                  </div>
+                )}
                 <div className="border-t border-[var(--border-subtle)] pt-2 flex items-center justify-between text-sm text-[var(--text-main)] font-black">
                   <span>Total</span>
                   <span>₹{totalAmount}</span>
                 </div>
+                {(handlingFee > 0 || codSurcharge > 0) && (
+                  <div className="pt-2 border-t border-[var(--border-subtle)] text-[11px] text-[var(--text-sub)]">
+                    <div className="flex items-center justify-between">
+                      <span>Refundable after non-refundable fees</span>
+                      <span className="font-mono font-bold text-[var(--text-main)]">₹{refundableAfterFees}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-5 pt-4 border-t border-[var(--border-subtle)] space-y-3">
@@ -726,6 +749,18 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                           : (isCod && wasDelivered ? 'Paid on Delivery' : 'Confirmed & Paid'))}
                   </span>
                 </div>
+                {(handlingFee > 0 || codSurcharge > 0) && (
+                  <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/60 p-3 text-[11px] text-[var(--text-sub)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Refund estimate</span>
+                      <span className="font-mono font-bold text-[var(--text-main)]">₹{refundableAfterFees}</span>
+                    </div>
+                    <p className="mt-2 text-[10px] leading-relaxed text-[var(--text-sub)]">
+                      {handlingFee > 0 && `₹${handlingFee} handling fee is non-refundable.`}
+                      {codSurcharge > 0 && ` ₹${codSurcharge} COD fee is also non-refundable.`}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -901,7 +936,7 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
               {isCod && (
                 <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/60 p-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-zinc-300">Choose COD refund method</p>
-                  <p className="text-[11px] text-[var(--text-sub)]">The ₹50 COD fee is non-refundable.</p>
+                  <p className="text-[11px] text-[var(--text-sub)]">The ₹10 handling fee and the ₹50 COD fee are non-refundable.</p>
                   <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="COD refund method">
                     {[
                       { value: 'upi', label: 'UPI', Icon: QrCode },

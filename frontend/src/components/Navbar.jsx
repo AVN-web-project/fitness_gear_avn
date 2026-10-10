@@ -97,8 +97,8 @@ export default function Navbar({
         isLightTheme
           ? 'fixed lg:sticky top-0 bg-[var(--bg-main)]/90 backdrop-blur-md border-b-0 shadow-none ' +
             ((activeView === 'home' || activeView === 'search') && !isScrolled
-              ? 'lg:bg-[var(--bg-navbar)] lg:border-transparent lg:backdrop-blur-md lg:shadow-none'
-              : 'lg:bg-[var(--bg-navbar)] lg:backdrop-blur-md lg:border-b lg:border-[var(--border-subtle)] lg:shadow-sm')
+              ? 'lg:bg-transparent lg:border-transparent lg:backdrop-blur-none lg:shadow-none'
+              : 'lg:bg-transparent lg:backdrop-blur-none lg:border-b lg:border-[var(--border-subtle)] lg:shadow-sm')
           : 'sticky top-0 ' +
             ((activeView === 'home' || activeView === 'search') && !isScrolled
               ? 'bg-transparent border-b border-transparent backdrop-blur-none shadow-none'

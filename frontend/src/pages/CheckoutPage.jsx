@@ -65,14 +65,13 @@ export default function CheckoutPage({
     checkoutData?.discountAmount || 0
   );
 
-  const baseTotalAmount =
-    Number(checkoutData?.totalAmount) ||
-    Math.max(
-      0,
-      subtotal - discountAmount + shippingFee
-    );
+  const baseTotalAmount = Math.max(
+    0,
+    subtotal - discountAmount + shippingFee
+  );
+  const handlingFee = subtotal === 0 ? 0 : 10;
   const codSurcharge = selectedPaymentMethod === 'cod' ? 50 : 0;
-  const totalAmount = baseTotalAmount + codSurcharge;
+  const totalAmount = baseTotalAmount + handlingFee + codSurcharge;
 
   /**
    * Converts the frontend address representation into
@@ -855,6 +854,11 @@ export default function CheckoutPage({
                       : `₹${shippingFee}`}
                   </span>
 
+                </div>
+
+                <div className="flex items-center justify-between text-[var(--text-sub)]">
+                  <span>Handling fee (non-refundable)</span>
+                  <span className="font-mono font-bold text-[var(--text-main)]">₹{handlingFee}</span>
                 </div>
 
                 {codSurcharge > 0 && (

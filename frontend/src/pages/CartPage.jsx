@@ -87,6 +87,7 @@ export default function CartPage({
   const freeShippingThreshold = context.freeShippingThreshold || 1499;
   const isFreeShipping = subtotal >= freeShippingThreshold || activeSelectedItems.length === 0;
   const shippingFee = isFreeShipping ? 0 : 99;
+  const handlingFee = subtotal === 0 ? 0 : 10;
   const shippingProgress = Math.min(100, (subtotal / freeShippingThreshold) * 100);
 
   const appliedCoupon = context.appliedCoupon;
@@ -100,7 +101,7 @@ export default function CartPage({
     else if (appliedCoupon.code === 'MULTI15' && activeSelectedItems.reduce((a, b) => a + b.quantity, 0) >= 2) discountAmount = Math.round(subtotal * 0.15);
   }
 
-  const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
+  const finalTotal = subtotal === 0 ? 0 : Math.max(0, subtotal - discountAmount + shippingFee + handlingFee);
 
   // Toggle single item checkbox
   const toggleItemSelection = (itemId) => {
@@ -189,6 +190,7 @@ export default function CartPage({
         subtotal,
         discountAmount,
         shippingFee,
+        handlingFee,
         totalAmount: finalTotal,
         appliedCoupon,
         isGiftOrder
@@ -212,6 +214,7 @@ export default function CartPage({
       subtotal,
       discountAmount,
       shippingFee,
+      handlingFee,
       totalAmount: finalTotal,
       isGiftOrder
     };
@@ -598,12 +601,35 @@ export default function CartPage({
                 </div>
 
                 {/* Subtotal Display */}
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <div className="text-lg font-extrabold font-heading text-[var(--text-main)]">
                     Subtotal ({activeSelectedItems.reduce((a, b) => a + b.quantity, 0)} items):{' '}
-                    <span className="text-[#FF1E27] font-mono">₹{finalTotal}</span>
+                    <span className="text-[#FF1E27] font-mono">₹{subtotal}</span>
                   </div>
 
+                  {discountAmount > 0 && (
+                    <div className="flex items-center justify-between text-xs text-emerald-500">
+                      <span>Discount Applied</span>
+                      <span className="font-mono font-bold">-₹{discountAmount}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-xs text-[var(--text-sub)]">
+                    <span>Shipping</span>
+                    <span className="font-mono font-bold text-emerald-500 uppercase">
+                      {shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-[var(--text-sub)]">
+                    <span>Handling fee</span>
+                    <span className="font-mono font-bold text-[var(--text-main)]">₹{handlingFee}</span>
+                  </div>
+
+                  <div className="border-t border-[var(--border-subtle)] pt-2 flex items-center justify-between text-base font-black font-heading text-[var(--text-main)]">
+                    <span>Total</span>
+                    <span className="text-[#FF1E27]">₹{finalTotal}</span>
+                  </div>
                 </div>
 
                 {/* Gift Option Checkbox */}

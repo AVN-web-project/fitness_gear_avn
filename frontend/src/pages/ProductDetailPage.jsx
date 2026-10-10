@@ -630,13 +630,13 @@ export default function ProductDetailPage({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10 animate-fade-in text-[var(--text-main)]">
+    <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${theme === 'light' ? 'pt-[104px] pb-6 lg:py-6' : 'py-6'} space-y-10 animate-fade-in text-[var(--text-main)]`}>
 
       {/* Main Split PDP Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
 
         {/* Left Column: Interactive Media Gallery (6 cols) */}
-        <div className="lg:col-span-6 space-y-4 sticky top-24">
+        <div className="lg:col-span-6 space-y-4 lg:sticky lg:top-24">
 
           {/* Main Visual Frame */}
           <div

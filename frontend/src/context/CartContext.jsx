@@ -390,7 +390,8 @@ export function CartProvider({ children }) {
   const subtotal = cartItems.reduce((acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
   const discountAmount = appliedCoupon ? Math.round((subtotal * (appliedCoupon.discountPercent || 0)) / 100) : 0;
   const shippingFee = subtotal >= 999 || subtotal === 0 ? 0 : 99;
-  const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+  const handlingFee = subtotal === 0 ? 0 : 10;
+  const totalAmount = subtotal === 0 ? 0 : Math.max(0, subtotal - discountAmount + shippingFee + handlingFee);
   const totalCartCount = cartItems.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
 
   return (
@@ -412,6 +413,7 @@ export function CartProvider({ children }) {
         subtotal,
         discountAmount,
         shippingFee,
+        handlingFee,
         totalAmount,
         totalCartCount,
         isBackendConnected
