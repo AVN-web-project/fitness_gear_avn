@@ -7,7 +7,8 @@ import {
   removeCartItemApi,
   clearCartApi,
   applyCartCouponApi,
-  clearGuestCartOnExitBeacon
+  clearGuestCartOnExitBeacon,
+  resolveMediaUrl
 } from '../services/api';
 
 const CartContext = createContext();
@@ -74,7 +75,8 @@ export function CartProvider({ children }) {
               selectedColor: bi.selectedColor || 'Crimson Red',
               variantSku: bi.variantSku,
               variantTitle: bi.variantTitle,
-              image: bi.image || null
+              image: resolveMediaUrl(bi.image) || null
+
             }));
             setCartItems(mapped);
             setIsBackendConnected(true);
@@ -85,7 +87,7 @@ export function CartProvider({ children }) {
                 localStorage.removeItem('avn-user-cart');
                 localStorage.removeItem('avn-cart-items');
                 sessionStorage.removeItem('avn-session-cart');
-              } catch {}
+              } catch { }
             }
           } else if (backendCart === null) {
             // DB has no cart or user has an empty cart
@@ -96,7 +98,7 @@ export function CartProvider({ children }) {
               localStorage.removeItem('avn-user-cart');
               localStorage.removeItem('avn-cart-items');
               sessionStorage.removeItem('avn-session-cart');
-            } catch {}
+            } catch { }
           }
         }
       } catch (err) {
@@ -136,7 +138,7 @@ export function CartProvider({ children }) {
         try {
           const raw = sessionStorage.getItem('avn-session-cart');
           guestSessionItems = raw ? JSON.parse(raw) : [];
-        } catch {}
+        } catch { }
 
         // Migrate guest session items to authenticated user's MongoDB cart
         if (guestSessionItems.length > 0) {
@@ -152,7 +154,7 @@ export function CartProvider({ children }) {
           try {
             sessionStorage.removeItem('avn-session-cart');
             sessionStorage.removeItem('avn-guest-id');
-          } catch {}
+          } catch { }
         }
 
         // Fetch latest authoritative cart from MongoDB
@@ -172,7 +174,8 @@ export function CartProvider({ children }) {
               selectedColor: bi.selectedColor || 'Crimson Red',
               variantSku: bi.variantSku,
               variantTitle: bi.variantTitle,
-              image: bi.image || null
+              image: resolveMediaUrl(bi.image) || null
+
             }));
             setCartItems(mapped);
             setIsBackendConnected(true);
@@ -181,7 +184,7 @@ export function CartProvider({ children }) {
               try {
                 localStorage.removeItem('avn-user-cart');
                 localStorage.removeItem('avn-cart-items');
-              } catch {}
+              } catch { }
             }
           } else {
             setCartItems([]);
@@ -190,7 +193,7 @@ export function CartProvider({ children }) {
             try {
               localStorage.removeItem('avn-user-cart');
               localStorage.removeItem('avn-cart-items');
-            } catch {}
+            } catch { }
           }
         }
       } catch (err) {
@@ -216,7 +219,7 @@ export function CartProvider({ children }) {
         sessionStorage.removeItem('avn-session-cart');
         localStorage.removeItem('avn-user-cart');
         localStorage.removeItem('avn-cart-items');
-      } catch {}
+      } catch { }
     }
     prevAuthRef.current = isAuthenticated;
   }, [isAuthenticated]);
@@ -236,7 +239,7 @@ export function CartProvider({ children }) {
         (!size || v.size === size || v.title?.includes(size)) &&
         (!color || v.color === color || v.title?.includes(color))
     ) || product.variants?.[0];
-    const variantSku = product.variantSku || matchedVariant?.sku || product.sku || 'AVN-STD-SKU';
+    const variantSku = product.variantSku || matchedVariant?.sku || product.sku || '';
     const itemPrice = Number(product.price ?? matchedVariant?.price ?? 0);
 
     const newItem = {
@@ -250,7 +253,8 @@ export function CartProvider({ children }) {
       selectedColor: color,
       selectedPack: pack,
       variantSku,
-      image: product.image || product.images?.[0]?.url || null,
+      variantSku,
+      image: resolveMediaUrl(product.image || product.images?.[0]?.url) || null,
       slug: product.slug || product.id
     };
 
@@ -346,7 +350,7 @@ export function CartProvider({ children }) {
       sessionStorage.removeItem('avn-guest-id');
       localStorage.removeItem('avn-user-cart');
       localStorage.removeItem('avn-cart-items');
-    } catch {}
+    } catch { }
 
     try {
       await clearCartApi();
@@ -365,7 +369,7 @@ export function CartProvider({ children }) {
         setAppliedCoupon(res.data.cart.appliedCoupon);
         return { success: true, coupon: res.data.cart.appliedCoupon };
       }
-    } catch {}
+    } catch { }
 
     // Local fallback if offline
     if (cleanCode === 'AVN10') {

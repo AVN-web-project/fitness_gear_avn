@@ -4,7 +4,7 @@ import {
   PackageCheck, MessageSquarePlus, XCircle, RotateCcw, Truck, Package
 } from 'lucide-react';
 import Button from '../components/Button';
-import { fetchMyOrdersApi } from '../services/api';
+import { fetchMyOrdersApi, resolveMediaUrl } from '../services/api';
 
 export default function OrderHistoryPage({
   onBack,
@@ -68,7 +68,7 @@ export default function OrderHistoryPage({
                 variantTitle: item.variantTitle || item.selectedSize || '',
                 qty: item.quantity || item.qty || 1,
                 price: `₹${(item.price ?? item.unitPrice ?? 0).toLocaleString('en-IN')}`,
-                image: item.image || item.webpImage || null,
+                image: resolveMediaUrl(item.image || item.webpImage) || null,
               })),
               deliveryDate: order.shipmentInfo?.deliveredAt
                 ? new Date(order.shipmentInfo.deliveredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })

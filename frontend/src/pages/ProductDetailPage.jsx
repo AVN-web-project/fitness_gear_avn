@@ -26,7 +26,7 @@ import ProductGraphic from '../components/ProductGraphic';
 import SizeChartModal from '../components/SizeChartModal';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { fetchProductReviewsApi, submitReviewApi, markReviewHelpfulApi, fetchMyOrdersApi } from '../services/api';
+import { fetchProductReviewsApi, submitReviewApi, markReviewHelpfulApi, fetchMyOrdersApi, resolveMediaUrl } from '../services/api';
 
 export default function ProductDetailPage({
   product,
@@ -209,9 +209,9 @@ export default function ProductDetailPage({
         '@context': 'https://schema.org/',
         '@type': 'Product',
         'name': product.name,
-        'image': [window.location.origin + product.image],
+        'image': [resolveMediaUrl(product.image)].filter(Boolean),
         'description': product.description,
-        'sku': product.sku || `AVN-${product.id}`,
+        'sku': product.variants?.[0]?.sku || product.sku || undefined,
         'offers': {
           '@type': 'Offer',
           'url': window.location.href,
@@ -789,7 +789,7 @@ export default function ProductDetailPage({
                 {typeof product.category === 'object' ? product.category?.name : product.category}
               </span>
               <span className="text-[11px] text-[var(--text-sub)] font-semibold font-mono bg-white/5 px-2 py-0.5 rounded">
-                SKU: {product.sku || `AVN-${product.id.toUpperCase()}`}
+                SKU: {product.variants?.[0]?.sku || product.sku || '—'}
               </span>
               {product.ageGenderTag && (
                 <span className="text-[10px] font-bold text-gray-400 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700">
@@ -1515,8 +1515,8 @@ export default function ProductDetailPage({
                         type="button"
                         onClick={() => handleHelpfulClick(rev.id)}
                         className={`flex items-center gap-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${rev.hasVoted
-                            ? 'text-[#FF1E27] font-bold'
-                            : 'text-[var(--text-sub)] hover:text-[#FF1E27]'
+                          ? 'text-[#FF1E27] font-bold'
+                          : 'text-[var(--text-sub)] hover:text-[#FF1E27]'
                           }`}
                         title={rev.hasVoted ? 'Undo helpful vote' : 'Mark as helpful'}
                       >
@@ -1613,11 +1613,10 @@ export default function ProductDetailPage({
           <div
             ref={lightboxModalRef}
             onClick={(e) => e.stopPropagation()}
-            className={`relative rounded-3xl border shadow-2xl overflow-hidden flex items-center justify-center ${
-              isOppositeLight
+            className={`relative rounded-3xl border shadow-2xl overflow-hidden flex items-center justify-center ${isOppositeLight
                 ? 'bg-white border-zinc-200 shadow-[0_20px_70px_rgba(0,0,0,0.4)]'
                 : 'bg-[#0D0E12] border-zinc-800 shadow-[0_20px_70px_rgba(0,0,0,0.85)]'
-            }`}
+              }`}
             style={{
               width: 'min(92vw, 720px)',
               height: 'min(85vh, 720px)',
@@ -1636,11 +1635,10 @@ export default function ProductDetailPage({
               }}
               aria-label="Close"
               title="Close (Esc)"
-              className={`absolute top-4 right-4 z-30 p-2.5 rounded-full transition-colors cursor-pointer ${
-                isOppositeLight
+              className={`absolute top-4 right-4 z-30 p-2.5 rounded-full transition-colors cursor-pointer ${isOppositeLight
                   ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-black shadow-sm'
                   : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white shadow-sm'
-              }`}
+                }`}
             >
               <X className="w-5 h-5" />
             </button>
@@ -1705,13 +1703,12 @@ export default function ProductDetailPage({
                       role="tab"
                       aria-selected={isActive}
                       title={item.label}
-                      className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none focus:outline-none ${
-                        isActive
+                      className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none focus:outline-none ${isActive
                           ? 'border-[#FF1E27] bg-[#FF1E27]/15 shadow-[0_0_12px_rgba(255,30,39,0.35)] ring-1 ring-[#FF1E27]'
                           : isOppositeLight
                             ? 'border-zinc-200/90 bg-white/80 hover:bg-white hover:border-zinc-300 text-zinc-700 shadow-sm'
                             : 'border-zinc-700/80 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-300 shadow-sm'
-                      }`}
+                        }`}
                     >
                       {/* Mini Thumbnail */}
                       <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg overflow-hidden flex items-center justify-center bg-transparent shrink-0">
@@ -1722,9 +1719,8 @@ export default function ProductDetailPage({
                         />
                       </div>
                       {/* Angle Tab Label */}
-                      <span className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wide whitespace-nowrap ${
-                        isActive ? 'text-[#FF1E27]' : isOppositeLight ? 'text-zinc-800' : 'text-zinc-200'
-                      }`}>
+                      <span className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wide whitespace-nowrap ${isActive ? 'text-[#FF1E27]' : isOppositeLight ? 'text-zinc-800' : 'text-zinc-200'
+                        }`}>
                         {item.label}
                       </span>
                     </button>

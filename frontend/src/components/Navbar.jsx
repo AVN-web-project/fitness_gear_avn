@@ -58,27 +58,38 @@ export default function Navbar({
   };
 
   const handleNavClick = (label, href) => {
-    setActiveNav(label);
-    if (label === 'HOME' && onNavigateHome) {
-      onNavigateHome();
-    } else if (label === 'PRODUCTS' && onNavigateSearch) {
-      onNavigateSearch();
-    } else if (label === 'CONTACT') {
-      if (onNavigateContact) {
-        onNavigateContact();
-      } else {
-        const element = document.querySelector(href) || document.querySelector('#contact') || document.querySelector('footer');
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
-    } else {
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
+  setActiveNav(label);
+
+  // Sections render with the home page, so retry briefly until the target exists
+  const scrollToSection = (attempts = 12) => {
+    const element = document.querySelector(href);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+      return;
     }
+    if (attempts > 0) setTimeout(() => scrollToSection(attempts - 1), 60);
   };
+
+  if (label === 'HOME' && onNavigateHome) {
+    onNavigateHome();
+  } else if (label === 'PRODUCTS' && onNavigateSearch) {
+    onNavigateSearch();
+  } else if (label === 'CONTACT') {
+    if (onNavigateContact) {
+      onNavigateContact();
+    } else {
+      scrollToSection();
+    }
+  } else {
+    if (activeView !== 'home' && onNavigateHome) {
+      onNavigateHome();
+      scrollToSection();
+    } else {
+      scrollToSection();
+    }
+  }
+};
+
 
   const handleCartClick = () => {
     if (onNavigateCart) {
@@ -136,7 +147,11 @@ export default function Navbar({
           {/* Center Navigation Links (Desktop) */}
           <nav className="hidden lg:flex items-center space-x-8">
             {navItems.filter(item => item.label !== 'CONTACT').map((item) => {
-              const isActive = activeNav === item.label && activeView === 'home';
+              const isActive =
+                item.label === 'PRODUCTS'
+                  ? activeView === 'search'
+                  : (activeView === 'home' && activeNav === item.label);
+
               return (
                 <a
                   key={item.label}

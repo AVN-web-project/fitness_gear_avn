@@ -329,10 +329,10 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
         ...(refundAccountDetails.method === 'upi'
           ? { upiId: refundAccountDetails.upiId.trim() }
           : {
-              accountHolderName: refundAccountDetails.accountHolderName.trim(),
-              accountNumber: refundAccountDetails.accountNumber.trim(),
-              ifscCode: refundAccountDetails.ifscCode.trim().toUpperCase()
-            })
+            accountHolderName: refundAccountDetails.accountHolderName.trim(),
+            accountNumber: refundAccountDetails.accountNumber.trim(),
+            ifscCode: refundAccountDetails.ifscCode.trim().toUpperCase()
+          })
       } : undefined);
       if (res && res.success === false) {
         setActionError(res.message || 'Unable to request return');
@@ -510,18 +510,18 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                           {isReturnRequested
                             ? (isCod ? 'Paid on Delivery • Return Under Review' : 'Confirmed & Paid • Return Under Review')
                             : isRefunded
-                            ? 'Refunded'
-                            : (isCod && wasDelivered ? 'Paid on Delivery' : 'Confirmed & Paid')}
+                              ? 'Refunded'
+                              : (isCod && wasDelivered ? 'Paid on Delivery' : 'Confirmed & Paid')}
                         </span>
                       </div>
                       <p className="text-xs font-bold text-[var(--text-main)] mt-0.5">
                         {isReturnRequested
                           ? (isCod
-                              ? `Cash on Delivery payment of ₹${Number(totalAmount).toLocaleString('en-IN')} was collected upon delivery. Refund will be processed upon return verification.`
-                              : `Payment of ₹${Number(totalAmount).toLocaleString('en-IN')} confirmed via ${paymentProvider}. Refund will be processed upon return approval.`)
+                            ? `Cash on Delivery payment of ₹${Number(totalAmount).toLocaleString('en-IN')} was collected upon delivery. Refund will be processed upon return verification.`
+                            : `Payment of ₹${Number(totalAmount).toLocaleString('en-IN')} confirmed via ${paymentProvider}. Refund will be processed upon return approval.`)
                           : isRefunded
-                          ? `Refund of ₹${Number(totalAmount).toLocaleString('en-IN')} has been processed.`
-                          : (isCod && wasDelivered
+                            ? `Refund of ₹${Number(totalAmount).toLocaleString('en-IN')} has been processed.`
+                            : (isCod && wasDelivered
                               ? 'Cash on Delivery payment collected and verified upon delivery'
                               : `Payment of ₹${Number(totalAmount).toLocaleString('en-IN')} confirmed via ${paymentProvider}`)}
                       </p>
@@ -674,7 +674,7 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                       <p className="text-sm font-extrabold uppercase text-[var(--text-main)]">{item.name || item.productName || 'Product'}</p>
                       <p className="text-xs font-bold text-[var(--text-sub)]">Qty: {item.qty || item.quantity || 1}</p>
                     </div>
-                    <p className="text-[11px] text-[var(--text-sub)] mt-1">{item.slug || item.productId || item.id || 'SKU not available'}</p>
+                    <p className="text-[11px] text-[var(--text-sub)] mt-1">{item.variantSku || '—'}</p>
                     <p className="text-sm font-bold text-[#FF1E27] mt-2">{item.price || `₹${item.total || 0}`}</p>
                   </div>
                 </div>
@@ -735,16 +735,15 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-sub)]">Payment status</span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
-                    isPaymentPending
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${isPaymentPending
                       ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                       : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                  }`}>
+                    }`}>
                     {isPaymentPending
                       ? (isCod ? 'Pending (Due on Delivery)' : 'Pending Payment')
                       : (isReturnRequested
-                          ? 'Paid (Return Under Review)'
-                          : isRefunded
+                        ? 'Paid (Return Under Review)'
+                        : isRefunded
                           ? 'Refunded'
                           : (isCod && wasDelivered ? 'Paid on Delivery' : 'Confirmed & Paid'))}
                   </span>

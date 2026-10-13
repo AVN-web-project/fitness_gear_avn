@@ -381,7 +381,7 @@ export default function CartPage({
                                   </span>
                                   <span className="text-[var(--text-sub)]">•</span>
                                   <span className="text-[10px] text-[var(--text-sub)] font-mono">
-                                    SKU: {item.sku || `AVN-${(item.id || '').toUpperCase()}`}
+                                    SKU: {item.variantSku || '—'}
                                   </span>
                                 </div>
 

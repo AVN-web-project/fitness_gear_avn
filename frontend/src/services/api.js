@@ -2,6 +2,28 @@ import { PRODUCTS as LOCAL_PRODUCTS } from '../data/products';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
 
+// Backend origin (API base without the /api/v1 suffix) — the host that serves /uploads.
+const MEDIA_BASE_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+
+/**
+ * Resolve a backend image path to a fully-qualified URL served by the backend.
+ *  - absolute (http/https/data/blob)       -> returned unchanged
+ *  - /uploads/...                          -> backend origin + path
+ *  - legacy root-relative (/knee-wrap.png) -> backend origin + /uploads/products/...
+ * The database historically stored root-relative paths such as "/knee-wrap.png";
+ * the actual files live on the backend under /uploads/products/.
+ */
+export function resolveMediaUrl(path) {
+  if (!path || typeof path !== 'string') return path || null;
+  const url = path.trim();
+  if (!url) return null;
+  if (/^(https?:|data:|blob:)/i.test(url)) return url;
+  if (url.startsWith('/uploads/')) return `${MEDIA_BASE_URL}${url}`;
+  if (url.startsWith('/')) return `${MEDIA_BASE_URL}/uploads/products${url}`;
+  return url;
+}
+
+
 export function getAuthHeaders() {
   const token = localStorage.getItem('avn-token');
   const headers = { 'Content-Type': 'application/json' };
@@ -43,10 +65,15 @@ export function normalizeProduct(p) {
     description: p.description || localMatch?.description || '',
     price,
     compareAtPrice,
-    image: primaryImage,
-    webpImage: p.webpImage || localMatch?.webpImage || primaryImage,
-    imageLight: p.imageLight || localMatch?.imageLight || primaryImage,
-    images: p.images && p.images.length > 0 ? p.images : (localMatch?.images || [{ url: primaryImage, altText: p.name, isPrimary: true }]),
+    image: resolveMediaUrl(primaryImage),
+    webpImage: resolveMediaUrl(p.webpImage || localMatch?.webpImage || primaryImage),
+    imageLight: resolveMediaUrl(p.imageLight || localMatch?.imageLight || primaryImage),
+    images: (p.images && p.images.length > 0
+      ? p.images
+      : (localMatch?.images || [{ url: primaryImage, altText: p.name, isPrimary: true }])
+    ).map((img) => (typeof img === 'string'
+      ? { url: resolveMediaUrl(img), altText: p.name, isPrimary: false }
+      : { ...img, url: resolveMediaUrl(img?.url) })),
     rating: p.ratingsAverage ?? p.rating ?? localMatch?.rating ?? 4.8,
     reviewsCount: p.ratingsCount ?? p.reviewsCount ?? localMatch?.reviewsCount ?? 100,
     stockQuantity: p.totalStock ?? p.stockQuantity ?? (p.variants?.reduce((sum, v) => sum + (v.stockQuantity || 0), 0)) ?? localMatch?.stockQuantity ?? 10,
@@ -236,10 +263,14 @@ export async function fetchCategoriesApi() {
     const response = await fetch(`${API_BASE_URL}/categories`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
-    if (Array.isArray(data?.data?.categories)) return data.data.categories;
-    if (Array.isArray(data?.data)) return data.data;
-    if (Array.isArray(data?.categories)) return data.categories;
-    return [];
+    const rawCats = Array.isArray(data?.data?.categories) ? data.data.categories
+      : Array.isArray(data?.data) ? data.data
+        : Array.isArray(data?.categories) ? data.categories
+          : [];
+    return rawCats.map((c) => (c && c.image
+      ? { ...c, image: { ...c.image, url: resolveMediaUrl(c.image.url) } }
+      : c));
+
   } catch (error) {
     console.warn('Fetch categories API failed:', error.message);
     return [];
@@ -254,7 +285,11 @@ export async function fetchCategoryBySlugApi(slug) {
     const response = await fetch(`${API_BASE_URL}/categories/${encodeURIComponent(slug)}`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
-    return data?.data || null;
+    const cat = data?.data || null;
+    return cat && cat.image
+      ? { ...cat, image: { ...cat.image, url: resolveMediaUrl(cat.image.url) } }
+      : cat;
+
   } catch (error) {
     console.warn('Fetch category by slug API failed:', error.message);
     return null;

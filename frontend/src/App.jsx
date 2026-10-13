@@ -677,6 +677,7 @@ function AppContent() {
             onRemoveItem={cart.removeItem}
             onUpdateVariant={cart.updateVariant}
             onNavigateHome={handleNavigateHome}
+            onNavigateSearch={handleNavigateSearch}
             onProceedToCheckout={handleProceedToCheckout}
             onClearCart={cart.clearCart}
             theme={theme}

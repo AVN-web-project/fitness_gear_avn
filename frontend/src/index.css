@@ -59,6 +59,12 @@
   .font-heading {
     font-family: var(--font-heading);
   }
+
+section[id],
+footer[id] {
+  scroll-margin-top: 6rem;
+}
+
 }
 
 .font-barlow-condensed {
