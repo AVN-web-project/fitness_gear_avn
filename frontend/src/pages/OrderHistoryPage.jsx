@@ -8,6 +8,7 @@ import { fetchMyOrdersApi, resolveMediaUrl } from '../services/api';
 
 export default function OrderHistoryPage({
   onBack,
+  onNavigateSearch,
   onWriteReviewClick,
   currentUser,
   onViewOrderDetails,
@@ -217,7 +218,7 @@ export default function OrderHistoryPage({
                 <Clock className="w-10 h-10 text-[var(--text-sub)] mx-auto opacity-50" />
                 <h3 className="text-base font-black font-heading uppercase text-[var(--text-main)]">NO IN-PROGRESS ORDERS</h3>
                 <p className="text-xs text-[var(--text-sub)]">You have no active shipments in transit right now.</p>
-                <Button onClick={onBack} variant="primary" size="sm" className="w-fit mx-auto">
+                <Button onClick={() => (onNavigateSearch || onBack)()} variant="primary" size="sm" className="w-fit mx-auto">
                   Browse Equipment
                 </Button>
               </div>
@@ -332,7 +333,7 @@ export default function OrderHistoryPage({
                 <PackageCheck className="w-10 h-10 text-[var(--text-sub)] mx-auto opacity-50" />
                 <h3 className="text-base font-black font-heading uppercase text-[var(--text-main)]">NO PREVIOUS ORDERS</h3>
                 <p className="text-xs text-[var(--text-sub)]">Completed or cancelled orders will appear here.</p>
-                <Button onClick={onBack} variant="primary" size="sm" className="w-fit mx-auto">
+                <Button onClick={() => (onNavigateSearch || onBack)()} variant="primary" size="sm" className="w-fit mx-auto">
                   Browse Equipment
                 </Button>
               </div>

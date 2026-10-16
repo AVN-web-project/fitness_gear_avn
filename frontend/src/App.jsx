@@ -610,6 +610,7 @@ function AppContent() {
         ) : activeView === 'order-history' ? (
           <OrderHistoryPage
             onBack={() => setActiveView('profile')}
+            onNavigateSearch={handleNavigateSearch}
             currentUser={user}
             onWriteReviewClick={(productSlug) => {
               const productObj = products.find(p => p.slug === productSlug || p.id === productSlug || p.name.toLowerCase().includes(productSlug.replace(/-/g, ' ')));

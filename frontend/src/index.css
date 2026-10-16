@@ -285,3 +285,11 @@ html.light .dark-blend {
 .font-mono {
   font-family: var(--font-mono);
 }
+
+@media (min-width: 1024px) {
+  .hero-stage-anchor {
+    left: auto !important;
+    right: max(0px, calc((100vw - 1536px) / 2)) !important;
+    width: 960px !important;
+  }
+}

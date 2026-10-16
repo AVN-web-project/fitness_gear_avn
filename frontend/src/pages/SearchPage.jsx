@@ -129,15 +129,18 @@ export default function SearchPage({
     let list = activeProductsSource.filter((p) => p.status !== 'Discontinued' && p.status !== 'discontinued');
 
     if (searchQuery.trim()) {
-      const qLower = searchQuery.trim().toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name?.toLowerCase().includes(qLower) ||
-          p.tagline?.toLowerCase().includes(qLower) ||
-          p.description?.toLowerCase().includes(qLower) ||
-          (typeof p.category === 'object' ? p.category?.name?.toLowerCase().includes(qLower) : p.category?.toLowerCase().includes(qLower)) ||
-          (Array.isArray(p.specs) && p.specs.some((s) => s.toLowerCase().includes(qLower)))
-      );
+      // Whole-word match (tolerating a plural "s"). A plain substring test made
+      // "lifting" match inside longer words such as "Powerlifting", so a knee
+      // wrap showed up when searching for lifting gear.
+      const qEsc = searchQuery.trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const qRe = new RegExp(`\\b${qEsc}s?\\b`, 'i');
+      list = list.filter((p) => {
+        const catName = typeof p.category === 'object' ? p.category?.name : p.category;
+        const haystack = [p.name, p.tagline, p.description, catName, ...(Array.isArray(p.specs) ? p.specs : [])]
+          .filter(Boolean)
+          .join(' \n ');
+        return qRe.test(haystack);
+      });
     }
 
     if (selectedCategory && selectedCategory.toUpperCase() !== 'ALL PRODUCTS' && selectedCategory.toUpperCase() !== 'ALL') {
@@ -439,7 +442,7 @@ export default function SearchPage({
               <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
                 <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">Age Group</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {['ALL', 'Adults', 'Teens', 'All Ages'].map((age) => (
+                  {['ALL', 'Adults', 'Teens'].map((age) => (
                     <button
                       key={age}
                       onClick={() => { setSelectedAgeGroup(age); setCurrentPage(1); }}
@@ -458,7 +461,7 @@ export default function SearchPage({
               <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
                 <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">Gender</h4>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {['ALL', 'Unisex', 'Men', 'Women'].map((g) => (
+                  {['Unisex', 'Men', 'Women'].map((g) => (
                     <button
                       key={g}
                       onClick={() => { setSelectedGender(g); setCurrentPage(1); }}
@@ -843,7 +846,7 @@ export default function SearchPage({
               <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
                 <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">Age Group</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {['ALL', 'Adults', 'Teens', 'All Ages'].map((age) => (
+                  {['ALL', 'Adults', 'Teens'].map((age) => (
                     <button
                       key={age}
                       onClick={() => { setSelectedAgeGroup(age); setCurrentPage(1); }}
@@ -860,7 +863,7 @@ export default function SearchPage({
               <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
                 <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">Gender</h4>
                 <div className="grid grid-cols-3 gap-1">
-                  {['ALL', 'Unisex', 'Men', 'Women'].map((g) => (
+                  {['Unisex', 'Men', 'Women'].map((g) => (
                     <button
                       key={g}
                       onClick={() => { setSelectedGender(g); setCurrentPage(1); }}

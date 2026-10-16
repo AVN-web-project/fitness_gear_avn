@@ -106,12 +106,12 @@ export default function Hero({ onExploreClick, theme }) {
           <div className="hidden lg:block absolute inset-0 bg-gradient-to-b from-[var(--bg-main)] via-transparent to-[var(--bg-main)]/80 pointer-events-none z-[1]" />
 
           {/* Light Theme Hero Stage Image: Full Unclipped Background on Mobile, Locked Stage on Desktop */}
-          <div className="absolute inset-0 lg:left-auto lg:top-0 lg:right-0 lg:bottom-0 w-full lg:w-[58%] xl:w-[64%] flex items-center justify-center lg:justify-end pointer-events-none overflow-visible lg:overflow-hidden z-10 lg:[mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.4)_2%,black_5%,black_100%),linear-gradient(to_bottom,transparent_0%,black_4%,black_94%,transparent_100%)] lg:[-webkit-mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.4)_2%,black_5%,black_100%),linear-gradient(to_bottom,transparent_0%,black_4%,black_94%,transparent_100%)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]">
+          <div className="absolute inset-0 lg:left-auto lg:top-0 lg:bottom-0 hero-stage-anchor w-full flex items-center justify-center lg:justify-end pointer-events-none overflow-visible lg:overflow-hidden z-10 lg:[mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.4)_2%,black_5%,black_100%),linear-gradient(to_bottom,transparent_0%,black_4%,black_94%,transparent_100%)] lg:[-webkit-mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.4)_2%,black_5%,black_100%),linear-gradient(to_bottom,transparent_0%,black_4%,black_94%,transparent_100%)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]">
             <img
               ref={heroImageRef}
               src="/avn-hero-light-3.png"
               alt="AVN Hero Light Stage & Logo"
-              className="hero-mobile-edge-fade w-full h-full object-contain object-center lg:object-right origin-center lg:origin-right scale-100 lg:scale-[1.02] xl:scale-[1.05] translate-y-0 lg:translate-x-1 xl:translate-x-0 transform-gpu opacity-100 mix-blend-multiply filter contrast-[1.06] saturate-[1.06] transition-all duration-700 pointer-events-none"
+              className="hero-mobile-edge-fade w-full h-full lg:w-[960px] lg:h-[720px] object-contain object-center lg:object-right origin-center lg:origin-right scale-100 lg:scale-100 xl:scale-100 translate-y-0 lg:translate-x-0 xl:translate-x-0 transform-gpu opacity-100 mix-blend-multiply filter contrast-[1.06] saturate-[1.06] transition-all duration-700 pointer-events-none"
             />
             <div ref={heroCoverRef} className="hero-mobile-cover hero-mobile-cover-top" />
             <div ref={heroBottomCoverRef} className="hero-mobile-cover hero-mobile-cover-bottom lg:hidden" />
@@ -125,12 +125,12 @@ export default function Hero({ onExploreClick, theme }) {
           <div className="relative w-full h-full">
 
             {/* Base Layer: 3D Stage & Athlete Overlay (Full Unclipped Background on Mobile, Locked Stage on Desktop) */}
-            <div className="absolute inset-0 lg:left-auto lg:top-0 lg:right-0 lg:bottom-0 w-full lg:w-[58%] xl:w-[64%] flex items-center justify-center lg:justify-end pointer-events-none overflow-visible lg:overflow-hidden z-0 lg:[mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_85%,transparent_99%)] lg:[-webkit-mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_65%,transparent_98%)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]">
+            <div className="absolute inset-0 lg:left-auto lg:top-0 lg:bottom-0 hero-stage-anchor w-full flex items-center justify-center lg:justify-end pointer-events-none overflow-visible lg:overflow-hidden z-0 lg:[mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_85%,transparent_99%)] lg:[-webkit-mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_65%,transparent_98%)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]">
               <img
                 ref={heroImageRef}
                 src="/avn-hero-4.png"
                 alt="AVN Hero Stage & Logo"
-                className="hero-mobile-edge-fade w-full h-full object-contain object-center lg:object-right origin-center lg:origin-right scale-100 lg:scale-[1.02] xl:scale-[1.05] translate-y-0 lg:translate-x-1 xl:translate-x-0 transform-gpu opacity-100 filter brightness-[1.05] contrast-[1.08] saturate-[1.12] transition-all duration-700"
+                className="hero-mobile-edge-fade w-full h-full lg:w-[960px] lg:h-[720px] object-contain object-center lg:object-right origin-center lg:origin-right scale-100 lg:scale-100 xl:scale-100 translate-y-0 lg:translate-x-0 xl:translate-x-0 transform-gpu opacity-100 filter brightness-[1.05] contrast-[1.08] saturate-[1.12] transition-all duration-700"
               />
             </div>
 

@@ -63,6 +63,16 @@ export default function AuthPage({
   // Feedback State
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
+
+  // Pull a specific field's message out of the backend's validation envelope
+  // ({ message, errors: [{ path: 'body.email', message }] }).
+  const extractFieldError = (err, field) => {
+    const errors = err?.data?.errors;
+    if (!Array.isArray(errors) || errors.length === 0) return '';
+    const match = errors.find((e) => String(e?.path || e?.field || '').includes(field));
+    return (match || errors[0])?.message || '';
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cooldown countdown timer for Login OTP resend
@@ -239,7 +249,12 @@ export default function AuthPage({
         setSignInMethod('otp');
         setLoginOtpStep('request');
       } else {
-        setErrorMessage(err.message || 'Failed to send verification code. Please try again.');
+        const fieldMessage = extractFieldError(err, 'email');
+        if (fieldMessage) {
+          setEmailError(fieldMessage);
+        } else {
+          setErrorMessage(err.message || 'Failed to send verification code. Please try again.');
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -661,11 +676,18 @@ export default function AuthPage({
                         onChange={(e) => {
                           setFormData({ ...formData, email: e.target.value });
                           if (errorMessage) setErrorMessage('');
+                          if (emailError) setEmailError('');
                         }}
                         placeholder="e.g. athlete@domain.com"
                         className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
                       />
                     </div>
+                    {emailError && (
+                      <p className="text-[11px] text-rose-500 font-semibold flex items-center gap-1 pt-1">
+                        <ShieldAlert className="w-3 h-3 shrink-0" />
+                        <span>{emailError}</span>
+                      </p>
+                    )}
                     <p className="text-[10px] text-[var(--text-sub)] pt-0.5">
                       We'll send a 6-digit OTP code to verify this email.
                     </p>

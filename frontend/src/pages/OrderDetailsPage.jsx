@@ -248,26 +248,6 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
       setActionError('Please provide a reason with at least 5 characters.');
       return;
     }
-    if (isCod) {
-      if (refundAccountDetails.method === 'upi') {
-        const upiId = refundAccountDetails.upiId.trim();
-        if (upiId.length > 100 || !/^[a-z0-9][a-z0-9._-]{1,}@[a-z0-9][a-z0-9.-]{1,}[a-z0-9]$/i.test(upiId)) {
-          setActionError('Enter a valid UPI ID.');
-          return;
-        }
-      } else if (refundAccountDetails.method === 'bank') {
-        const { accountHolderName, accountNumber, ifscCode } = refundAccountDetails;
-        const trimmedHolderName = accountHolderName.trim();
-        const validHolderName = /^[\p{L}\p{M}]+(?:[ .'-][\p{L}\p{M}]+)*$/u.test(trimmedHolderName);
-        if (trimmedHolderName.length < 2 || trimmedHolderName.length > 100 || !validHolderName || !/^\d{6,34}$/.test(accountNumber.trim()) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.trim().toUpperCase())) {
-          setActionError('Enter a valid account holder name, bank account number, and IFSC code.');
-          return;
-        }
-      } else {
-        setActionError('Choose UPI or bank transfer for your COD refund.');
-        return;
-      }
-    }
 
     setIsSubmittingAction(true);
     setActionError('');
