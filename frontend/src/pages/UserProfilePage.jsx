@@ -17,7 +17,7 @@ export default function UserProfilePage({
   onSignOut,
   theme = 'dark'
 }) {
-  const { user: authUser, updateProfile, setPassword, sendEmailOtp } = useAuth();
+  const { user: authUser, updateProfile, setPassword, changePassword, sendEmailOtp } = useAuth();
 
   const user = authUser || currentUser || {
     name: 'Not Logged In',
@@ -94,6 +94,7 @@ export default function UserProfilePage({
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
@@ -114,6 +115,11 @@ export default function UserProfilePage({
     setPasswordError('');
     setPasswordSuccess('');
 
+    if (user.authProvider === 'local' && !currentPassword) {
+      setPasswordError('Please enter your current password.');
+      return;
+    }
+
     if (!newPassword || newPassword.length < 6) {
       setPasswordError('Password must be at least 6 characters.');
       return;
@@ -126,7 +132,11 @@ export default function UserProfilePage({
 
     setPasswordLoading(true);
     try {
-      await setPassword(newPassword);
+      if (user.authProvider === 'local') {
+        await changePassword(currentPassword, newPassword);
+      } else {
+        await setPassword(newPassword);
+      }
       setPasswordSuccess('✓ Password saved successfully!');
       setTimeout(() => {
         setIsPasswordModalOpen(false);
@@ -632,6 +642,36 @@ export default function UserProfilePage({
 
             <form onSubmit={handleSavePassword} className="space-y-4">
               
+              {/* Current Password — only when an existing password must be verified */}
+              {user.authProvider === 'local' && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub)] flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-[#FF1E27]" /> Current Password *
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      required
+                      autoFocus
+                      value={currentPassword}
+                      onChange={(e) => {
+                        setCurrentPassword(e.target.value);
+                        if (passwordError) setPasswordError('');
+                      }}
+                      className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm pl-4 pr-11 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                      placeholder="Enter your current password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3.5 text-[var(--text-sub)] hover:text-[var(--text-main)] cursor-pointer"
+                    >
+                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* New Password */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub)] flex items-center gap-1.5">

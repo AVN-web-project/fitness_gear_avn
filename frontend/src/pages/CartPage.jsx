@@ -84,7 +84,7 @@ export default function CartPage({
 
   // Financial calculations based on CHECKED items (Amazon style)
   const subtotal = activeSelectedItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const freeShippingThreshold = context.freeShippingThreshold || 1499;
+  const freeShippingThreshold = 999;
   const isFreeShipping = subtotal >= freeShippingThreshold || activeSelectedItems.length === 0;
   const shippingFee = isFreeShipping ? 0 : 99;
   const handlingFee = subtotal === 0 ? 0 : 10;

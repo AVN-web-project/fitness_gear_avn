@@ -289,11 +289,27 @@ function AppContent() {
   }, []);
 
   const [activeView, setActiveView] = useState(() => {
-    if (typeof window !== 'undefined' && window.location.search) {
-      return 'search';
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      // Password-reset links arrive in two shapes:
+      //   /?resetToken=<t>&email=<e>          (current)
+      //   /reset-password?token=<t>&email=<e> (legacy)
+      // Both must open the auth view so AuthPage can read the token, instead of
+      // falling through to the catalog because the URL happens to have a query string.
+      const isResetLink =
+        Boolean(params.get('resetToken')) ||
+        Boolean(params.get('token')) ||
+        window.location.pathname.includes('reset-password');
+      if (isResetLink) {
+        return 'auth';
+      }
+      if (window.location.search) {
+        return 'search';
+      }
     }
     return 'home';
   });
+
   const [currentPdpProduct, setCurrentPdpProduct] = useState(null);
   const [checkoutData, setCheckoutData] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);

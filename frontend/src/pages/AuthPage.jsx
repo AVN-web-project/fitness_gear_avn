@@ -23,7 +23,9 @@ export default function AuthPage({
     register,
     sendEmailOtp,
     verifyEmailOtp,
-    setPassword
+    setPassword,
+    forgotPassword,
+    resetPassword
   } = useAuth();
 
   // Mode: 'signin' vs 'signup'
@@ -31,6 +33,68 @@ export default function AuthPage({
 
   // Sign In method: 'password' vs 'otp'
   const [signInMethod, setSignInMethod] = useState('password');
+
+  // Password recovery: 'none' | 'forgot' | 'reset'
+  const [recovery, setRecovery] = useState('none');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetPw, setResetPw] = useState('');
+  const [resetConfirm, setResetConfirm] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+
+  // A reset link arrives as /?resetToken=...&email=... — open the reset view.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('resetToken');
+    const email = params.get('email');
+    if (token && email) {
+      setResetToken(token);
+      setResetEmail(email);
+      setRecovery('reset');
+    }
+  }, []);
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+    setForgotLoading(true);
+    try {
+      await forgotPassword(forgotEmail.trim());
+      setForgotSent(true);
+    } catch (err) {
+      setErrorMessage(err.message || 'Could not send the reset link. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setErrorMessage('');
+    if (resetPw.length < 6) {
+      setErrorMessage('Password must be at least 6 characters.');
+      return;
+    }
+    if (resetPw !== resetConfirm) {
+      setErrorMessage('Passwords do not match. Please re-enter.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await resetPassword(resetEmail, resetToken, resetPw);
+      setResetDone(true);
+    } catch (err) {
+      setErrorMessage(err.message || 'Could not reset your password. Please request a new link.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -398,9 +462,88 @@ export default function AuthPage({
         <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-5 shadow-xl">
 
           {/* ======================================================== */}
+          {/* PASSWORD RECOVERY: FORGOT + RESET                        */}
+          {/* ======================================================== */}
+          {recovery === 'forgot' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="text-center space-y-1">
+                <h2 className="text-lg font-black font-heading uppercase text-[var(--text-main)]">Forgot your password?</h2>
+                <p className="text-[11px] text-[var(--text-sub)]">Enter your account email and we'll send a reset link.</p>
+              </div>
+              {forgotSent ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-center text-[var(--text-sub)] bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl p-4 leading-relaxed">
+                    If an account exists for <strong className="text-[var(--text-main)]">{forgotEmail}</strong>, a reset link is on its way. Check your inbox and spam folder.
+                  </p>
+                  <button type="button" onClick={() => { setRecovery('none'); setForgotSent(false); setErrorMessage(''); }} className="w-full py-3 rounded-xl text-xs font-black uppercase font-heading bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-main)] cursor-pointer">
+                    Back to sign in
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--text-sub)] uppercase">EMAIL ADDRESS *</label>
+                    <div className="relative flex items-center">
+                      <Mail className="absolute left-3.5 w-4 h-4 text-[var(--text-sub)]" />
+                      <input type="email" required value={forgotEmail} onChange={(e) => { setForgotEmail(e.target.value); if (errorMessage) setErrorMessage(''); }} placeholder="e.g. athlete@domain.com" className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]" />
+                    </div>
+                  </div>
+                  {errorMessage && <p className="text-[11px] text-[#FF1E27] font-semibold">{errorMessage}</p>}
+                  <button type="submit" disabled={forgotLoading} className="w-full py-3 rounded-xl text-xs font-black uppercase font-heading bg-[#FF1E27] text-white cursor-pointer disabled:opacity-60">
+                    {forgotLoading ? 'Sending...' : 'Send reset link'}
+                  </button>
+                  <button type="button" onClick={() => { setRecovery('none'); setErrorMessage(''); }} className="w-full text-[11px] font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] cursor-pointer">
+                    Back to sign in
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {recovery === 'reset' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="text-center space-y-1">
+                <h2 className="text-lg font-black font-heading uppercase text-[var(--text-main)]">Set a new password</h2>
+                <p className="text-[11px] text-[var(--text-sub)]">{resetEmail}</p>
+              </div>
+              {resetDone ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-center text-[var(--text-sub)] bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl p-4 leading-relaxed">
+                    Your password has been reset. You can now sign in with it.
+                  </p>
+                  <button type="button" onClick={() => { setRecovery('none'); setResetDone(false); setResetPw(''); setResetConfirm(''); setErrorMessage(''); }} className="w-full py-3 rounded-xl text-xs font-black uppercase font-heading bg-[#FF1E27] text-white cursor-pointer">
+                    Go to sign in
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--text-sub)] uppercase">NEW PASSWORD *</label>
+                    <div className="relative flex items-center">
+                      <Lock className="absolute left-3.5 w-4 h-4 text-[var(--text-sub)]" />
+                      <input type="password" required value={resetPw} onChange={(e) => { setResetPw(e.target.value); if (errorMessage) setErrorMessage(''); }} placeholder="At least 6 characters" className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--text-sub)] uppercase">CONFIRM PASSWORD *</label>
+                    <div className="relative flex items-center">
+                      <Lock className="absolute left-3.5 w-4 h-4 text-[var(--text-sub)]" />
+                      <input type="password" required value={resetConfirm} onChange={(e) => { setResetConfirm(e.target.value); if (errorMessage) setErrorMessage(''); }} placeholder="Re-enter the password" className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]" />
+                    </div>
+                  </div>
+                  {errorMessage && <p className="text-[11px] text-[#FF1E27] font-semibold">{errorMessage}</p>}
+                  <button type="submit" disabled={resetLoading} className="w-full py-3 rounded-xl text-xs font-black uppercase font-heading bg-[#FF1E27] text-white cursor-pointer disabled:opacity-60">
+                    {resetLoading ? 'Saving...' : 'Reset password'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* ======================================================== */}
           {/* VIEW A: SIGN IN (PASSWORD vs EMAIL OTP)                  */}
           {/* ======================================================== */}
-          {!isSignUp && (
+          {!isSignUp && recovery === 'none' && (
             <div className="space-y-4">
               <div className="text-center">
                 <p className="text-[11px] font-extrabold font-heading uppercase tracking-wider text-[var(--text-sub)] mb-2">
@@ -467,7 +610,9 @@ export default function AuthPage({
                       <button
                         type="button"
                         onClick={() => {
-                          setSignInMethod('otp');
+                          setRecovery('forgot');
+                          setForgotEmail(formData.email || '');
+                          setForgotSent(false);
                           setErrorMessage('');
                           setSuccessMessage('');
                         }}

@@ -555,6 +555,27 @@ export async function setPasswordApi(password) {
   });
 }
 
+export async function forgotPasswordApi(email) {
+  return apiFetch('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+}
+
+export async function resetPasswordApi(email, token, password) {
+  return apiFetch('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ email, token, password })
+  });
+}
+
+export async function changePasswordApi(currentPassword, newPassword) {
+  return apiFetch('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+}
+
 export async function logoutUserApi() {
   try {
     return await apiFetch('/auth/logout', { method: 'POST' });

@@ -10,7 +10,10 @@ import {
   deleteAddressApi,
   sendOtpApi,
   verifyOtpApi,
-  setPasswordApi
+  setPasswordApi,
+  forgotPasswordApi,
+  resetPasswordApi,
+  changePasswordApi
 } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -200,6 +203,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 3.4 Request a password-reset link by email
+  const forgotPassword = async (email) => {
+    try {
+      return await forgotPasswordApi(email);
+    } catch (err) {
+      const error = new Error(err.message || 'Could not send the reset link.');
+      error.status = err.status || err.data?.statusCode;
+      error.data = err.data;
+      throw error;
+    }
+  };
+
+  // 3.5 Consume the emailed reset token and set a new password
+  const resetPassword = async (email, token, password) => {
+    try {
+      return await resetPasswordApi(email, token, password);
+    } catch (err) {
+      const error = new Error(err.message || 'Could not reset your password.');
+      error.status = err.status || err.data?.statusCode;
+      error.data = err.data;
+      throw error;
+    }
+  };
+
+  // 3.6 Change password — the backend verifies the current password
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      return await changePasswordApi(currentPassword, newPassword);
+    } catch (err) {
+      const error = new Error(err.message || 'Could not change your password.');
+      error.status = err.status || err.data?.statusCode;
+      error.data = err.data;
+      throw error;
+    }
+  };
+
   // 4. Logout
   const logout = async () => {
     try {
@@ -301,6 +340,9 @@ export const AuthProvider = ({ children }) => {
       sendEmailOtp,
       verifyEmailOtp,
       setPassword,
+      forgotPassword,
+      resetPassword,
+      changePassword,
       logout,
       updateProfile,
       addAddress,
