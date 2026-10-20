@@ -43,6 +43,8 @@ export default function AuthPage({
   const [resetEmail, setResetEmail] = useState('');
   const [resetPw, setResetPw] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
+  const [showResetPw, setShowResetPw] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetDone, setResetDone] = useState(false);
 
@@ -50,7 +52,7 @@ export default function AuthPage({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('resetToken');
+    const token = params.get('resetToken') || params.get('token');
     const email = params.get('email');
     if (token && email) {
       setResetToken(token);
@@ -521,14 +523,30 @@ export default function AuthPage({
                     <label className="text-[10px] font-bold text-[var(--text-sub)] uppercase">NEW PASSWORD *</label>
                     <div className="relative flex items-center">
                       <Lock className="absolute left-3.5 w-4 h-4 text-[var(--text-sub)]" />
-                      <input type="password" required value={resetPw} onChange={(e) => { setResetPw(e.target.value); if (errorMessage) setErrorMessage(''); }} placeholder="At least 6 characters" className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]" />
+                      <input type={showResetPw ? 'text' : 'password'} required value={resetPw} onChange={(e) => { setResetPw(e.target.value); if (errorMessage) setErrorMessage(''); }} placeholder="At least 6 characters" className="w-full pl-10 pr-10 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]" />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetPw(!showResetPw)}
+                        aria-label={showResetPw ? 'Hide password' : 'Show password'}
+                        className="absolute right-3 text-[var(--text-sub)] hover:text-[var(--text-main)] cursor-pointer"
+                      >
+                        {showResetPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-[var(--text-sub)] uppercase">CONFIRM PASSWORD *</label>
                     <div className="relative flex items-center">
                       <Lock className="absolute left-3.5 w-4 h-4 text-[var(--text-sub)]" />
-                      <input type="password" required value={resetConfirm} onChange={(e) => { setResetConfirm(e.target.value); if (errorMessage) setErrorMessage(''); }} placeholder="Re-enter the password" className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]" />
+                      <input type={showResetConfirm ? 'text' : 'password'} required value={resetConfirm} onChange={(e) => { setResetConfirm(e.target.value); if (errorMessage) setErrorMessage(''); }} placeholder="Re-enter the password" className="w-full pl-10 pr-10 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]" />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetConfirm(!showResetConfirm)}
+                        aria-label={showResetConfirm ? 'Hide password' : 'Show password'}
+                        className="absolute right-3 text-[var(--text-sub)] hover:text-[var(--text-main)] cursor-pointer"
+                      >
+                        {showResetConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
                   {errorMessage && <p className="text-[11px] text-[#FF1E27] font-semibold">{errorMessage}</p>}

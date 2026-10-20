@@ -144,7 +144,6 @@ export default function SupportWidget({ onOpenFullSupport, initialOrderId = '' }
         >
           <MessageSquare className="w-5 h-5 group-hover:rotate-12 transition-transform" />
           <span className="hidden sm:inline">LIVE SUPPORT</span>
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
         </button>
       )}
 

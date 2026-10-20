@@ -702,7 +702,6 @@ export default function CartPage({
                   ORDER GENERATED SUCCESSFULLY!
                 </h2>
                 <div className="inline-flex items-center gap-2 bg-[#FF1E27]/10 text-[#FF1E27] text-xs font-mono font-bold px-3 py-1 rounded-full border border-[#FF1E27]/40">
-                  <span className="w-2 h-2 rounded-full bg-[#FF1E27] animate-ping" />
                   <span>State: {completedOrder.status || 'pending_payment'}</span>
                 </div>
               </div>
