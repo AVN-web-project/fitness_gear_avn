@@ -84,7 +84,7 @@ export default function SearchPage({
     });
 
     const newRelativePathQuery = url.pathname + (params.toString() ? `?${params.toString()}` : '');
-    window.history.replaceState(null, '', newRelativePathQuery);
+    window.history.replaceState(window.history.state, '', newRelativePathQuery);
   }, []);
 
   useEffect(() => {

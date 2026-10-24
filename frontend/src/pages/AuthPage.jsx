@@ -70,7 +70,7 @@ export default function AuthPage({
       await forgotPassword(forgotEmail.trim());
       setForgotSent(true);
     } catch (err) {
-      setErrorMessage(describeError(err, 'Could not send the reset link. Please try again.'));
+      setErrorMessage(err.message || 'Could not send the reset link. Please try again.');
     } finally {
       setForgotLoading(false);
     }
@@ -92,7 +92,7 @@ export default function AuthPage({
       await resetPassword(resetEmail, resetToken, resetPw);
       setResetDone(true);
     } catch (err) {
-      setErrorMessage(describeError(err, 'Could not reset your password. Please request a new link.'));
+      setErrorMessage(err.message || 'Could not reset your password. Please request a new link.');
     } finally {
       setResetLoading(false);
     }
@@ -136,17 +136,9 @@ export default function AuthPage({
   const extractFieldError = (err, field) => {
     const errors = err?.data?.errors;
     if (!Array.isArray(errors) || errors.length === 0) return '';
-    const match = field
-      ? errors.find((e) => String(e?.path || e?.field || '').includes(field))
-      : null;
+    const match = errors.find((e) => String(e?.path || e?.field || '').includes(field));
     return (match || errors[0])?.message || '';
   };
-
-  // Turn any backend error into something a person can act on. Prefers the specific
-  // field message ("Verification code must be 6 digits") over the generic envelope
-  // ("Validation Error"), which on its own tells the user nothing about what to fix.
-  const describeError = (err, fallback) =>
-    extractFieldError(err) || err?.message || fallback;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cooldown countdown timer for Login OTP resend
@@ -220,7 +212,7 @@ export default function AuthPage({
         setErrorMessage('');
         setSuccessMessage('');
       } else {
-        setErrorMessage(describeError(err, 'Authentication failed. Please check credentials.'));
+        setErrorMessage(err.message || 'Authentication failed. Please check credentials.');
       }
     } finally {
       setIsSubmitting(false);
@@ -262,7 +254,7 @@ export default function AuthPage({
         setErrorMessage('');
         setSuccessMessage('');
       } else {
-        setErrorMessage(describeError(err, 'Failed to send OTP. Please verify email.'));
+        setErrorMessage(err.message || 'Failed to send OTP. Please verify email.');
       }
     } finally {
       setIsSubmitting(false);
@@ -285,7 +277,7 @@ export default function AuthPage({
       setSuccessMessage('✓ Code verified! Signing in...');
       handleSuccess(result?.user);
     } catch (err) {
-      setErrorMessage(describeError(err, 'Invalid or expired verification code.'));
+      setErrorMessage(err.message || 'Invalid or expired verification code.');
     } finally {
       setIsSubmitting(false);
     }
@@ -327,7 +319,7 @@ export default function AuthPage({
         if (fieldMessage) {
           setEmailError(fieldMessage);
         } else {
-          setErrorMessage(describeError(err, 'Failed to send verification code. Please try again.'));
+          setErrorMessage(err.message || 'Failed to send verification code. Please try again.');
         }
       }
     } finally {
@@ -359,7 +351,7 @@ export default function AuthPage({
       setSignUpStep('password');
       setSuccessMessage('');
     } catch (err) {
-      setErrorMessage(describeError(err, 'Registration failed. Invalid or expired verification code.'));
+      setErrorMessage(err.message || 'Registration failed. Invalid or expired verification code.');
     } finally {
       setIsSubmitting(false);
     }
@@ -387,7 +379,7 @@ export default function AuthPage({
       setSuccessMessage('✓ Password saved successfully! Entering...');
       handleSuccess(registeredUser);
     } catch (err) {
-      setErrorMessage(describeError(err, 'Failed to save password. Please try again.'));
+      setErrorMessage(err.message || 'Failed to save password. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -823,15 +815,19 @@ export default function AuthPage({
                     <label className="text-[10px] font-bold text-[var(--text-sub)] uppercase">PHONE NUMBER</label>
                     <div className="relative flex items-center">
                       <Navigation className="absolute left-3.5 w-4 h-4 text-[var(--text-sub)]" />
+                      <span className="absolute left-[2.4rem] text-xs text-[var(--text-sub)] pointer-events-none select-none">+91</span>
                       <input
                         type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
                         value={formData.phone}
                         onChange={(e) => {
-                          setFormData({ ...formData, phone: e.target.value });
+                          // Digits only, capped at 10 — the +91 prefix sits outside the field.
+                          setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) });
                           if (errorMessage) setErrorMessage('');
                         }}
-                        placeholder="e.g. +91 98765 43210"
-                        className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
+                        placeholder="98765 43210"
+                        className="w-full pl-[4.75rem] pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-xs rounded-xl text-[var(--text-main)] outline-none focus:border-[#FF1E27]"
                       />
                     </div>
                   </div>
@@ -919,7 +915,7 @@ export default function AuthPage({
                         required
                         autoFocus
                         value={signUpOtp}
-                        onChange={(e) => setSignUpOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        onChange={(e) => setSignUpOtp(e.target.value.replace(/\D/g, ''))}
                         placeholder="••••••"
                         className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-lg tracking-[8px] font-mono font-bold rounded-xl text-[var(--text-main)] text-center outline-none focus:border-[#FF1E27]"
                       />

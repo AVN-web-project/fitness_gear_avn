@@ -22,6 +22,11 @@ import { PRODUCTS as LOCAL_PRODUCTS } from './data/products';
 import { CartProvider, useCart } from './context/CartContext';
 import { fetchProducts, fetchCategoriesApi } from './services/api';
 
+const STOREFRONT_VIEWS = new Set([
+  'home', 'search', 'pdp', 'auth', 'profile', 'addresses', 'add-address',
+  'order-history', 'order-details', 'contact', 'support', 'cart', 'checkout'
+]);
+
 function AppContent() {
   const { user, isAuthenticated, logout, setRedirectPath, redirectPath, addAddress, updateAddress, deleteAddress } = useAuth();
   const [theme, setTheme] = useState(() => {
@@ -288,7 +293,7 @@ function AppContent() {
     };
   }, []);
 
-  const [activeView, setActiveView] = useState(() => {
+  const [activeView, setActiveViewState] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       // Password-reset links arrive in two shapes:
@@ -302,6 +307,10 @@ function AppContent() {
         window.location.pathname.includes('reset-password');
       if (isResetLink) {
         return 'auth';
+      }
+      const view = params.get('view');
+      if (STOREFRONT_VIEWS.has(view)) {
+        return view;
       }
       if (window.location.search) {
         return 'search';
@@ -320,9 +329,92 @@ function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
+  const routeProductSlug = activeView === 'pdp' && typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('product')
+    : null;
+  const activePdpProduct = activeView === 'pdp' && routeProductSlug
+    ? products.find((item) =>
+      item.slug === routeProductSlug || item.id === routeProductSlug || item._id === routeProductSlug
+    )
+    : currentPdpProduct;
+
+  const setActiveView = (view, { productSlug, orderId } = {}) => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.pathname = '/';
+      if (view === 'home') {
+        url.search = '';
+      } else {
+        url.searchParams.set('view', view);
+        if (view !== 'auth') {
+          url.searchParams.delete('resetToken');
+          url.searchParams.delete('token');
+        }
+        if (view === 'pdp') {
+          const slug = productSlug || currentPdpProduct?.slug || currentPdpProduct?.id || currentPdpProduct?._id;
+          if (slug) url.searchParams.set('product', slug);
+          else url.searchParams.delete('product');
+        } else {
+          url.searchParams.delete('product');
+        }
+        const selectedOrderId = orderId || selectedOrder?.orderId || selectedOrder?.id;
+        if (view === 'order-details' && selectedOrderId) {
+          url.searchParams.set('order', selectedOrderId);
+        } else if (view !== 'order-details') {
+          url.searchParams.delete('order');
+        } else {
+          url.searchParams.delete('order');
+        }
+      }
+
+      const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+      const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (nextUrl !== currentUrl) {
+        window.history.pushState({ ...window.history.state, storefrontView: view }, '', nextUrl);
+      }
+    }
+    setActiveViewState(view);
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get('view');
+      const resetLink = params.has('resetToken') || params.has('token') ||
+        window.location.pathname.includes('reset-password');
+      const nextView = resetLink
+        ? 'auth'
+        : STOREFRONT_VIEWS.has(view)
+          ? view
+          : window.location.search ? 'search' : 'home';
+
+      setActiveViewState(nextView);
+      if (nextView === 'pdp') {
+        const productSlug = params.get('product');
+        const product = products.find((item) =>
+          item.slug === productSlug || item.id === productSlug || item._id === productSlug
+        );
+        if (product) setCurrentPdpProduct(product);
+      } else {
+        setCurrentPdpProduct(null);
+      }
+      if (nextView === 'order-details') {
+        const orderId = params.get('order');
+        const savedOrders = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
+        const order = savedOrders.find((item) =>
+          String(item.orderId || item.id) === orderId
+        );
+        if (order) setSelectedOrder(order);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [products]);
+
   const handleSelectProductForPdp = (product) => {
     setCurrentPdpProduct(product);
-    setActiveView('pdp');
+    setActiveView('pdp', { productSlug: product.slug || product.id || product._id });
     setQuickViewProduct(null);
     setIsSearchOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -343,7 +435,6 @@ function AppContent() {
   };
 
   const handleNavigateSearch = (param = '') => {
-    setActiveView('search');
     setIsSearchOpen(false);
     const paramTrimmed = typeof param === 'string' ? param.trim() : '';
     const normParam = paramTrimmed.toLowerCase().replace(/-/g, ' ');
@@ -361,21 +452,35 @@ function AppContent() {
 
     const targetCategory = matchedCategory?.name?.toUpperCase() || fallbackCatMatch;
 
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (targetCategory) {
-        url.searchParams.set('category', targetCategory);
-        url.searchParams.delete('q');
-      } else if (paramTrimmed) {
-        url.searchParams.set('q', paramTrimmed);
-        url.searchParams.delete('category');
-      } else {
-        url.searchParams.delete('q');
-        url.searchParams.delete('category');
-      }
-      window.history.replaceState(null, '', url.pathname + url.search);
-      window.dispatchEvent(new Event('popstate'));
+    const params = new URLSearchParams(window.location.search);
+    if (targetCategory) {
+      params.set('category', targetCategory);
+      params.delete('q');
+    } else if (paramTrimmed) {
+      params.set('q', paramTrimmed);
+      params.delete('category');
+    } else {
+      params.delete('q');
+      params.delete('category');
     }
+    params.set('view', 'search');
+    params.delete('product');
+    params.delete('order');
+    params.delete('resetToken');
+    params.delete('token');
+    const url = new URL(window.location.href);
+    url.pathname = '/';
+    url.search = params.toString();
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (nextUrl !== currentUrl) {
+      window.history.pushState(
+        { ...window.history.state, storefrontView: 'search' },
+        '',
+        nextUrl
+      );
+    }
+    setActiveViewState('search');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -489,7 +594,7 @@ function AppContent() {
             }}
             onViewOrderDetails={(order) => {
               setSelectedOrder(order);
-              setActiveView('order-details');
+              setActiveView('order-details', { orderId: order.orderId || order.id });
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateCart={handleNavigateCart}
@@ -632,7 +737,7 @@ function AppContent() {
               const productObj = products.find(p => p.slug === productSlug || p.id === productSlug || p.name.toLowerCase().includes(productSlug.replace(/-/g, ' ')));
               if (productObj) {
                 setCurrentPdpProduct(productObj);
-                setActiveView('pdp');
+                setActiveView('pdp', { productSlug: productObj.slug || productObj.id || productObj._id });
               } else {
                 // Try fallback search page or home
                 setActiveView('search');
@@ -641,7 +746,7 @@ function AppContent() {
             }}
             onViewOrderDetails={(order) => {
               setSelectedOrder(order);
-              setActiveView('order-details');
+              setActiveView('order-details', { orderId: order.orderId || order.id });
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             theme={theme}
@@ -710,9 +815,9 @@ function AppContent() {
             theme={theme}
             isMobileView={isMobileView}
           />
-        ) : activeView === 'pdp' && currentPdpProduct ? (
+        ) : activeView === 'pdp' && activePdpProduct ? (
           <ProductDetailPage
-            product={currentPdpProduct}
+            product={activePdpProduct}
             allProducts={products}
             onBack={handleNavigateHome}
             onAddToCart={cart.addToCart}

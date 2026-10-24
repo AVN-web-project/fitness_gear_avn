@@ -247,15 +247,20 @@ export default function AddAddressPage({
               <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-main)] block">
                 Mobile Number *
               </label>
-              <input
-                type="tel"
-                placeholder="10-digit mobile number"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border focus:outline-none transition-colors ${
-                  errors.phone ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
-                }`}
-              />
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--text-sub)] pointer-events-none select-none">+91</span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="98765 43210"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                  className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm pl-[4.5rem] pr-4 py-3 rounded-xl border focus:outline-none transition-colors ${
+                    errors.phone ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
+                  }`}
+                />
+              </div>
               {errors.phone && <p className="text-[11px] text-red-500 font-medium">{errors.phone}</p>}
             </div>
           </div>

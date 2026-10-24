@@ -466,14 +466,20 @@ export default function UserProfilePage({
                 <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-sub)] flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-[#FF1E27]" /> Phone Number
                 </label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
-                  placeholder="Enter phone number"
-                />
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--text-sub)] pointer-events-none select-none">+91</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    required
+                    value={formData.phone}
+                    // Digits only, capped at 10 — the +91 prefix sits outside the field.
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm pl-[4.5rem] pr-4 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                    placeholder="98765 43210"
+                  />
+                </div>
               </div>
 
               {/* Email */}
@@ -535,7 +541,7 @@ export default function UserProfilePage({
                           required={isEmailChanged}
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
-                          className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm pl-4 pr-11 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                          className="w-full bg-[var(--bg-main)] text-white text-sm pl-4 pr-11 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
                           placeholder="Enter your current password to confirm email change"
                         />
                         <button
@@ -567,7 +573,7 @@ export default function UserProfilePage({
                         required={isEmailChanged}
                         value={verificationCode}
                         onChange={(e) => setVerificationCode(e.target.value)}
-                        className="w-full bg-[var(--bg-main)] text-[var(--text-main)] font-mono tracking-widest text-center text-sm px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                        className="w-full bg-[var(--bg-main)] text-white font-mono tracking-widest text-center text-sm px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
                         placeholder="Enter 6-digit verification code"
                       />
                     </div>
