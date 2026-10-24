@@ -244,7 +244,7 @@ export default function SupportWidget({ onOpenFullSupport, initialOrderId = '' }
                   value={inputMsg}
                   onChange={(e) => setInputMsg(e.target.value)}
                   placeholder="Ask about shipping, returns or sizing..."
-                  className="flex-1 bg-[var(--bg-main)] text-white text-xs px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                  className="flex-1 bg-[var(--bg-main)] text-[var(--text-main)] text-xs px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
                 />
                 <button
                   type="submit"

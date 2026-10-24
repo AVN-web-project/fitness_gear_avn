@@ -535,7 +535,7 @@ export default function UserProfilePage({
                           required={isEmailChanged}
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
-                          className="w-full bg-[var(--bg-main)] text-white text-sm pl-4 pr-11 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                          className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm pl-4 pr-11 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
                           placeholder="Enter your current password to confirm email change"
                         />
                         <button
@@ -567,7 +567,7 @@ export default function UserProfilePage({
                         required={isEmailChanged}
                         value={verificationCode}
                         onChange={(e) => setVerificationCode(e.target.value)}
-                        className="w-full bg-[var(--bg-main)] text-white font-mono tracking-widest text-center text-sm px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
+                        className="w-full bg-[var(--bg-main)] text-[var(--text-main)] font-mono tracking-widest text-center text-sm px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
                         placeholder="Enter 6-digit verification code"
                       />
                     </div>

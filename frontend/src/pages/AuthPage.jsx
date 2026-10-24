@@ -70,7 +70,7 @@ export default function AuthPage({
       await forgotPassword(forgotEmail.trim());
       setForgotSent(true);
     } catch (err) {
-      setErrorMessage(err.message || 'Could not send the reset link. Please try again.');
+      setErrorMessage(describeError(err, 'Could not send the reset link. Please try again.'));
     } finally {
       setForgotLoading(false);
     }
@@ -92,7 +92,7 @@ export default function AuthPage({
       await resetPassword(resetEmail, resetToken, resetPw);
       setResetDone(true);
     } catch (err) {
-      setErrorMessage(err.message || 'Could not reset your password. Please request a new link.');
+      setErrorMessage(describeError(err, 'Could not reset your password. Please request a new link.'));
     } finally {
       setResetLoading(false);
     }
@@ -136,9 +136,17 @@ export default function AuthPage({
   const extractFieldError = (err, field) => {
     const errors = err?.data?.errors;
     if (!Array.isArray(errors) || errors.length === 0) return '';
-    const match = errors.find((e) => String(e?.path || e?.field || '').includes(field));
+    const match = field
+      ? errors.find((e) => String(e?.path || e?.field || '').includes(field))
+      : null;
     return (match || errors[0])?.message || '';
   };
+
+  // Turn any backend error into something a person can act on. Prefers the specific
+  // field message ("Verification code must be 6 digits") over the generic envelope
+  // ("Validation Error"), which on its own tells the user nothing about what to fix.
+  const describeError = (err, fallback) =>
+    extractFieldError(err) || err?.message || fallback;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cooldown countdown timer for Login OTP resend
@@ -212,7 +220,7 @@ export default function AuthPage({
         setErrorMessage('');
         setSuccessMessage('');
       } else {
-        setErrorMessage(err.message || 'Authentication failed. Please check credentials.');
+        setErrorMessage(describeError(err, 'Authentication failed. Please check credentials.'));
       }
     } finally {
       setIsSubmitting(false);
@@ -254,7 +262,7 @@ export default function AuthPage({
         setErrorMessage('');
         setSuccessMessage('');
       } else {
-        setErrorMessage(err.message || 'Failed to send OTP. Please verify email.');
+        setErrorMessage(describeError(err, 'Failed to send OTP. Please verify email.'));
       }
     } finally {
       setIsSubmitting(false);
@@ -277,7 +285,7 @@ export default function AuthPage({
       setSuccessMessage('✓ Code verified! Signing in...');
       handleSuccess(result?.user);
     } catch (err) {
-      setErrorMessage(err.message || 'Invalid or expired verification code.');
+      setErrorMessage(describeError(err, 'Invalid or expired verification code.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -319,7 +327,7 @@ export default function AuthPage({
         if (fieldMessage) {
           setEmailError(fieldMessage);
         } else {
-          setErrorMessage(err.message || 'Failed to send verification code. Please try again.');
+          setErrorMessage(describeError(err, 'Failed to send verification code. Please try again.'));
         }
       }
     } finally {
@@ -351,7 +359,7 @@ export default function AuthPage({
       setSignUpStep('password');
       setSuccessMessage('');
     } catch (err) {
-      setErrorMessage(err.message || 'Registration failed. Invalid or expired verification code.');
+      setErrorMessage(describeError(err, 'Registration failed. Invalid or expired verification code.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -379,7 +387,7 @@ export default function AuthPage({
       setSuccessMessage('✓ Password saved successfully! Entering...');
       handleSuccess(registeredUser);
     } catch (err) {
-      setErrorMessage(err.message || 'Failed to save password. Please try again.');
+      setErrorMessage(describeError(err, 'Failed to save password. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -911,7 +919,7 @@ export default function AuthPage({
                         required
                         autoFocus
                         value={signUpOtp}
-                        onChange={(e) => setSignUpOtp(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => setSignUpOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="••••••"
                         className="w-full pl-10 pr-4 py-3 bg-[var(--bg-main)] border border-[var(--border-subtle)] text-lg tracking-[8px] font-mono font-bold rounded-xl text-[var(--text-main)] text-center outline-none focus:border-[#FF1E27]"
                       />

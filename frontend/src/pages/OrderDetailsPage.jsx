@@ -805,7 +805,7 @@ export default function OrderDetailsPage({ order, onBack, theme = 'dark', onOrde
                     if (actionError) setActionError('');
                   }}
                   placeholder="Please type your reason for cancelling this order..."
-                  className="w-full rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-3.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-rose-500 transition-colors resize-none leading-relaxed"
+                  className="w-full rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] p-3.5 text-xs text-[var(--text-main)] placeholder:text-[var(--text-sub)] focus:outline-none focus:border-rose-500 transition-colors resize-none leading-relaxed"
                 />
                 <div className="flex items-center justify-between text-[11px] text-[var(--text-sub)] mt-1.5 px-1">
                   <span>Please type your reason directly (required)</span>
