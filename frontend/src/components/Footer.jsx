@@ -8,7 +8,10 @@ import { fetchCategoriesApi } from '../services/api';
 export default function Footer({
   onNavigateSupport,
   onNavigateContact,
+  onNavigateWhyAvn,
+  onNavigateAbout,
   onNavigateSearch,
+  onNavigateHome,
   categories: propCategories,
   theme,
   isMobileView = false,
@@ -121,7 +124,7 @@ export default function Footer({
   useEffect(() => {
     let animId;
     const container = scrollRef.current;
-    const speed = isMobileView ? 2.5 : 1;
+    const speed = isMobileView ? 1.75 : 1; // Adjust speed for mobile view
 
     // Set initial scroll position instantly once container has scrollWidth
     if (container) {
@@ -209,13 +212,13 @@ export default function Footer({
           
           {/* Brand Info Column */}
           <div className="md:col-span-4 space-y-3">
-            <a href="#home" className="inline-block">
+            <button type="button" onClick={onNavigateHome} className="inline-block">
               <img
                 src={currentLogo}
                 alt="AVN Brand Logo"
                 className="h-14 sm:h-16 md:h-20 w-auto object-contain transition-transform duration-300 hover:scale-105"
               />
-            </a>
+            </button>
             <p className="text-sm sm:text-base text-[var(--text-sub)] leading-relaxed max-w-sm font-normal">
               Engineered for powerlifters, bodybuilders, and fitness enthusiasts. Uncompromising quality and wrist/knee support gear.
             </p>
@@ -240,10 +243,10 @@ export default function Footer({
                 QUICK LINKS
               </h4>
               <ul className="space-y-3 text-sm sm:text-base text-[var(--text-sub)] font-normal">
-                <li><a href="#home" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Home</a></li>
-                <li><a href="#products" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Shop All</a></li>
-                <li><a href="#why-avn" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Why AVN</a></li>
-                <li><a href="#about" className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">About Us</a></li>
+                <li><button type="button" onClick={onNavigateHome} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Home</button></li>
+                <li><button type="button" onClick={() => onNavigateSearch?.()} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all">Shop All</button></li>
+                <li><button type="button" onClick={() => onNavigateWhyAvn && onNavigateWhyAvn()} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">Why AVN</button></li>
+                <li><button type="button" onClick={() => onNavigateAbout && onNavigateAbout()} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">About Us</button></li>
                 <li><button type="button" onClick={() => { if (onNavigateContact) onNavigateContact(); else if (onNavigateSupport) onNavigateSupport(); }} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">Contact Us</button></li>
                 <li><button type="button" onClick={() => onNavigateSupport && onNavigateSupport()} className="hover:text-[#FF1E27] hover:translate-x-1 inline-block transition-all cursor-pointer text-left">Support Hub</button></li>
               </ul>

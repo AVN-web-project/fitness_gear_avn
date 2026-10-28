@@ -34,9 +34,16 @@ export function CartProvider({ children }) {
     }
   });
 
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+  const toastTimerRef = useRef(null);
+  const showCartToast = (message) => {
+    if (!message) return;
+    setToastMessage(String(message));
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 6000);
+  };
   const [isBackendConnected, setIsBackendConnected] = useState(false);
 
   // Storage Persistence:
@@ -75,6 +82,9 @@ export function CartProvider({ children }) {
               selectedColor: bi.selectedColor || 'Crimson Red',
               variantSku: bi.variantSku,
               variantTitle: bi.variantTitle,
+              sizes: bi.sizes || [],
+              colors: bi.colors || [],
+              variants: bi.variants || [],
               image: resolveMediaUrl(bi.image) || null
 
             }));
@@ -174,6 +184,9 @@ export function CartProvider({ children }) {
               selectedColor: bi.selectedColor || 'Crimson Red',
               variantSku: bi.variantSku,
               variantTitle: bi.variantTitle,
+              sizes: bi.sizes || [],
+              colors: bi.colors || [],
+              variants: bi.variants || [],
               image: resolveMediaUrl(bi.image) || null
 
             }));
@@ -233,14 +246,24 @@ export function CartProvider({ children }) {
       : (product.colors ? product.colors[0].name : 'Crimson Red');
     const pack = product.selectedPack || (product.packQuantityOptions ? product.packQuantityOptions[0] : 'Single Pair');
 
-    // Resolve variant SKU from product.variants
-    const matchedVariant = product.variants?.find(
-      (v) =>
-        (!size || v.size === size || v.title?.includes(size)) &&
-        (!color || v.color === color || v.title?.includes(color))
-    ) || product.variants?.[0];
-    const variantSku = product.variantSku || matchedVariant?.sku || product.sku || '';
-    const itemPrice = Number(product.price ?? matchedVariant?.price ?? 0);
+    // Resolve the variant for the size/colour actually selected.
+    //
+    // This used to fall back to `product.variants[0]` whenever the match failed, which quietly
+    // turned "add Large" into "add the first variant" — and since the line was then deduped on
+    // that SKU, the quantity went onto whatever was already in the cart instead of creating a
+    // second line. A miss must stay a miss.
+    const variantList = Array.isArray(product.variants) ? product.variants : [];
+    const matchedVariant =
+      variantList.find(
+        (v) =>
+          v.isActive !== false &&
+          (!v.size || !size || v.size === size || v.title?.includes(size)) &&
+          (!v.color || !color || v.color === color || v.title?.includes(color))
+      ) || null;
+
+    const variantSku = product.variantSku || matchedVariant?.sku || '';
+    // The variant's price wins over the product's, otherwise a cheaper/ dearer size is mispriced.
+    const itemPrice = Number(matchedVariant?.price ?? product.price ?? 0);
 
     const newItem = {
       ...product,
@@ -253,19 +276,24 @@ export function CartProvider({ children }) {
       selectedColor: color,
       selectedPack: pack,
       variantSku,
-      variantSku,
+      resistanceLevel: matchedVariant?.resistanceLevel || '',
       image: resolveMediaUrl(product.image || product.images?.[0]?.url) || null,
       slug: product.slug || product.id
     };
 
+    // A line is identified by its variant, not by its product: two sizes of the same product are
+    // two separate lines, and adding to one must never touch the other.
+    const lineKey = (item) => {
+      if (variantSku && item.variantSku) return `sku:${item.variantSku}`;
+      const pid = item.productId || item.id || item.slug || '';
+      return `p:${pid}|${item.selectedSize || ''}|${item.selectedColor || ''}|${item.selectedPack || ''}`;
+    };
+    const newLineKey = variantSku
+      ? `sku:${variantSku}`
+      : `p:${newItem.productId || newItem.id || newItem.slug || ''}|${size}|${color}|${pack}`;
+
     setCartItems((prevItems) => {
-      const existingIndex = prevItems.findIndex(
-        (item) =>
-          (item.variantSku && item.variantSku === variantSku) ||
-          ((item.id === product.id || item.productId === product.id) &&
-            item.selectedSize === size &&
-            item.selectedColor === color)
-      );
+      const existingIndex = prevItems.findIndex((item) => lineKey(item) === newLineKey);
       if (existingIndex > -1) {
         return prevItems.map((item, idx) => {
           if (idx === existingIndex) {
@@ -283,15 +311,19 @@ export function CartProvider({ children }) {
 
     // Always sync to MongoDB (with user auth token or x-guest-id header)
     try {
-      await addToCartApi({
+      const result = await addToCartApi({
         productId: product._id || product.productId || product.id,
         variantSku,
         selectedSize: size,
         selectedColor: color,
         quantity: qtyToAdd
       });
+      if (result && result.success === false) {
+        showCartToast(result.message || 'Could not save this item to your cart.');
+      }
     } catch (err) {
       console.warn('Backend cart add failed:', err);
+      showCartToast(err?.message || 'Could not save this item to your cart.');
     }
   };
 
@@ -313,12 +345,68 @@ export function CartProvider({ children }) {
 
     try {
       if (qty === 0) {
-        await removeCartItemApi(itemId);
+        const removed = await removeCartItemApi(itemId);
+        if (removed && removed.success === false) showCartToast(removed.message || 'Could not update your cart.');
       } else {
-        await updateCartItemApi(itemId, { quantity: qty });
+        const updated = await updateCartItemApi(itemId, { quantity: qty });
+        if (updated && updated.success === false) showCartToast(updated.message || 'Could not update your cart.');
       }
     } catch (err) {
       console.warn('Backend cart update failed:', err);
+      showCartToast(err?.message || 'Could not update your cart.');
+    }
+  };
+
+  const updateVariant = async (itemId, field, value) => {
+    if (field !== 'selectedSize' && field !== 'selectedColor') return;
+
+    const isSameLine = (item) =>
+      (item.id || item.productId || item._id) === itemId || item.variantSku === itemId;
+
+    const current = cartItems.find(isSameLine);
+    if (!current) return;
+
+    const draft = { ...current, [field]: value };
+
+    const variants = Array.isArray(current.variants) ? current.variants : [];
+    const matched =
+      variants.find(
+        (v) =>
+          (!draft.selectedSize || v.size === draft.selectedSize || v.title?.includes(draft.selectedSize)) &&
+          (!draft.selectedColor || v.color === draft.selectedColor || v.title?.includes(draft.selectedColor)) &&
+          v.isActive !== false
+      ) || null;
+
+    if (matched) {
+      draft.variantSku = matched.sku;
+      if (matched.price != null) draft.price = Number(matched.price);
+      if (matched.compareAtPrice != null) draft.compareAtPrice = Number(matched.compareAtPrice);
+      draft.resistanceLevel = matched.resistanceLevel || '';
+    }
+
+    setCartItems((prev) => prev.map((item) => (isSameLine(item) ? draft : item)));
+
+    if (!matched || matched.sku === current.variantSku) return;
+
+    try {
+      const removed = await removeCartItemApi(current.variantSku || current.id);
+      if (removed && removed.success === false) {
+        showCartToast(removed.message || 'Could not change the variant.');
+        return;
+      }
+      const added = await addToCartApi({
+        productId: draft.productId || draft._id || draft.id,
+        variantSku: matched.sku,
+        selectedSize: draft.selectedSize,
+        selectedColor: draft.selectedColor,
+        quantity: draft.quantity
+      });
+      if (added && added.success === false) {
+        showCartToast(added.message || 'Could not change the variant.');
+      }
+    } catch (err) {
+      console.warn('Cart variant change sync failed:', err);
+      showCartToast(err?.message || 'Could not change the variant.');
     }
   };
 
@@ -402,10 +490,10 @@ export function CartProvider({ children }) {
     <CartContext.Provider
       value={{
         cartItems,
-        isCartOpen,
-        setIsCartOpen,
+        toastMessage,
         addToCart,
         updateQuantity,
+        updateVariant,
         removeFromCart,
         removeItem: removeFromCart,
         clearCart,

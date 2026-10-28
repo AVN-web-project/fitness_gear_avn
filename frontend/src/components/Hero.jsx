@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 
-export default function Hero({ onExploreClick, theme }) {
+export default function Hero({ onExploreClick, onNavigateWhyAvn, theme }) {
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const heroImageRef = useRef(null);
@@ -177,7 +177,10 @@ export default function Hero({ onExploreClick, theme }) {
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 sm:gap-4 pt-1 w-full sm:w-auto">
               <a
                 href="#products"
-                onClick={onExploreClick}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onExploreClick?.();
+                }}
                 className="btn-glow-red flex-1 sm:flex-none sm:min-w-[240px] px-2.5 sm:px-7 py-3.5 rounded-xl font-heading font-bold text-[11px] sm:text-sm tracking-wider uppercase text-white flex items-center justify-center gap-1 sm:gap-2 group cursor-pointer text-center whitespace-nowrap shadow-md"
               >
                 <span>EXPLORE PRODUCTS</span>
@@ -186,6 +189,12 @@ export default function Hero({ onExploreClick, theme }) {
 
               <a
                 href="#why-avn"
+                onClick={(e) => {
+                  if (onNavigateWhyAvn) {
+                    e.preventDefault();
+                    onNavigateWhyAvn();
+                  }
+                }}
                 className="btn-outline-dark flex-1 sm:flex-none sm:min-w-[240px] px-2.5 sm:px-7 py-3.5 rounded-xl font-heading font-bold text-[11px] sm:text-sm tracking-wider uppercase flex items-center justify-center gap-1 sm:gap-2 group text-center whitespace-nowrap shadow-sm"
               >
                 <span>DISCOVER MORE</span>

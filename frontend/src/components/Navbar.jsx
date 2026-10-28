@@ -10,6 +10,8 @@ export default function Navbar({
   onOpenCart,
   onOpenSearch,
   onNavigateSearch,
+  onNavigateWhyAvn,
+  onNavigateAbout,
   onNavigateContact,
   theme = 'dark',
   onToggleTheme,
@@ -74,6 +76,10 @@ export default function Navbar({
     onNavigateHome();
   } else if (label === 'PRODUCTS' && onNavigateSearch) {
     onNavigateSearch();
+  } else if (label === 'WHY AVN' && onNavigateWhyAvn) {
+    onNavigateWhyAvn();
+  } else if (label === 'ABOUT' && onNavigateAbout) {
+    onNavigateAbout();
   } else if (label === 'CONTACT') {
     if (onNavigateContact) {
       onNavigateContact();
@@ -147,17 +153,25 @@ export default function Navbar({
           {/* Center Navigation Links (Desktop) */}
           <nav className="hidden lg:flex items-center space-x-8">
             {navItems.filter(item => item.label !== 'CONTACT').map((item) => {
-              const isActive =
-                item.label === 'PRODUCTS'
-                  ? activeView === 'search'
-                  : (activeView === 'home' && activeNav === item.label);
+              // Labels that map to a page of their own rather than a home-page section.
+              const PAGE_FOR_LABEL = {
+                PRODUCTS: 'search',
+                'WHY AVN': 'why-avn',
+                ABOUT: 'about-us',
+              };
+              const isActive = PAGE_FOR_LABEL[item.label]
+                ? activeView === PAGE_FOR_LABEL[item.label]
+                : (activeView === 'home' && activeNav === item.label);
 
               return (
                 <a
                   key={item.label}
                   href={item.href}
                   onClick={(e) => {
-                    if (item.label === 'HOME') e.preventDefault();
+                    // Stop the browser following href="#..." — without this the anchor
+                    // fires alongside the handler, so the URL gains a hash and the page
+                    // jumps to a home-page section instead of navigating.
+                    e.preventDefault();
                     handleNavClick(item.label, item.href);
                   }}
                   className={`relative px-4 py-2.5 transition-all duration-300 uppercase whitespace-nowrap ${

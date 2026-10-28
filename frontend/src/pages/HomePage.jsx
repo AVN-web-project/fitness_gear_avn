@@ -9,13 +9,19 @@ export default function HomePage({
   products,
   categories,
   onExploreClick,
+  onNavigateWhyAvn,
   onAddToCart,
   onSelectProduct,
   isMobileView
 }) {
   return (
     <>
-      <Hero onExploreClick={onExploreClick} theme={theme} isMobileView={isMobileView} />
+      <Hero
+        onExploreClick={onExploreClick}
+        onNavigateWhyAvn={onNavigateWhyAvn}
+        theme={theme}
+        isMobileView={isMobileView}
+      />
       <FeatureBar isMobileView={isMobileView} />
       <Bestsellers
         products={products}
@@ -26,7 +32,7 @@ export default function HomePage({
         onNavigateSearch={onExploreClick}
         isMobileView={isMobileView}
       />
-      <WhyChoose isMobileView={isMobileView} />
+      <WhyChoose onNavigateWhyAvn={onNavigateWhyAvn} isMobileView={isMobileView} />
     </>
   );
 }

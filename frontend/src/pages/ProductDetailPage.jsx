@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Star,
@@ -80,11 +80,20 @@ export default function ProductDetailPage({
 
   // Live cart quantity for this product (drives button label + quantity sync)
   const { cartItems, updateQuantity: updateCartQty } = useCart();
+
+  // A cart line names its product differently before and after a refresh: a freshly added line
+  // carries the product id, while one hydrated from the server carries its own cart-line id plus
+  // productId and slug. Match on every identifier so the count survives a reload.
+  const cartLineMatchesProduct = (item) => {
+    const ids = [product?.id, product?.productId, product?.slug].filter(Boolean).map(String);
+    return [item.id, item.productId, item.slug].filter(Boolean).map(String).some((v) => ids.includes(v));
+  };
+  
   const inCartQty = cartItems
     ? cartItems
       .filter(
         (item) =>
-          (item.id === product?.id || item.productId === product?.id) &&
+          cartLineMatchesProduct(item) &&
           item.selectedSize === selectedSize &&
           item.selectedColor === (typeof selectedColor === 'string' ? selectedColor : selectedColor?.name)
       )
@@ -278,15 +287,75 @@ export default function ProductDetailPage({
   const isProductActive = product?.status ? product.status === 'Active' : product?.inStock !== false;
   const isPurchasingDisabled = !isProductActive || maxStock <= 0;
 
-  const galleryItems = product?.gallery && product.gallery.length > 0
-    ? product.gallery
-    : product?.image
+  // The variant currently chosen by the size/colour pickers. Its SKU is what the admin Media
+  // tab writes against each image.
+  const selectedVariant = useMemo(() => {
+    const list = Array.isArray(product?.variants) ? product.variants : [];
+    if (list.length === 0) return null;
+    const colourName = typeof selectedColor === 'string' ? selectedColor : selectedColor?.name;
+    return (
+      list.find((v) => {
+        const vSize = v.size || v.title;
+        const sizeOk = !selectedSize || vSize === selectedSize;
+        const colourOk = !colourName || !v.color || v.color === colourName;
+        return sizeOk && colourOk;
+      }) || null
+    );
+  }, [product?.variants, selectedSize, selectedColor]);
+
+  // Gallery source, in order of preference:
+  //   1. product.gallery — a curated list, if one is ever supplied
+  //   2. product.images — the admin Media tab, filtered to the selected variant
+  //   3. a single product.image — legacy fallback
+  // An image with no variantSkus is common and shows for every variant; one with SKUs shows
+  // only when a variant carrying that SKU is selected.
+  const galleryItems = useMemo(() => {
+    if (product?.gallery && product.gallery.length > 0) return product.gallery;
+
+    const allImages = Array.isArray(product?.images) ? product.images : [];
+    const sku = selectedVariant?.sku ? String(selectedVariant.sku).trim().toUpperCase() : null;
+
+    const scoped = allImages.filter((img) => {
+      const tags = Array.isArray(img?.variantSkus)
+        ? img.variantSkus.map((x) => String(x || '').trim().toUpperCase()).filter(Boolean)
+        : [];
+      if (tags.length === 0) return true;      // common image — always visible
+      return sku ? tags.includes(sku) : false; // variant image — only for that variant
+    });
+
+    // If narrowing leaves nothing (e.g. every image is scoped to another variant), fall back
+    // to the full set so the customer never sees an empty gallery.
+    const usable = (scoped.length > 0 ? scoped : allImages).filter((img) => img?.url);
+    if (usable.length > 0) {
+      return usable.map((img, i) => ({
+        id: img._id || `img-${i}`,
+        label: img.altText || `View ${i + 1}`,
+        image: img.url,
+        imageLight: img.url,
+        type: 'image',
+      }));
+    }
+
+    return product?.image
       ? [{ id: 'front', label: 'Front View', image: product.image, imageLight: product.imageLight, type: product.imageType }]
       : [];
+  }, [
+    product?.gallery,
+    product?.images,
+    product?.image,
+    product?.imageLight,
+    product?.imageType,
+    selectedVariant,
+  ]);
 
   const currentGalleryItem = galleryItems[activeGalleryIndex] || galleryItems[0];
   const activeImage = currentGalleryItem?.image || product?.image;
   const activeImageLight = currentGalleryItem?.imageLight || (activeGalleryIndex === 0 ? product?.imageLight : null) || currentGalleryItem?.image || product?.image;
+
+  // Switching variant can change how many images the gallery holds, so return to the first.
+  useEffect(() => {
+    setActiveGalleryIndex(0);
+  }, [selectedVariant?.sku]);
 
   // Auto-scroll PDP gallery thumbnail into view when activeGalleryIndex changes
   useEffect(() => {
@@ -950,7 +1019,7 @@ export default function ProductDetailPage({
                   onClick={() => {
                     const match = cartItems.find(
                       (item) =>
-                        (item.id === product?.id || item.productId === product?.id) &&
+                        cartLineMatchesProduct(item) &&
                         item.selectedSize === selectedSize &&
                         item.selectedColor === (typeof selectedColor === 'string' ? selectedColor : selectedColor?.name)
                     );
@@ -970,7 +1039,7 @@ export default function ProductDetailPage({
                   onClick={() => {
                     const match = cartItems.find(
                       (item) =>
-                        (item.id === product?.id || item.productId === product?.id) &&
+                        cartLineMatchesProduct(item) &&
                         item.selectedSize === selectedSize &&
                         item.selectedColor === (typeof selectedColor === 'string' ? selectedColor : selectedColor?.name)
                     );

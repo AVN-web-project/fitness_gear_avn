@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import Footer from './components/Footer';
-import CartDrawer from './components/CartDrawer';
 import CartPage from './pages/CartPage';
 import ProductModal from './components/ProductModal';
 import SearchModal from './components/SearchModal';
@@ -17,18 +17,101 @@ import OrderHistoryPage from './pages/OrderHistoryPage';
 import OrderDetailsPage from './pages/OrderDetailsPage';
 import SupportPage from './pages/SupportPage';
 import ContactPage from './pages/ContactPage';
+import WhyAvnPage from './pages/WhyAvnPage';
+import AboutUsPage from './pages/AboutUsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PRODUCTS as LOCAL_PRODUCTS } from './data/products';
 import { CartProvider, useCart } from './context/CartContext';
 import { fetchProducts, fetchCategoriesApi } from './services/api';
 
-const STOREFRONT_VIEWS = new Set([
-  'home', 'search', 'pdp', 'auth', 'profile', 'addresses', 'add-address',
-  'order-history', 'order-details', 'contact', 'support', 'cart', 'checkout'
-]);
+const ROUTE_FOR_VIEW = {
+  home: '/',
+  search: '/search',
+  pdp: '/products',
+  auth: '/login',
+  profile: '/account',
+  addresses: '/account/addresses',
+  'add-address': '/account/addresses/new',
+  'order-history': '/orders',
+  'order-details': '/orders',
+  contact: '/contact',
+  support: '/support',
+  'about-us': '/about',
+  'why-avn': '/why-avn',
+  cart: '/cart',
+  checkout: '/checkout'
+};
+
+const SEARCH_PARAMS = [
+  'q', 'category', 'ageGroup', 'gender', 'minPrice', 'maxPrice',
+  'discount', 'sort', 'page', 'viewMode'
+];
+
+const decodePathParam = (value) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+function getRoute(location) {
+  const pathname = location.pathname.replace(/\/+$/, '') || '/';
+  const params = new URLSearchParams(location.search);
+  const legacyView = params.get('view');
+
+  if (pathname === '/') {
+    if (params.has('resetToken') || params.has('token')) return { view: 'auth' };
+    if (legacyView) {
+      if (ROUTE_FOR_VIEW[legacyView]) {
+        if (legacyView === 'pdp') return { view: 'pdp', productId: params.get('product') };
+        if (legacyView === 'order-details') return { view: 'order-details', orderId: params.get('order') };
+        return { view: legacyView };
+      }
+    }
+    if ([...params.keys()].some((key) => SEARCH_PARAMS.includes(key))) return { view: 'search' };
+    return legacyView ? { view: 'not-found' } : { view: 'home' };
+  }
+  if (pathname === '/search') return { view: 'search' };
+  if (pathname === '/login' || pathname === '/reset-password') return { view: 'auth' };
+  if (pathname === '/account') return { view: 'profile' };
+  if (pathname === '/account/addresses') return { view: 'addresses' };
+  if (pathname === '/account/addresses/new') return { view: 'add-address' };
+  if (pathname === '/orders') return { view: 'order-history' };
+  const orderMatch = pathname.match(/^\/orders\/([^/]+)$/);
+  if (orderMatch) return { view: 'order-details', orderId: decodePathParam(orderMatch[1]) };
+  const productMatch = pathname.match(/^\/products\/([^/]+)$/);
+  if (productMatch) return { view: 'pdp', productId: decodePathParam(productMatch[1]) };
+
+  const staticRoutes = {
+    '/contact': 'contact',
+    '/support': 'support',
+    '/about': 'about-us',
+    '/why-avn': 'why-avn',
+    '/cart': 'cart',
+    '/checkout': 'checkout'
+  };
+  return staticRoutes[pathname] ? { view: staticRoutes[pathname] } : { view: 'not-found' };
+}
+
+function readSavedOrder(orderId) {
+  if (!orderId) return null;
+  try {
+    const savedOrders = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
+    if (!Array.isArray(savedOrders)) return null;
+    return savedOrders.find((item) => String(item.orderId || item.id) === orderId) || null;
+  } catch (error) {
+    console.warn('Could not restore the selected order from local storage:', error);
+    return null;
+  }
+}
 
 function AppContent() {
-  const { user, isAuthenticated, logout, setRedirectPath, redirectPath, addAddress, updateAddress, deleteAddress } = useAuth();
+  const { user, isAuthenticated, isInitializing, logout, setRedirectPath, redirectPath, addAddress, updateAddress, deleteAddress } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const route = getRoute(location);
+  const activeView = route.view;
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('avn-theme') || 'dark';
   });
@@ -293,35 +376,16 @@ function AppContent() {
     };
   }, []);
 
-  const [activeView, setActiveViewState] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      // Password-reset links arrive in two shapes:
-      //   /?resetToken=<t>&email=<e>          (current)
-      //   /reset-password?token=<t>&email=<e> (legacy)
-      // Both must open the auth view so AuthPage can read the token, instead of
-      // falling through to the catalog because the URL happens to have a query string.
-      const isResetLink =
-        Boolean(params.get('resetToken')) ||
-        Boolean(params.get('token')) ||
-        window.location.pathname.includes('reset-password');
-      if (isResetLink) {
-        return 'auth';
-      }
-      const view = params.get('view');
-      if (STOREFRONT_VIEWS.has(view)) {
-        return view;
-      }
-      if (window.location.search) {
-        return 'search';
-      }
-    }
-    return 'home';
-  });
-
   const [currentPdpProduct, setCurrentPdpProduct] = useState(null);
-  const [checkoutData, setCheckoutData] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [checkoutData, setCheckoutData] = useState(() => {
+    if (route.view !== 'checkout') return null;
+    const items = cart.cartItems || [];
+    if (items.length === 0) return null;
+    const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0);
+    return { items, subtotal, discountAmount: 0, shippingFee: 0, totalAmount: subtotal };
+  });
+  const [selectedOrder, setSelectedOrder] = useState(() => readSavedOrder(route.orderId));
+  const [orderJustPlaced, setOrderJustPlaced] = useState(false);
   const [addressReturnView, setAddressReturnView] = useState('profile');
   const [addressSourceView, setAddressSourceView] = useState('addresses');
   const [editingAddress, setEditingAddress] = useState(null);
@@ -329,88 +393,116 @@ function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
-  const routeProductSlug = activeView === 'pdp' && typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('product')
-    : null;
-  const activePdpProduct = activeView === 'pdp' && routeProductSlug
+  const activePdpProduct = activeView === 'pdp' && route.productId
     ? products.find((item) =>
-      item.slug === routeProductSlug || item.id === routeProductSlug || item._id === routeProductSlug
+      item.slug === route.productId || item.id === route.productId || item._id === route.productId
     )
     : currentPdpProduct;
+  const activeOrder = useMemo(() => {
+    if (!route.orderId) return selectedOrder;
+    const matchesRoute = (order) =>
+      order && String(order.orderId || order.id) === route.orderId;
+    if (matchesRoute(selectedOrder)) return selectedOrder;
+    if (matchesRoute(location.state?.order)) return location.state.order;
+    return readSavedOrder(route.orderId);
+  }, [location.state, route.orderId, selectedOrder]);
 
-  const setActiveView = (view, { productSlug, orderId } = {}) => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.pathname = '/';
-      if (view === 'home') {
-        url.search = '';
-      } else {
-        url.searchParams.set('view', view);
-        if (view !== 'auth') {
-          url.searchParams.delete('resetToken');
-          url.searchParams.delete('token');
-        }
-        if (view === 'pdp') {
-          const slug = productSlug || currentPdpProduct?.slug || currentPdpProduct?.id || currentPdpProduct?._id;
-          if (slug) url.searchParams.set('product', slug);
-          else url.searchParams.delete('product');
-        } else {
-          url.searchParams.delete('product');
-        }
-        const selectedOrderId = orderId || selectedOrder?.orderId || selectedOrder?.id;
-        if (view === 'order-details' && selectedOrderId) {
-          url.searchParams.set('order', selectedOrderId);
-        } else if (view !== 'order-details') {
-          url.searchParams.delete('order');
-        } else {
-          url.searchParams.delete('order');
-        }
-      }
+  const setActiveView = (view, { productSlug, orderId, replace = false, state } = {}) => {
+    let path = ROUTE_FOR_VIEW[view];
+    if (!path) return;
 
-      const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-      const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-      if (nextUrl !== currentUrl) {
-        window.history.pushState({ ...window.history.state, storefrontView: view }, '', nextUrl);
-      }
+    if (view === 'pdp') {
+      const slug = productSlug || currentPdpProduct?.slug || currentPdpProduct?.id || currentPdpProduct?._id;
+      if (!slug) return;
+      path = `${path}/${encodeURIComponent(slug)}`;
+    } else if (view === 'order-details') {
+      const id = orderId || selectedOrder?.orderId || selectedOrder?.id;
+      if (!id) return;
+      path = `${path}/${encodeURIComponent(id)}`;
+    } else if (view === 'search') {
+      const params = new URLSearchParams();
+      const currentParams = new URLSearchParams(location.search);
+      SEARCH_PARAMS.forEach((key) => {
+        if (currentParams.has(key)) params.set(key, currentParams.get(key));
+      });
+      const query = params.toString();
+      if (query) path += `?${query}`;
     }
-    setActiveViewState(view);
+
+    const currentPath = `${location.pathname}${location.search}${location.hash}`;
+    if (path !== currentPath) {
+      navigate(path, { replace, state });
+    }
   };
 
   useEffect(() => {
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const view = params.get('view');
-      const resetLink = params.has('resetToken') || params.has('token') ||
-        window.location.pathname.includes('reset-password');
-      const nextView = resetLink
-        ? 'auth'
-        : STOREFRONT_VIEWS.has(view)
-          ? view
-          : window.location.search ? 'search' : 'home';
+    const protectedViews = new Set([
+      'profile', 'addresses', 'add-address', 'order-history', 'order-details', 'checkout'
+    ]);
+    if (isInitializing || user || !protectedViews.has(activeView)) return;
 
-      setActiveViewState(nextView);
-      if (nextView === 'pdp') {
-        const productSlug = params.get('product');
-        const product = products.find((item) =>
-          item.slug === productSlug || item.id === productSlug || item._id === productSlug
-        );
-        if (product) setCurrentPdpProduct(product);
-      } else {
-        setCurrentPdpProduct(null);
-      }
-      if (nextView === 'order-details') {
-        const orderId = params.get('order');
-        const savedOrders = JSON.parse(localStorage.getItem('avn-user-orders') || '[]');
-        const order = savedOrders.find((item) =>
-          String(item.orderId || item.id) === orderId
-        );
-        if (order) setSelectedOrder(order);
-      }
-    };
+    if (activeView === 'checkout') setRedirectPath('checkout');
+    navigate('/login', {
+      replace: true,
+      state: { from: `${location.pathname}${location.search}${location.hash}` }
+    });
+  }, [activeView, isInitializing, location.hash, location.pathname, location.search, navigate, setRedirectPath, user]);
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [products]);
+  useEffect(() => {
+    if (
+      activeView === 'checkout' &&
+      user &&
+      !isInitializing &&
+      !orderJustPlaced &&
+      !checkoutData?.items?.length &&
+      cart.cartItems.length === 0
+    ) {
+      navigate('/cart', { replace: true });
+    }
+  }, [activeView, cart.cartItems.length, checkoutData, isInitializing, navigate, orderJustPlaced, user]);
+
+  useEffect(() => {
+    if (activeView !== 'checkout') setOrderJustPlaced(false);
+  }, [activeView]);
+
+  useEffect(() => {
+    const pathname = location.pathname.replace(/\/+$/, '') || '/';
+    if (pathname !== '/') return;
+
+    const params = new URLSearchParams(location.search);
+    if (params.has('resetToken') || params.has('token')) return;
+    const legacyView = params.get('view');
+    const protectedLegacyViews = new Set([
+      'profile', 'addresses', 'add-address', 'order-history', 'order-details', 'checkout'
+    ]);
+    if (protectedLegacyViews.has(legacyView) && (!user || isInitializing)) return;
+    if (legacyView && ROUTE_FOR_VIEW[legacyView]) {
+      const legacyRoute = getRoute(location);
+      let path = ROUTE_FOR_VIEW[legacyRoute.view];
+      if (legacyRoute.view === 'pdp' && legacyRoute.productId) {
+        path += `/${encodeURIComponent(legacyRoute.productId)}`;
+      } else if (legacyRoute.view === 'order-details' && legacyRoute.orderId) {
+        path += `/${encodeURIComponent(legacyRoute.orderId)}`;
+      }
+      if (legacyRoute.view === 'search') {
+        const search = new URLSearchParams();
+        SEARCH_PARAMS.forEach((key) => {
+          if (params.has(key)) search.set(key, params.get(key));
+        });
+        if (search.size) path += `?${search.toString()}`;
+      }
+      if (path) navigate(path, { replace: true });
+      return;
+    }
+
+    if ([...params.keys()].some((key) => SEARCH_PARAMS.includes(key))) {
+      const search = new URLSearchParams();
+      SEARCH_PARAMS.forEach((key) => {
+        if (params.has(key)) search.set(key, params.get(key));
+      });
+      navigate(`/search?${search.toString()}`, { replace: true });
+    }
+  }, [activeView, isInitializing, location, navigate, user]);
 
   const handleSelectProductForPdp = (product) => {
     setCurrentPdpProduct(product);
@@ -434,6 +526,16 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleNavigateWhyAvn = () => {
+    setActiveView('why-avn');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavigateAbout = () => {
+    setActiveView('about-us');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleNavigateSearch = (param = '') => {
     setIsSearchOpen(false);
     const paramTrimmed = typeof param === 'string' ? param.trim() : '';
@@ -452,7 +554,7 @@ function AppContent() {
 
     const targetCategory = matchedCategory?.name?.toUpperCase() || fallbackCatMatch;
 
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     if (targetCategory) {
       params.set('category', targetCategory);
       params.delete('q');
@@ -463,30 +565,13 @@ function AppContent() {
       params.delete('q');
       params.delete('category');
     }
-    params.set('view', 'search');
-    params.delete('product');
-    params.delete('order');
-    params.delete('resetToken');
-    params.delete('token');
-    const url = new URL(window.location.href);
-    url.pathname = '/';
-    url.search = params.toString();
-    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    if (nextUrl !== currentUrl) {
-      window.history.pushState(
-        { ...window.history.state, storefrontView: 'search' },
-        '',
-        nextUrl
-      );
-    }
-    setActiveViewState('search');
+    ['view', 'product', 'order', 'resetToken', 'token'].forEach((key) => params.delete(key));
+    navigate(`/search${params.size ? `?${params.toString()}` : ''}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNavigateCart = () => {
     setActiveView('cart');
-    cart.setIsCartOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -496,6 +581,7 @@ function AppContent() {
   };
 
     const handleProceedToCheckout = (data) => {
+      setOrderJustPlaced(false);
     const payload = typeof data === 'object' && data.items ? data : {
       items: cart.cartItems,
       subtotal: cart.cartItems.reduce((a, b) => a + b.price * b.quantity, 0),
@@ -511,7 +597,6 @@ function AppContent() {
     if (!user) {
       if (setRedirectPath) setRedirectPath('checkout');
       setActiveView('auth');
-      cart.setIsCartOpen(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -524,7 +609,6 @@ function AppContent() {
     } else {
       setActiveView('checkout');
     }
-    cart.setIsCartOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -545,6 +629,8 @@ function AppContent() {
         onNavigateCart={handleNavigateCart}
         onOpenSearch={() => setIsSearchOpen(true)}
         onNavigateSearch={handleNavigateSearch}
+        onNavigateWhyAvn={handleNavigateWhyAvn}
+        onNavigateAbout={handleNavigateAbout}
         onOpenAccount={() => {
           if (!user) {
             setActiveView('auth');
@@ -591,10 +677,14 @@ function AppContent() {
               cart.clearCart();
               setCheckoutData(null);
               setAddressReturnView('profile');
+              setOrderJustPlaced(true);
             }}
             onViewOrderDetails={(order) => {
               setSelectedOrder(order);
-              setActiveView('order-details', { orderId: order.orderId || order.id });
+              setActiveView('order-details', {
+                orderId: order.orderId || order.id,
+                state: { order }
+              });
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateCart={handleNavigateCart}
@@ -617,7 +707,16 @@ function AppContent() {
                 }
               } else if (redirectPath === 'review') {
                 if (setRedirectPath) setRedirectPath(null);
-                setActiveView('pdp');
+                setActiveView('pdp', {
+                  productSlug: currentPdpProduct?.slug || currentPdpProduct?.id || currentPdpProduct?._id
+                });
+              } else if (
+                typeof location.state?.from === 'string' &&
+                location.state.from.startsWith('/') &&
+                !location.state.from.startsWith('//')
+              ) {
+                if (setRedirectPath) setRedirectPath(null);
+                navigate(location.state.from, { replace: true });
               } else {
                 setActiveView('profile');
               }
@@ -697,7 +796,7 @@ function AppContent() {
           />
         ) : activeView === 'order-details' ? (
           <OrderDetailsPage
-            order={selectedOrder}
+            order={activeOrder}
             onBack={() => setActiveView('order-history')}
             onOrderUpdated={(updatedOrder) => {
               const normalizedOrder = {
@@ -725,9 +824,6 @@ function AppContent() {
             }}
             theme={theme}
           />
-        ) : activeView === 'order-history' && !user ? (
-          // Auth gate: redirect to auth if not logged in
-          (() => { setActiveView('auth'); return null; })()
         ) : activeView === 'order-history' ? (
           <OrderHistoryPage
             onBack={() => setActiveView('profile')}
@@ -746,7 +842,40 @@ function AppContent() {
             }}
             onViewOrderDetails={(order) => {
               setSelectedOrder(order);
-              setActiveView('order-details', { orderId: order.orderId || order.id });
+              setActiveView('order-details', {
+                orderId: order.orderId || order.id,
+                state: { order }
+              });
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            theme={theme}
+          />
+        ) : activeView === 'why-avn' ? (
+          <WhyAvnPage
+            onBack={() => {
+              setActiveView('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateAbout={() => {
+              setActiveView('about-us');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateSearch={handleNavigateSearch}
+            theme={theme}
+          />
+        ) : activeView === 'about-us' ? (
+          <AboutUsPage
+            onBack={() => {
+              setActiveView('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateWhyAvn={() => {
+              setActiveView('why-avn');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateSearch={handleNavigateSearch}
+            onNavigateContact={() => {
+              setActiveView('contact');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             theme={theme}
@@ -831,11 +960,25 @@ function AppContent() {
             isMobileView={isMobileView}
           />
         ) : (
+          activeView === 'not-found' || (activeView === 'pdp' && !activePdpProduct) ? (
+            <section className="min-h-[50vh] flex flex-col items-center justify-center gap-4 px-6 text-center">
+              <h1 className="text-3xl font-sans font-black uppercase">Page not found</h1>
+              <p className="text-sm text-[var(--text-sub)]">The page you requested is unavailable.</p>
+              <button
+                type="button"
+                onClick={handleNavigateHome}
+                className="btn-glow-red rounded-xl px-6 py-3 text-sm font-bold uppercase text-white"
+              >
+                Back to home
+              </button>
+            </section>
+          ) :
           <HomePage
             theme={theme}
             products={products}
             categories={categories}
             onExploreClick={handleNavigateSearch}
+            onNavigateWhyAvn={handleNavigateWhyAvn}
             onAddToCart={cart.addToCart}
             onSelectProduct={handleSelectProductForPdp}
             isMobileView={isMobileView}
@@ -847,29 +990,16 @@ function AppContent() {
         theme={theme}
         categories={categories}
         onNavigateSearch={handleNavigateSearch}
+        onNavigateHome={handleNavigateHome}
         isMobileView={isMobileView}
         activeView={activeView}
         onNavigateContact={handleNavigateContact}
+        onNavigateWhyAvn={handleNavigateWhyAvn}
+        onNavigateAbout={handleNavigateAbout}
         onNavigateSupport={() => {
           setActiveView('support');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-      />
-
-      <CartDrawer
-        isOpen={cart.isCartOpen}
-        onClose={() => cart.setIsCartOpen(false)}
-        cartItems={cart.cartItems}
-        onSelectProduct={(product) => {
-          cart.setIsCartOpen(false);
-          handleSelectProductForPdp(product);
-        }}
-        onUpdateQuantity={cart.updateQuantity}
-        onRemoveItem={cart.removeItem}
-        onCheckout={handleProceedToCheckout}
-        onOpenFullCart={handleNavigateCart}
-        theme={theme}
-        isMobileView={isMobileView}
       />
 
       <ProductModal
@@ -959,11 +1089,13 @@ class ErrorBoundary extends React.Component {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <CartProvider>
-          <AppContent />
-        </CartProvider>
-      </AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <CartProvider>
+            <AppContent />
+          </CartProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

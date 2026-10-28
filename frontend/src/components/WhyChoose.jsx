@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
 
-export default function WhyChoose() {
+export default function WhyChoose({ onNavigateWhyAvn }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -50,7 +50,13 @@ export default function WhyChoose() {
 
           <div className="pt-4 z-10">
             <a
-              href="#about"
+              href="#why-avn"
+              onClick={(e) => {
+                if (onNavigateWhyAvn) {
+                  e.preventDefault();
+                  onNavigateWhyAvn();
+                }
+              }}
               className="red-highlight-btn inline-flex items-center gap-3 px-7 py-3.5 rounded-xl text-xs sm:text-sm font-bold tracking-wider uppercase text-[var(--text-main)] group cursor-pointer"
             >
               <span className="relative z-10">LEARN MORE</span>

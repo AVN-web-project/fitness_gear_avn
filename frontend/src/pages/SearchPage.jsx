@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Search,
   SlidersHorizontal,
@@ -20,6 +20,7 @@ import {
 import ProductGraphic from '../components/ProductGraphic';
 import { PRODUCTS as LOCAL_PRODUCTS, CATEGORIES as LOCAL_CATEGORIES } from '../data/products';
 import { useCart } from '../context/CartContext';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 export default function SearchPage({
   products: propProducts,
@@ -30,15 +31,25 @@ export default function SearchPage({
   theme = 'dark'
 }) {
   // --- 1. SEO & URL Synchronization State ---
+  const location = useLocation();
+  const [, setSearchParams] = useSearchParams();
+  // Track the URL that has been observed by this component. When the browser's
+  // Back/Forward buttons change location.search, do not write the previous
+  // render's filter state back over the destination URL before state restores.
+  const lastObservedSearchRef = useRef(location.search);
   const { cartItems: cartItemsList } = useCart();
-  const getProductCartQty = (productId) =>
-    (cartItemsList || [])
-      .filter((item) => item.id === productId || item.productId === productId)
-      .reduce((sum, item) => sum + item.quantity, 0);
+  const getProductCartQty = (product) => {
+  const ids = [product?.id, product?.productId, product?.slug].filter(Boolean).map(String);
+    return (cartItemsList || [])
+      .filter((item) =>
+        [item.id, item.productId, item.slug].filter(Boolean).map(String).some((v) => ids.includes(v))
+      )
+      .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  };
 
-  const parseUrlParams = () => {
-    if (typeof window === 'undefined') return {};
-    const params = new URLSearchParams(window.location.search);
+
+  const parseUrlParams = (search = location.search) => {
+    const params = new URLSearchParams(search);
     return {
       q: params.get('q') || '',
       category: params.get('category') || 'ALL PRODUCTS',
@@ -53,7 +64,7 @@ export default function SearchPage({
     };
   };
 
-  const initialUrlState = parseUrlParams();
+  const initialUrlState = parseUrlParams(location.search);
 
   const [searchQuery, setSearchQuery] = useState(initialUrlState.q);
   const [selectedCategory, setSelectedCategory] = useState(initialUrlState.category);
@@ -71,9 +82,13 @@ export default function SearchPage({
 
   // Sync state to URL search parameters without page reload
   const updateUrlParams = useCallback((newParams) => {
-    if (typeof window === 'undefined') return;
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
+    if (lastObservedSearchRef.current !== location.search) {
+      lastObservedSearchRef.current = location.search;
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    ['view', 'product', 'order'].forEach((key) => params.delete(key));
 
     Object.entries(newParams).forEach(([key, val]) => {
       if (val !== undefined && val !== '' && val !== false && val !== 'ALL' && val !== 'ALL PRODUCTS' && !(key === 'page' && val === 1) && !(key === 'sort' && val === 'reviews') && !(key === 'viewMode' && val === 'grid')) {
@@ -83,9 +98,10 @@ export default function SearchPage({
       }
     });
 
-    const newRelativePathQuery = url.pathname + (params.toString() ? `?${params.toString()}` : '');
-    window.history.replaceState(window.history.state, '', newRelativePathQuery);
-  }, []);
+    if (params.toString() !== location.search.replace(/^\?/, '')) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [location.search, setSearchParams]);
 
   useEffect(() => {
     updateUrlParams({
@@ -102,25 +118,20 @@ export default function SearchPage({
     });
   }, [searchQuery, selectedCategory, selectedAgeGroup, selectedGender, minPrice, maxPrice, discountOnly, sortMode, currentPage, viewLayout, updateUrlParams]);
 
-  // Listen to browser Back/Forward navigation
   useEffect(() => {
-    const handlePopState = () => {
-      const p = parseUrlParams();
-      setSearchQuery(p.q);
-      setSelectedCategory(p.category);
-      setSelectedAgeGroup(p.ageGroup);
-      setSelectedGender(p.gender);
-      setMinPrice(p.minPrice);
-      setMaxPrice(p.maxPrice);
-      setDiscountOnly(p.discount);
-      setSortMode(p.sort);
-      setCurrentPage(p.page);
-      setViewLayout(p.viewMode);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    lastObservedSearchRef.current = location.search;
+    const params = parseUrlParams(location.search);
+    setSearchQuery(params.q);
+    setSelectedCategory(params.category);
+    setSelectedAgeGroup(params.ageGroup);
+    setSelectedGender(params.gender);
+    setMinPrice(params.minPrice);
+    setMaxPrice(params.maxPrice);
+    setDiscountOnly(params.discount);
+    setSortMode(params.sort);
+    setCurrentPage(params.page);
+    setViewLayout(params.viewMode);
+  }, [location.search]);
 
   // --- 2. Live MongoDB & Client Catalog Pipeline Engine ---
   const activeProductsSource = (Array.isArray(propProducts) && propProducts.length > 0) ? propProducts : LOCAL_PRODUCTS;
@@ -518,7 +529,7 @@ export default function SearchPage({
           </aside>
 
           {/* Catalog Grid Section */}
-          <main className="lg:col-span-3 space-y-6">
+          <section aria-label="Catalog results" className="lg:col-span-3 space-y-6">
 
             {loading ? (
               <div className="py-24 text-center space-y-4">
@@ -614,7 +625,7 @@ export default function SearchPage({
                           <div className="flex items-center gap-2">
 
                             {(() => {
-                              const qtyInCart = getProductCartQty(product.id);
+                              const qtyInCart = getProductCartQty(product);
                               return (
                                 <button
                                   disabled={isOutOfStock}
@@ -719,7 +730,7 @@ export default function SearchPage({
 
 
                         {(() => {
-                          const qtyInCart = getProductCartQty(product.id);
+                          const qtyInCart = getProductCartQty(product);
                           return (
                             <button
                               disabled={isOutOfStock}
@@ -794,7 +805,7 @@ export default function SearchPage({
               </div>
             )}
 
-          </main>
+          </section>
         </div>
 
       </div>

@@ -1,4 +1,5 @@
 import DiscountPromo from '../components/DiscountPromo';
+import { variantSummary } from '../utils/variantSummary';
 import React, { useState } from 'react';
 import {
   ShoppingBag,
@@ -365,22 +366,28 @@ export default function CartPage({
                           {/* Product Details (Shifted Rightward) */}
                           <div className="flex-1 min-w-0 pl-1 sm:pl-2 space-y-2">
                             <div className="flex items-start justify-between gap-4">
-                              <div className="space-y-1">
+                              <div className="min-w-0 space-y-1">
                                 {/* Bolder & More Prominent Product Name */}
                                 <h3
                                   onClick={() => onSelectProduct && onSelectProduct(item)}
-                                  className="text-base sm:text-lg lg:text-xl font-black font-sans italic uppercase tracking-wider text-[var(--text-main)] hover:text-[#FF1E27] transition-colors cursor-pointer leading-tight line-clamp-2"
+                                  className="text-base sm:text-lg lg:text-xl font-black font-sans italic uppercase tracking-wider text-[var(--text-main)] hover:text-[#FF1E27] transition-colors cursor-pointer leading-tight break-words"
                                 >
                                   {item.name}
                                 </h3>
 
+                                {variantSummary(item) && (
+                                  <p className="text-xs text-[var(--text-sub)] font-medium leading-snug break-words">
+                                    {variantSummary(item)}
+                                  </p>
+                                )}
+
                                 {/* Stock Status Badge & SKU */}
-                                <div className="flex items-center gap-2 text-xs pt-0.5">
-                                  <span className="text-[#FF1E27] font-bold flex items-center gap-1">
-                                    <Check className="w-3.5 h-3.5" /> In stock
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs pt-0.5">
+                                  <span className="text-[#FF1E27] font-bold flex items-center gap-1 whitespace-nowrap">
+                                    <Check className="w-3.5 h-3.5 shrink-0" /> In stock
                                   </span>
                                   <span className="text-[var(--text-sub)]">•</span>
-                                  <span className="text-[10px] text-[var(--text-sub)] font-mono">
+                                  <span className="text-[10px] text-[var(--text-sub)] font-mono break-all">
                                     SKU: {item.variantSku || '—'}
                                   </span>
                                 </div>
@@ -398,7 +405,7 @@ export default function CartPage({
 
                               {/* Price Display & Remove Button directly underneath Price Area */}
                               <div className="text-right shrink-0">
-                                <span className="text-lg sm:text-xl font-black font-heading text-[#FF1E27] block leading-none">
+                                <span className="text-lg sm:text-xl font-black font-heading text-[#FF1E27] block leading-none whitespace-nowrap">
                                   ₹{item.price * item.quantity}
                                 </span>
                                 {item.quantity > 1 && (
@@ -537,7 +544,7 @@ export default function CartPage({
                           className="w-16 h-16 rounded-lg shrink-0 border border-[var(--border-subtle)]"
                         />
                         <div className="flex-1 min-w-0 text-left space-y-1">
-                          <h4 className="text-xs font-bold font-heading uppercase text-[var(--text-main)] truncate">
+                          <h4 className="text-xs font-bold font-heading uppercase text-[var(--text-main)] break-words">
                             {item.name}
                           </h4>
                           <p className="text-xs font-bold text-[#FF1E27]">₹{item.price}</p>

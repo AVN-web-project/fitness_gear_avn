@@ -13,6 +13,19 @@ const MEDIA_BASE_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
  * The database historically stored root-relative paths such as "/knee-wrap.png";
  * the actual files live on the backend under /uploads/products/.
  */
+// Fallback chip colours for variant-derived options. The local catalogue carries real hex values;
+// this covers anything it does not know about, so a chip is never rendered in a misleading red.
+const COLOR_HEX = {
+  'STEALTH BLACK': '#181820',
+  'CRIMSON RED': '#FF1E27',
+  'STEALTH RED': '#C41E24',
+  'NATURAL CANVAS': '#D9CBB3',
+  'WHITE': '#F5F5F5',
+  'MIDNIGHT NAVY': '#1B2A41',
+  'GREY': '#6B7280',
+  'GRAY': '#6B7280',
+};
+
 export function resolveMediaUrl(path) {
   if (!path || typeof path !== 'string') return path || null;
   const url = path.trim();
@@ -79,7 +92,29 @@ export function normalizeProduct(p) {
     stockQuantity: p.totalStock ?? p.stockQuantity ?? (p.variants?.reduce((sum, v) => sum + (v.stockQuantity || 0), 0)) ?? localMatch?.stockQuantity ?? 10,
     status: (p.status || 'Active').charAt(0).toUpperCase() + (p.status || 'Active').slice(1).toLowerCase(),
     sizes: p.sizes || (p.variants ? [...new Set(p.variants.map((v) => v.size || v.title).filter(Boolean))] : localMatch?.sizes) || ['Standard'],
-    colors: p.colors || (p.variants ? p.variants.filter((v) => v.color).map((v) => ({ name: v.color, hex: '#FF1E27' })) : localMatch?.colors) || [{ name: 'Crimson Red', hex: '#FF1E27' }],
+    // One chip per COLOUR, not one per variant. With a full size x colour matrix this list used to
+    // repeat each colour once per size — four chips reading "Black, Red, Black, Red" — because
+    // sizes deduped with a Set while colours did not. The hex now comes from the local catalogue
+    // where it is known, instead of every chip being hardcoded red.
+    colors: p.colors || (() => {
+      const derived = [...new Map(
+        (p.variants || [])
+          .filter((v) => v.color)
+          .map((v) => {
+            const name = String(v.color).trim();
+            const known = (localMatch?.colors || []).find(
+              (c) => String(c.name || '').toLowerCase() === name.toLowerCase()
+            );
+            return [
+              name.toLowerCase(),
+              { name, hex: known?.hex || COLOR_HEX[name.toUpperCase()] || '#6B7280' },
+            ];
+          })
+      ).values()];
+      // Nothing derivable (no variants, or variants without a colour) — fall back rather than
+      // render zero chips.
+      return derived.length ? derived : (localMatch?.colors || [{ name: 'Crimson Red', hex: '#FF1E27' }]);
+    })(),
     variants: (p.variants && p.variants.length > 0) ? p.variants.map((v) => ({
       ...v,
       id: v._id || v.sku,
