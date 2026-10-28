@@ -44,6 +44,11 @@ export function CartProvider({ children }) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => setToastMessage(null), 6000);
   };
+
+  const clearToast = () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(null);
+  };
   const [isBackendConnected, setIsBackendConnected] = useState(false);
 
   // Storage Persistence:
@@ -262,6 +267,16 @@ export function CartProvider({ children }) {
       ) || null;
 
     const variantSku = product.variantSku || matchedVariant?.sku || '';
+
+    // A line with no SKU cannot be priced, stocked or fulfilled: it renders as "SKU: —" in the
+    // cart and the backend drops it on the next refresh. Refuse it rather than creating a
+    // phantom entry — an unavailable variant lands here because matchedVariant excludes them.
+    if (!variantSku) {
+      const message = 'That variant is unavailable. Please choose another.';
+      showCartToast(message);
+      return { success: false, message };
+    }
+
     // The variant's price wins over the product's, otherwise a cheaper/ dearer size is mispriced.
     const itemPrice = Number(matchedVariant?.price ?? product.price ?? 0);
 
@@ -292,6 +307,8 @@ export function CartProvider({ children }) {
       ? `sku:${variantSku}`
       : `p:${newItem.productId || newItem.id || newItem.slug || ''}|${size}|${color}|${pack}`;
 
+    const snapshot = cartItems;
+
     setCartItems((prevItems) => {
       const existingIndex = prevItems.findIndex((item) => lineKey(item) === newLineKey);
       if (existingIndex > -1) {
@@ -319,13 +336,16 @@ export function CartProvider({ children }) {
         quantity: qtyToAdd
       });
       if (result && result.success === false) {
+        setCartItems(snapshot);
         showCartToast(result.message || 'Could not save this item to your cart.');
       }
     } catch (err) {
       console.warn('Backend cart add failed:', err);
+      setCartItems(snapshot);
       showCartToast(err?.message || 'Could not save this item to your cart.');
     }
   };
+
 
   // Update Line Item Quantity (Explicit target quantity)
   const updateQuantity = async (itemId, newQty) => {

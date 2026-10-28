@@ -88,7 +88,7 @@ export default function ProductDetailPage({
     const ids = [product?.id, product?.productId, product?.slug].filter(Boolean).map(String);
     return [item.id, item.productId, item.slug].filter(Boolean).map(String).some((v) => ids.includes(v));
   };
-  
+
   const inCartQty = cartItems
     ? cartItems
       .filter(
@@ -178,8 +178,24 @@ export default function ProductDetailPage({
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (product) {
-      if (product.sizes && product.sizes.length > 0) setSelectedSize(product.sizes[0]);
-      if (product.colors && product.colors.length > 0) setSelectedColor(product.colors[0]);
+      // Seed the pickers from a variant that can actually be bought. sizes[0] / colors[0] is
+      // simply the first entry in each array, which is how the page kept reopening on an
+      // unavailable variant (Stealth Black / Medium) regardless of what was selected before.
+      const allVariants = Array.isArray(product.variants) ? product.variants : [];
+      const seedVariant =
+        allVariants.find((v) => v.isActive !== false && (Number(v.stockQuantity) || 0) > 0) ||
+        allVariants[0];
+
+      const seedSize =
+        (product.sizes || []).find((sz) => sz === seedVariant?.size) ||
+        (product.sizes && product.sizes[0]);
+      const seedColour =
+        (product.colors || []).find(
+          (c) => (typeof c === 'string' ? c : c?.name) === seedVariant?.color
+        ) || (product.colors && product.colors[0]);
+
+      if (seedSize) setSelectedSize(seedSize);
+      if (seedColour) setSelectedColor(seedColour);
       if (product.packQuantityOptions && product.packQuantityOptions.length > 0) {
         setSelectedPack(product.packQuantityOptions[0]);
       }
@@ -246,7 +262,7 @@ export default function ProductDetailPage({
         if (scriptToRemove) scriptToRemove.remove();
       };
     }
-  }, [product]);
+  }, [product, product?.variants?.length]);
 
   // Dynamic reviews hydration with user-specific helpful upvote status
   const targetProdId = product?._id || product?.slug || product?.id;
@@ -287,21 +303,118 @@ export default function ProductDetailPage({
   const isProductActive = product?.status ? product.status === 'Active' : product?.inStock !== false;
   const isPurchasingDisabled = !isProductActive || maxStock <= 0;
 
+  // Whether the exact size/colour combination the customer picked is purchasable. `selectedVariant`
+  // cannot answer this: it deliberately falls back to another active variant, so an unavailable
+  // combination would inherit a sibling's stock and look buyable.
+  const isComboUnavailable = useMemo(() => {
+    const all = Array.isArray(product?.variants) ? product.variants : [];
+    if (all.length === 0) return false;
+    const colourName = typeof selectedColor === 'string' ? selectedColor : selectedColor?.name;
+    const combo = all.filter(
+      (v) =>
+        (!selectedSize || (v.size || v.title) === selectedSize) &&
+        (!colourName || !v.color || v.color === colourName)
+    );
+    if (combo.length === 0) return true;
+    return !combo.some((v) => v.isActive !== false && (Number(v.stockQuantity) || 0) > 0);
+  }, [product?.variants, selectedSize, selectedColor]);
+
+  const isPurchaseBlocked = isPurchasingDisabled || isComboUnavailable;
+
+
   // The variant currently chosen by the size/colour pickers. Its SKU is what the admin Media
   // tab writes against each image.
   const selectedVariant = useMemo(() => {
-    const list = Array.isArray(product?.variants) ? product.variants : [];
-    if (list.length === 0) return null;
-    const colourName = typeof selectedColor === 'string' ? selectedColor : selectedColor?.name;
+    const all = Array.isArray(product?.variants)
+      ? product.variants
+      : [];
+
+    if (all.length === 0) return null;
+
+    const norm = (value) =>
+      String(value || '').trim().toLowerCase();
+
+    const colourName =
+      typeof selectedColor === 'string'
+        ? selectedColor
+        : selectedColor?.name;
+
+    const sizeMatches = (variant) => {
+      if (!selectedSize) return true;
+
+      const selected = norm(selectedSize);
+      const candidates = [
+        norm(variant.size),
+        norm(variant.title),
+      ].filter(Boolean);
+
+      return candidates.some(
+        (value) =>
+          value === selected ||
+          value.startsWith(selected)
+      );
+    };
+
+    const colourMatches = (variant) =>
+      !colourName ||
+      norm(variant.color) === norm(colourName);
+
+    // Match the selected combination, even if unavailable.
+    // Never substitute a sibling variant's SKU.
     return (
-      list.find((v) => {
-        const vSize = v.size || v.title;
-        const sizeOk = !selectedSize || vSize === selectedSize;
-        const colourOk = !colourName || !v.color || v.color === colourName;
-        return sizeOk && colourOk;
-      }) || null
+      all.find(
+        (variant) =>
+          sizeMatches(variant) &&
+          colourMatches(variant)
+      ) || null
     );
   }, [product?.variants, selectedSize, selectedColor]);
+
+  // The pickers initialise once at mount, before the API responds, so they can hold a size or
+  // colour that the loaded product doesn't have — every lookup then misses and the price stays
+  // on the product-level fallback until a refresh remounts the page. Re-sync when the product
+  // arrives, and prefer a variant that can actually be bought rather than variants[0], which is
+  // how the page opened on an unavailable one.
+  useEffect(() => {
+    const all = Array.isArray(product?.variants) ? product.variants : [];
+    if (all.length === 0) return;
+
+    const norm = (s) => String(s || '').trim().toLowerCase();
+    const buyable = (v) => v.isActive !== false && (Number(v.stockQuantity) || 0) > 0;
+
+    const currentSize = norm(selectedSize);
+    const currentColour = norm(typeof selectedColor === 'string' ? selectedColor : selectedColor?.name);
+
+    const comboIsBuyable = all.some(
+      (v) =>
+        buyable(v) &&
+        (!currentSize || norm(v.size) === currentSize || norm(v.title).startsWith(currentSize)) &&
+        (!currentColour || norm(v.color) === currentColour)
+    );
+    if (comboIsBuyable) return;
+
+    const fallback = all.find(buyable) || all[0];
+    const sizes = Array.isArray(product?.sizes) ? product.sizes : [];
+    const colourOptions = Array.isArray(product?.colors) ? product.colors : [];
+
+    const nextSize = sizes.find((s) => norm(s) === norm(fallback.size)) || fallback.size;
+
+    // selectedColor has to stay the OBJECT from product.colors: the chips compare
+    // `selectedColor.name === color.name`, so assigning a bare name string leaves every chip
+    // unselected after a refresh (and `selectedColor.name` renders empty).
+    const nextColour =
+      colourOptions.find(
+        (c) => norm(typeof c === 'string' ? c : c?.name) === norm(fallback.color)
+      ) || colourOptions[0];
+
+    if (nextSize) setSelectedSize(nextSize);
+    if (nextColour) setSelectedColor(nextColour);
+    // Deliberately not depending on selectedSize/selectedColor — this should run when the
+    // product loads, not on every chip click.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.variants, product?.sizes, product?.colors]);
+
+
 
   // Gallery source, in order of preference:
   //   1. product.gallery — a curated list, if one is ever supplied
@@ -497,12 +610,24 @@ export default function ProductDetailPage({
   if (!product) return null;
 
   // Price calculations
-  const compareAt = product.compareAtPrice || product.mrp || Math.round(product.price * 1.35);
-  const discountPercent = Math.round(((compareAt - product.price) / compareAt) * 100);
+  const currentPrice = Number(
+    selectedVariant?.price ?? product.price ?? 0
+  );
+
+  const compareAt = Number(
+    selectedVariant?.compareAtPrice ??
+    product.compareAtPrice ??
+    product.mrp ??
+    Math.round(currentPrice * 1.35)
+  );
+
+  const discountPercent = compareAt > 0
+    ? Math.round(((compareAt - currentPrice) / compareAt) * 100)
+    : 0;
 
   // Handle Add to Cart
   const handleAddToCart = () => {
-    if (isPurchasingDisabled) return;
+    if (isPurchaseBlocked) return;
     const qtyToAdd = inCartQty > 0 ? 1 : Math.max(1, Number(quantity) || 1);
     onAddToCart({
       ...product,
@@ -515,7 +640,7 @@ export default function ProductDetailPage({
 
   // Handle Buy Now
   const handleBuyNow = () => {
-    if (isPurchasingDisabled) return;
+    if (isPurchaseBlocked) return;
 
     onAddToCart({
       ...product,
@@ -691,7 +816,7 @@ export default function ProductDetailPage({
     : 0;
 
   const handleAddBundle = () => {
-    if (isPurchasingDisabled) return;
+    if (isPurchaseBlocked) return;
     onAddToCart({ ...product, quantity: 1 });
     if (companionProduct) onAddToCart({ ...companionProduct, quantity: 1 });
     setBundleAdded(true);
@@ -858,7 +983,7 @@ export default function ProductDetailPage({
                 {typeof product.category === 'object' ? product.category?.name : product.category}
               </span>
               <span className="text-[11px] text-[var(--text-sub)] font-semibold font-mono bg-white/5 px-2 py-0.5 rounded">
-                SKU: {product.sku || '—'}
+                SKU: {selectedVariant?.sku || product.sku || '—'}
               </span>
               {product.ageGenderTag && (
                 <span className="text-[10px] font-bold text-gray-400 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700">
@@ -895,7 +1020,7 @@ export default function ProductDetailPage({
           <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-1">
             <div className="flex items-baseline gap-3">
               <span className="text-3xl sm:text-4xl font-extrabold font-heading text-[var(--text-main)]">
-                ₹{product.price}
+                ₹{currentPrice}
               </span>
               <span className="text-sm font-semibold text-[var(--text-sub)] line-through">
                 M.R.P.: ₹{compareAt}
@@ -1061,44 +1186,53 @@ export default function ProductDetailPage({
 
 
 
-            <div className="flex items-center gap-3">
-              {/* Add to Cart */}
-              <button
-                onClick={handleAddToCart}
-                disabled={isPurchasingDisabled}
-                className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all ${isPurchasingDisabled
-                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
-                  : 'btn-cart-inward-glow cursor-pointer'
-                  }`}
-              >
-                {isPurchasingDisabled ? (
-                  <span>UNAVAILABLE</span>
-                ) : inCartQty > 0 ? (
-                  <>
-                    <ShoppingCart className="w-5 h-5" />
-                    <span>Added {inCartQty} {inCartQty === 1 ? 'item' : 'items'}</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-5 h-5" />
-                    <span>ADD TO CART</span>
-                  </>
-                )}
-              </button>
+            {isPurchaseBlocked ? (
+              <div className="w-full py-4 px-6 rounded-xl border border-gray-700 bg-gray-800/40 text-center">
+                <span className="text-xs font-bold font-heading uppercase tracking-wider text-gray-400">
+                  Item Unavailable
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                {/* Add to Cart */}
+                <button
+                  onClick={handleAddToCart}
+                  disabled={isPurchasingDisabled}
+                  className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all ${isPurchasingDisabled
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                    : 'btn-cart-inward-glow cursor-pointer'
+                    }`}
+                >
+                  {isPurchasingDisabled ? (
+                    <span>UNAVAILABLE</span>
+                  ) : inCartQty > 0 ? (
+                    <>
+                      <ShoppingCart className="w-5 h-5" />
+                      <span>Added {inCartQty} {inCartQty === 1 ? 'item' : 'items'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-5 h-5" />
+                      <span>ADD TO CART</span>
+                    </>
+                  )}
+                </button>
 
-              {/* Buy Now */}
-              <button
-                onClick={handleBuyNow}
-                disabled={isPurchasingDisabled}
-                className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-colors ${isPurchasingDisabled
-                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
-                  : 'bg-white hover:bg-gray-100 text-black cursor-pointer'
-                  }`}
-              >
-                <Zap className={`w-5 h-5 fill-current ${isPurchasingDisabled ? 'text-gray-500' : 'text-[#FF1E27]'}`} />
-                <span>BUY NOW</span>
-              </button>
-            </div>
+                {/* Buy Now */}
+                <button
+                  onClick={handleBuyNow}
+                  disabled={isPurchasingDisabled}
+                  className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-colors ${isPurchasingDisabled
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                    : 'bg-white hover:bg-gray-100 text-black cursor-pointer'
+                    }`}
+                >
+                  <Zap className={`w-5 h-5 fill-current ${isPurchasingDisabled ? 'text-gray-500' : 'text-[#FF1E27]'}`} />
+                  <span>BUY NOW</span>
+                </button>
+              </div>
+            )}
+
 
             {/* Dedicated Button to Redirect to Cart Page (Only rendered when this product is in cart) */}
             {inCartQty > 0 && (
@@ -1584,8 +1718,8 @@ export default function ProductDetailPage({
                         type="button"
                         onClick={() => handleHelpfulClick(rev.id)}
                         className={`flex items-center gap-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${rev.hasVoted
-                            ? 'text-[#FF1E27] font-bold'
-                            : 'text-[var(--text-sub)] hover:text-[#FF1E27]'
+                          ? 'text-[#FF1E27] font-bold'
+                          : 'text-[var(--text-sub)] hover:text-[#FF1E27]'
                           }`}
                         title={rev.hasVoted ? 'Undo helpful vote' : 'Mark as helpful'}
                       >
@@ -1682,11 +1816,10 @@ export default function ProductDetailPage({
           <div
             ref={lightboxModalRef}
             onClick={(e) => e.stopPropagation()}
-            className={`relative rounded-3xl border shadow-2xl overflow-hidden flex items-center justify-center ${
-              isOppositeLight
-                ? 'bg-white border-zinc-200 shadow-[0_20px_70px_rgba(0,0,0,0.4)]'
-                : 'bg-[#0D0E12] border-zinc-800 shadow-[0_20px_70px_rgba(0,0,0,0.85)]'
-            }`}
+            className={`relative rounded-3xl border shadow-2xl overflow-hidden flex items-center justify-center ${isOppositeLight
+              ? 'bg-white border-zinc-200 shadow-[0_20px_70px_rgba(0,0,0,0.4)]'
+              : 'bg-[#0D0E12] border-zinc-800 shadow-[0_20px_70px_rgba(0,0,0,0.85)]'
+              }`}
             style={{
               width: 'min(92vw, 720px)',
               height: 'min(85vh, 720px)',
@@ -1705,11 +1838,10 @@ export default function ProductDetailPage({
               }}
               aria-label="Close"
               title="Close (Esc)"
-              className={`absolute top-4 right-4 z-30 p-2.5 rounded-full transition-colors cursor-pointer ${
-                isOppositeLight
-                  ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-black shadow-sm'
-                  : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white shadow-sm'
-              }`}
+              className={`absolute top-4 right-4 z-30 p-2.5 rounded-full transition-colors cursor-pointer ${isOppositeLight
+                ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-black shadow-sm'
+                : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white shadow-sm'
+                }`}
             >
               <X className="w-5 h-5" />
             </button>
@@ -1774,13 +1906,12 @@ export default function ProductDetailPage({
                       role="tab"
                       aria-selected={isActive}
                       title={item.label}
-                      className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none focus:outline-none ${
-                        isActive
-                          ? 'border-[#FF1E27] bg-[#FF1E27]/15 shadow-[0_0_12px_rgba(255,30,39,0.35)] ring-1 ring-[#FF1E27]'
-                          : isOppositeLight
-                            ? 'border-zinc-200/90 bg-white/80 hover:bg-white hover:border-zinc-300 text-zinc-700 shadow-sm'
-                            : 'border-zinc-700/80 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-300 shadow-sm'
-                      }`}
+                      className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none focus:outline-none ${isActive
+                        ? 'border-[#FF1E27] bg-[#FF1E27]/15 shadow-[0_0_12px_rgba(255,30,39,0.35)] ring-1 ring-[#FF1E27]'
+                        : isOppositeLight
+                          ? 'border-zinc-200/90 bg-white/80 hover:bg-white hover:border-zinc-300 text-zinc-700 shadow-sm'
+                          : 'border-zinc-700/80 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-300 shadow-sm'
+                        }`}
                     >
                       {/* Mini Thumbnail */}
                       <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg overflow-hidden flex items-center justify-center bg-transparent shrink-0">
@@ -1791,9 +1922,8 @@ export default function ProductDetailPage({
                         />
                       </div>
                       {/* Angle Tab Label */}
-                      <span className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wide whitespace-nowrap ${
-                        isActive ? 'text-[#FF1E27]' : isOppositeLight ? 'text-zinc-800' : 'text-zinc-200'
-                      }`}>
+                      <span className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wide whitespace-nowrap ${isActive ? 'text-[#FF1E27]' : isOppositeLight ? 'text-zinc-800' : 'text-zinc-200'
+                        }`}>
                         {item.label}
                       </span>
                     </button>
