@@ -334,9 +334,9 @@ export default function CartPage({
                     return (
                       <div
                         key={itemIdKey}
-                        className={`p-4 sm:p-5 my-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/20 opacity-80 hover:opacity-100 hover:border-[#FF1E27]/40 transition-all duration-300 shadow-sm space-y-3 ${!isChecked ? 'opacity-40' : ''}`}
+                        className={`p-3 sm:p-5 my-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]/20 opacity-80 hover:opacity-100 hover:border-[#FF1E27]/40 transition-all duration-300 shadow-sm space-y-2 ${!isChecked ? 'opacity-40' : ''}`}
                       >
-                        <div className="flex items-start gap-3 sm:gap-5">
+                        <div className="flex items-start gap-2 sm:gap-5">
 
                           {/* Item Selection Checkbox */}
                           <div className="pt-3">
@@ -364,9 +364,9 @@ export default function CartPage({
                           </div>
 
                           {/* Product Details (Shifted Rightward) */}
-                          <div className="flex-1 min-w-0 pl-1 sm:pl-2 space-y-2">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0 space-y-1">
+                          <div className="flex-1 min-w-0 pl-0 sm:pl-2 space-y-2">
+                            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                              <div className="min-w-0 flex-1 basis-full sm:basis-auto space-y-1">
                                 {/* Bolder & More Prominent Product Name */}
                                 <h3
                                   onClick={() => onSelectProduct && onSelectProduct(item)}
@@ -387,7 +387,7 @@ export default function CartPage({
                                     <Check className="w-3.5 h-3.5 shrink-0" /> In stock
                                   </span>
                                   <span className="text-[var(--text-sub)]">•</span>
-                                  <span className="text-[10px] text-[var(--text-sub)] font-mono break-all">
+                                  <span className="text-[10px] text-[var(--text-sub)] font-mono break-words">
                                     SKU: {item.variantSku || '—'}
                                   </span>
                                 </div>
@@ -404,7 +404,7 @@ export default function CartPage({
                               </div>
 
                               {/* Price Display & Remove Button directly underneath Price Area */}
-                              <div className="text-right shrink-0">
+                              <div className="text-right shrink-0 ml-auto">
                                 <span className="text-lg sm:text-xl font-black font-heading text-[#FF1E27] block leading-none whitespace-nowrap">
                                   ₹{item.price * item.quantity}
                                 </span>
@@ -417,14 +417,14 @@ export default function CartPage({
                             </div>
 
                             {/* In-Line Variant Dropdowns */}
-                            <div className="flex items-center gap-3 pt-2 text-xs flex-wrap">
+                            <div className="flex min-w-0 items-center gap-x-3 gap-y-2 pt-2 text-xs flex-wrap">
                               {item.sizes && item.sizes.length > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[var(--text-sub)] font-bold text-[10px] uppercase">Size:</span>
+                                <div className="flex min-w-0 items-center gap-1">
+                                  <span className="text-[var(--text-sub)] font-bold text-[10px] uppercase shrink-0">Size:</span>
                                   <select
                                     value={item.selectedSize || item.sizes[0]}
                                     onChange={(e) => onUpdateVariant && onUpdateVariant(itemIdKey, 'selectedSize', e.target.value)}
-                                    className="bg-[var(--bg-main)] text-[var(--text-main)] text-xs font-bold px-2 py-0.5 rounded border border-[var(--border-subtle)] focus:border-[#C41E24] focus:outline-none"
+                                    className="min-w-0 max-w-full bg-[var(--bg-main)] text-[var(--text-main)] text-xs font-bold px-2 py-0.5 rounded border border-[var(--border-subtle)] focus:border-[#C41E24] focus:outline-none"
                                   >
                                     {item.sizes.map((s) => (
                                       <option key={s} value={s}>{s}</option>
@@ -434,12 +434,12 @@ export default function CartPage({
                               )}
 
                               {item.colors && item.colors.length > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[var(--text-sub)] font-bold text-[10px] uppercase">Color:</span>
+                                <div className="flex min-w-0 items-center gap-1">
+                                  <span className="text-[var(--text-sub)] font-bold text-[10px] uppercase shrink-0">Color:</span>
                                   <select
                                     value={item.selectedColor || item.colors[0].name}
                                     onChange={(e) => onUpdateVariant && onUpdateVariant(itemIdKey, 'selectedColor', e.target.value)}
-                                    className="bg-[var(--bg-main)] text-[var(--text-main)] text-xs font-bold px-2 py-0.5 rounded border border-[var(--border-subtle)] focus:border-[#C41E24] focus:outline-none"
+                                    className="min-w-0 max-w-full bg-[var(--bg-main)] text-[var(--text-main)] text-xs font-bold px-2 py-0.5 rounded border border-[var(--border-subtle)] focus:border-[#C41E24] focus:outline-none"
                                   >
                                     {item.colors.map((c) => (
                                       <option key={c.name} value={c.name}>{c.name}</option>
