@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle, X } from 'lucide-react';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
@@ -187,7 +186,7 @@ function AppContent() {
       const updated = prev.map((a) => ({ ...a, isDefault: a.id === addressId }));
       try {
         localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
-      } catch (e) { }
+      } catch (e) {}
       return updated;
     });
 
@@ -204,7 +203,7 @@ function AppContent() {
       const updated = prev.filter((a) => a.id !== addressId);
       try {
         localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
-      } catch (e) { }
+      } catch (e) {}
       return updated;
     });
 
@@ -262,7 +261,7 @@ function AppContent() {
         }
         try {
           localStorage.setItem('avn-saved-addresses', JSON.stringify(updated));
-        } catch (e) { }
+        } catch (e) {}
         return updated;
       });
     }
@@ -581,8 +580,8 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleProceedToCheckout = (data) => {
-    setOrderJustPlaced(false);
+    const handleProceedToCheckout = (data) => {
+      setOrderJustPlaced(false);
     const payload = typeof data === 'object' && data.items ? data : {
       items: cart.cartItems,
       subtotal: cart.cartItems.reduce((a, b) => a + b.price * b.quantity, 0),
@@ -590,10 +589,10 @@ function AppContent() {
       shippingFee: 0,
       totalAmount: cart.cartItems.reduce((a, b) => a + b.price * b.quantity, 0)
     };
-
+    
     // Store checkout payload
     setCheckoutData(payload);
-
+    
     // Guest Checkout Check
     if (!user) {
       if (setRedirectPath) setRedirectPath('checkout');
@@ -618,8 +617,8 @@ function AppContent() {
     : 'min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col selection:bg-[#FF1E27] selection:text-white transition-colors duration-300 pb-16 md:pb-0';
 
   const toastContainerClasses = isMobileView
-    ? 'fixed bottom-20 right-4 left-4 z-50 flex items-start gap-3 rounded-2xl border border-[#FF1E27]/40 bg-[var(--bg-card-solid)] px-4 py-3.5 shadow-2xl ring-1 ring-black/5'
-    : 'fixed bottom-6 right-6 z-50 flex w-[22rem] items-start gap-3 rounded-2xl border border-[#FF1E27]/40 bg-[var(--bg-card-solid)] px-4 py-3.5 shadow-2xl ring-1 ring-black/5';
+    ? 'fixed bottom-20 right-4 left-4 z-50 bg-[var(--bg-card-solid)] border border-[#FF1E27]/50 text-white px-5 py-3 rounded-xl shadow-lg font-bold text-xs font-heading flex items-center justify-between gap-2'
+    : 'fixed bottom-6 right-6 z-50 bg-[var(--bg-card-solid)] border border-[#FF1E27]/50 text-white px-5 py-3 rounded-xl shadow-lg font-bold text-xs font-heading flex items-center justify-between gap-2';
 
   return (
     <div className={mainContainerClasses}>
@@ -662,7 +661,7 @@ function AppContent() {
         isMobileView={isMobileView}
       />
 
-
+      
 
       <main className="flex-1 space-y-1 lg:space-y-4">
         {activeView === 'checkout' ? (
@@ -974,16 +973,16 @@ function AppContent() {
               </button>
             </section>
           ) :
-            <HomePage
-              theme={theme}
-              products={products}
-              categories={categories}
-              onExploreClick={handleNavigateSearch}
-              onNavigateWhyAvn={handleNavigateWhyAvn}
-              onAddToCart={cart.addToCart}
-              onSelectProduct={handleSelectProductForPdp}
-              isMobileView={isMobileView}
-            />
+          <HomePage
+            theme={theme}
+            products={products}
+            categories={categories}
+            onExploreClick={handleNavigateSearch}
+            onNavigateWhyAvn={handleNavigateWhyAvn}
+            onAddToCart={cart.addToCart}
+            onSelectProduct={handleSelectProductForPdp}
+            isMobileView={isMobileView}
+          />
         )}
       </main>
 
@@ -1022,35 +1021,16 @@ function AppContent() {
       />
 
       {cart.toastMessage && (
-        <div role="status" aria-live="polite" className={toastContainerClasses}>
-          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[#FF1E27]/30 bg-[#FF1E27]/10">
-            <AlertCircle className="h-4 w-4 text-[#FF1E27]" />
-          </span>
-
-          <div className="min-w-0 flex-1">
-            <p className="font-heading text-[10px] font-bold uppercase tracking-wider text-[#FF1E27]">
-              Cart update
-            </p>
-            <p className="mt-0.5 break-words text-xs font-medium leading-snug text-[var(--text-main)]">
-              {cart.toastMessage}
-            </p>
+        <div className={toastContainerClasses}>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#FF1E27]" />
+            <span>{cart.toastMessage}</span>
           </div>
-
-          <div className="flex shrink-0 items-center gap-1.5">
-            {(isBackendConnected || cart.isBackendConnected) && (
-              <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-emerald-400">
-                Synced
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => cart.clearToast && cart.clearToast()}
-              aria-label="Dismiss notification"
-              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg text-[var(--text-sub)] transition-colors hover:bg-[var(--border-subtle)] hover:text-[var(--text-main)]"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          {(isBackendConnected || cart.isBackendConnected) && (
+            <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-1.5 py-0.5 rounded">
+              API SYNC
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -1090,7 +1070,7 @@ class ErrorBoundary extends React.Component {
               onClick={() => {
                 try {
                   localStorage.removeItem('avn-saved-address');
-                } catch (e) { }
+                } catch (e) {}
                 window.location.href = '/';
               }}
               className="w-full py-3.5 bg-[#FF1E27] hover:bg-[#d40008] text-white font-heading font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"

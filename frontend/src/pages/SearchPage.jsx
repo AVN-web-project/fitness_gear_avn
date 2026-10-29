@@ -39,7 +39,7 @@ export default function SearchPage({
   const lastObservedSearchRef = useRef(location.search);
   const { cartItems: cartItemsList } = useCart();
   const getProductCartQty = (product) => {
-  const ids = [product?.id, product?.productId, product?.slug].filter(Boolean).map(String);
+    const ids = [product?.id, product?.productId, product?.slug].filter(Boolean).map(String);
     return (cartItemsList || [])
       .filter((item) =>
         [item.id, item.productId, item.slug].filter(Boolean).map(String).some((v) => ids.includes(v))
@@ -134,7 +134,10 @@ export default function SearchPage({
   }, [location.search]);
 
   // --- 2. Live MongoDB & Client Catalog Pipeline Engine ---
-  const activeProductsSource = (Array.isArray(propProducts) && propProducts.length > 0) ? propProducts : LOCAL_PRODUCTS;
+  // An empty array from the parent means the backend answered and there is nothing to show — not
+  // that the backend is down. Swapping in the local catalogue on an empty result is what made a
+  // filtered search with no matches look like a disconnected backend.
+  const activeProductsSource = Array.isArray(propProducts) ? propProducts : LOCAL_PRODUCTS;
 
   const fallbackResult = useMemo(() => {
     let list = activeProductsSource.filter((p) => p.status !== 'Discontinued' && p.status !== 'discontinued');
@@ -217,7 +220,11 @@ export default function SearchPage({
         genders: { Unisex: 5, Men: 1, Women: 1 }
       }
     };
-  }, [searchQuery, selectedCategory, selectedAgeGroup, selectedGender, minPrice, maxPrice, discountOnly, sortMode, currentPage]);
+    // activeProductsSource is the catalogue itself. Without it in the deps, a hard refresh froze the
+    // result computed on first render — when App still held LOCAL_PRODUCTS — and the live products
+    // that arrived moments later never triggered a recompute. Client-side navigation looked fine
+    // because the page mounted after the data was already there.
+  }, [activeProductsSource, searchQuery, selectedCategory, selectedAgeGroup, selectedGender, minPrice, maxPrice, discountOnly, sortMode, currentPage]);
 
   const activeResult = fallbackResult;
   const productsList = Array.isArray(activeResult?.data)
@@ -381,8 +388,8 @@ export default function SearchPage({
               <button
                 onClick={() => setViewLayout('grid')}
                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewLayout === 'grid'
-                    ? 'bg-[#FF1E27] text-white shadow-sm'
-                    : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
+                  ? 'bg-[#FF1E27] text-white shadow-sm'
+                  : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
                   }`}
                 title="Grid View"
               >
@@ -391,8 +398,8 @@ export default function SearchPage({
               <button
                 onClick={() => setViewLayout('list')}
                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewLayout === 'list'
-                    ? 'bg-[#FF1E27] text-white shadow-sm'
-                    : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
+                  ? 'bg-[#FF1E27] text-white shadow-sm'
+                  : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
                   }`}
                 title="List View"
               >
@@ -435,8 +442,8 @@ export default function SearchPage({
                         key={cat}
                         onClick={() => handleCategorySelect(cat)}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold font-heading transition-all cursor-pointer ${isSelected
-                            ? 'bg-[#FF1E27] text-white shadow-md'
-                            : 'text-[var(--text-sub)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-main)]'
+                          ? 'bg-[#FF1E27] text-white shadow-md'
+                          : 'text-[var(--text-sub)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-main)]'
                           }`}
                       >
                         <span className="truncate">{cat}</span>
@@ -458,8 +465,8 @@ export default function SearchPage({
                       key={age}
                       onClick={() => { setSelectedAgeGroup(age); setCurrentPage(1); }}
                       className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${selectedAgeGroup === age
-                          ? 'bg-[#FF1E27] text-white shadow-sm'
-                          : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
+                        ? 'bg-[#FF1E27] text-white shadow-sm'
+                        : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
                         }`}
                     >
                       {age}
@@ -477,8 +484,8 @@ export default function SearchPage({
                       key={g}
                       onClick={() => { setSelectedGender(g); setCurrentPage(1); }}
                       className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer text-center ${selectedGender === g
-                          ? 'bg-[#FF1E27] text-white shadow-sm'
-                          : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
+                        ? 'bg-[#FF1E27] text-white shadow-sm'
+                        : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
                         }`}
                     >
                       {g}
@@ -613,14 +620,9 @@ export default function SearchPage({
 
                         <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-[var(--border-subtle)] gap-4">
                           <div className="text-left sm:text-right">
-                            <div className="text-lg font-black font-heading text-[#FF1E27]">₹{product.price}</div>
-                            {product.compareAtPrice && (
-                              <div className="flex items-center gap-1.5 text-xs">
-                                <span className="text-[var(--text-sub)] line-through">₹{product.compareAtPrice}</span>
-                                {discountPercent && <span className="text-emerald-400 font-bold text-[10px]">-{discountPercent}%</span>}
-                              </div>
-                            )}
+                            <div className="text-lg font-black font-heading text-[#FF1E27]">{product.price}</div>
                           </div>
+
 
                           <div className="flex items-center gap-2">
 
@@ -631,8 +633,8 @@ export default function SearchPage({
                                   disabled={isOutOfStock}
                                   onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
                                   className={`px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md transition-all ${isOutOfStock
-                                      ? 'opacity-50 cursor-not-allowed bg-slate-700 text-white'
-                                      : 'btn-glow-red'
+                                    ? 'opacity-50 cursor-not-allowed bg-slate-700 text-white'
+                                    : 'btn-glow-red'
                                     }`}
                                 >
                                   {isOutOfStock ? (
@@ -736,8 +738,8 @@ export default function SearchPage({
                               disabled={isOutOfStock}
                               onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
                               className={`w-full py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${isOutOfStock
-                                  ? 'opacity-50 cursor-not-allowed bg-slate-700'
-                                  : 'btn-glow-red'
+                                ? 'opacity-50 cursor-not-allowed bg-slate-700'
+                                : 'btn-glow-red'
                                 }`}
                             >
                               {isOutOfStock ? (
@@ -784,8 +786,8 @@ export default function SearchPage({
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
                         className={`w-9 h-9 rounded-xl text-xs font-extrabold font-heading transition-all cursor-pointer ${currentPage === pageNum
-                            ? 'bg-[#FF1E27] text-white shadow-sm'
-                            : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
+                          ? 'bg-[#FF1E27] text-white shadow-sm'
+                          : 'bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
                           }`}
                       >
                         {pageNum}
@@ -844,8 +846,8 @@ export default function SearchPage({
                       setMobileFilterOpen(false);
                     }}
                     className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${selectedCategory.toUpperCase() === cat.toUpperCase()
-                        ? 'bg-[#FF1E27] text-white'
-                        : 'text-[var(--text-sub)] hover:bg-[var(--border-subtle)]'
+                      ? 'bg-[#FF1E27] text-white'
+                      : 'text-[var(--text-sub)] hover:bg-[var(--border-subtle)]'
                       }`}
                   >
                     {cat}

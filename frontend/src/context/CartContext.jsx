@@ -5,6 +5,7 @@ import {
   addToCartApi,
   updateCartItemApi,
   removeCartItemApi,
+  updateCartItemVariantApi,
   clearCartApi,
   applyCartCouponApi,
   clearGuestCartOnExitBeacon,
@@ -44,12 +45,42 @@ export function CartProvider({ children }) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => setToastMessage(null), 6000);
   };
-
-  const clearToast = () => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToastMessage(null);
-  };
   const [isBackendConnected, setIsBackendConnected] = useState(false);
+
+  // ---- one shape for a cart line ----------------------------------------------------------
+  // Every cart mutation returns the same computed cart from the server. These helpers turn that
+  // payload into state, so a line is identical whether it arrived from a click, a quantity change
+  // or a page refresh. Nothing about a line is invented on the client any more — that divergence
+  // is why the variant selectors and the weight/pack subtitle vanished on refresh.
+  const toCartLine = (line) => ({
+    ...line,
+    id: line._id || line.id || line.variantSku,
+    _id: line._id,
+    image: resolveMediaUrl(line.image) || null,
+    selectedSize: line.selectedSize || 'Standard',
+    selectedColor: line.selectedColor || 'Crimson Red',
+    sizes: Array.isArray(line.sizes) ? line.sizes : [],
+    colors: Array.isArray(line.colors) ? line.colors : [],
+    variants: Array.isArray(line.variants) ? line.variants : [],
+  });
+
+  const applyServerCart = (payload) => {
+    // The API client is inconsistent: fetchCart unwraps to the cart, while the mutation helpers
+    // return the raw envelope. Accept every shape rather than making the caller remember which is
+    // which — getting this wrong silently no-ops, which is what left a newly added line invisible
+    // until the page was refreshed.
+    const cart =
+      (payload && payload.data && payload.data.cart) ||
+      (payload && payload.cart) ||
+      (payload && payload.data && Array.isArray(payload.data.items) ? payload.data : null) ||
+      (payload && Array.isArray(payload.items) ? payload : null);
+
+    if (!cart) return false;
+    setCartItems(cart.items.map(toCartLine));
+    setAppliedCoupon(cart.appliedCoupon || null);
+    setIsBackendConnected(true);
+    return true;
+  };
 
   // Storage Persistence:
   // - Authenticated: saved to localStorage ('avn-user-cart')
@@ -74,25 +105,7 @@ export function CartProvider({ children }) {
         const backendCart = await fetchCart();
         if (isMounted) {
           if (backendCart && Array.isArray(backendCart.items)) {
-            const mapped = backendCart.items.map((bi) => ({
-              id: bi._id || bi.id || bi.variantSku,
-              _id: bi._id,
-              productId: bi.productId,
-              name: bi.name,
-              slug: bi.slug,
-              price: bi.price,
-              compareAtPrice: bi.compareAtPrice,
-              quantity: bi.quantity,
-              selectedSize: bi.selectedSize || 'Standard',
-              selectedColor: bi.selectedColor || 'Crimson Red',
-              variantSku: bi.variantSku,
-              variantTitle: bi.variantTitle,
-              sizes: bi.sizes || [],
-              colors: bi.colors || [],
-              variants: bi.variants || [],
-              image: resolveMediaUrl(bi.image) || null
-
-            }));
+            const mapped = backendCart.items.map(toCartLine);
             setCartItems(mapped);
             setIsBackendConnected(true);
             setAppliedCoupon(backendCart.appliedCoupon || null);
@@ -158,13 +171,20 @@ export function CartProvider({ children }) {
         // Migrate guest session items to authenticated user's MongoDB cart
         if (guestSessionItems.length > 0) {
           for (const item of guestSessionItems) {
-            await addToCartApi({
+            const added = await addToCartApi({
               productId: item.productId || item.id,
               variantSku: item.variantSku,
               selectedSize: item.selectedSize,
               selectedColor: item.selectedColor,
               quantity: item.quantity || 1
             });
+
+            if (added && added.success === false) {
+              showCartToast(added.message || 'Could not add that to your cart.');
+            } else {
+              // Adopt the server cart, including the new line, replacing the optimistic one.
+              applyServerCart(added);
+            }
           }
           try {
             sessionStorage.removeItem('avn-session-cart');
@@ -268,63 +288,14 @@ export function CartProvider({ children }) {
 
     const variantSku = product.variantSku || matchedVariant?.sku || '';
 
-    // A line with no SKU cannot be priced, stocked or fulfilled: it renders as "SKU: —" in the
-    // cart and the backend drops it on the next refresh. Refuse it rather than creating a
-    // phantom entry — an unavailable variant lands here because matchedVariant excludes them.
+    // Never send an empty SKU. The server would then have to guess which variant was meant, and
+    // that is how the wrong line (often an inactive one) ended up in the cart.
     if (!variantSku) {
-      const message = 'That variant is unavailable. Please choose another.';
-      showCartToast(message);
-      return { success: false, message };
+      showCartToast('That combination is not available. Please pick another size or colour.');
+      return;
     }
-
     // The variant's price wins over the product's, otherwise a cheaper/ dearer size is mispriced.
     const itemPrice = Number(matchedVariant?.price ?? product.price ?? 0);
-
-    const newItem = {
-      ...product,
-      id: product.id || product.productId || `cart-${Date.now()}`,
-      productId: product._id || product.productId || product.id,
-      name: product.name,
-      price: itemPrice,
-      quantity: qtyToAdd,
-      selectedSize: size,
-      selectedColor: color,
-      selectedPack: pack,
-      variantSku,
-      resistanceLevel: matchedVariant?.resistanceLevel || '',
-      image: resolveMediaUrl(product.image || product.images?.[0]?.url) || null,
-      slug: product.slug || product.id
-    };
-
-    // A line is identified by its variant, not by its product: two sizes of the same product are
-    // two separate lines, and adding to one must never touch the other.
-    const lineKey = (item) => {
-      if (variantSku && item.variantSku) return `sku:${item.variantSku}`;
-      const pid = item.productId || item.id || item.slug || '';
-      return `p:${pid}|${item.selectedSize || ''}|${item.selectedColor || ''}|${item.selectedPack || ''}`;
-    };
-    const newLineKey = variantSku
-      ? `sku:${variantSku}`
-      : `p:${newItem.productId || newItem.id || newItem.slug || ''}|${size}|${color}|${pack}`;
-
-    const snapshot = cartItems;
-
-    setCartItems((prevItems) => {
-      const existingIndex = prevItems.findIndex((item) => lineKey(item) === newLineKey);
-      if (existingIndex > -1) {
-        return prevItems.map((item, idx) => {
-          if (idx === existingIndex) {
-            const currentQty = Math.max(1, Number(item.quantity) || 1);
-            return {
-              ...item,
-              quantity: currentQty + qtyToAdd
-            };
-          }
-          return item;
-        });
-      }
-      return [...prevItems, newItem];
-    });
 
     // Always sync to MongoDB (with user auth token or x-guest-id header)
     try {
@@ -335,17 +306,20 @@ export function CartProvider({ children }) {
         selectedColor: color,
         quantity: qtyToAdd
       });
+
+      // Adopt the server cart. The line the server returns carries the full shape (sizes,
+      // colours, weight, pack), so the card renders correctly straight away instead of showing a
+      // reduced version until the next refresh.
       if (result && result.success === false) {
-        setCartItems(snapshot);
         showCartToast(result.message || 'Could not save this item to your cart.');
+      } else {
+        applyServerCart(result);
       }
     } catch (err) {
       console.warn('Backend cart add failed:', err);
-      setCartItems(snapshot);
       showCartToast(err?.message || 'Could not save this item to your cart.');
     }
   };
-
 
   // Update Line Item Quantity (Explicit target quantity)
   const updateQuantity = async (itemId, newQty) => {
@@ -364,12 +338,14 @@ export function CartProvider({ children }) {
     );
 
     try {
-      if (qty === 0) {
-        const removed = await removeCartItemApi(itemId);
-        if (removed && removed.success === false) showCartToast(removed.message || 'Could not update your cart.');
+      const res = qty === 0
+        ? await removeCartItemApi(itemId)
+        : await updateCartItemApi(itemId, { quantity: qty });
+
+      if (res && res.success === false) {
+        showCartToast(res.message || 'Could not update your cart.');
       } else {
-        const updated = await updateCartItemApi(itemId, { quantity: qty });
-        if (updated && updated.success === false) showCartToast(updated.message || 'Could not update your cart.');
+        applyServerCart(res);
       }
     } catch (err) {
       console.warn('Backend cart update failed:', err);
@@ -386,46 +362,23 @@ export function CartProvider({ children }) {
     const current = cartItems.find(isSameLine);
     if (!current) return;
 
-    const draft = { ...current, [field]: value };
-
-    const variants = Array.isArray(current.variants) ? current.variants : [];
-    const matched =
-      variants.find(
-        (v) =>
-          (!draft.selectedSize || v.size === draft.selectedSize || v.title?.includes(draft.selectedSize)) &&
-          (!draft.selectedColor || v.color === draft.selectedColor || v.title?.includes(draft.selectedColor)) &&
-          v.isActive !== false
-      ) || null;
-
-    if (matched) {
-      draft.variantSku = matched.sku;
-      if (matched.price != null) draft.price = Number(matched.price);
-      if (matched.compareAtPrice != null) draft.compareAtPrice = Number(matched.compareAtPrice);
-      draft.resistanceLevel = matched.resistanceLevel || '';
-    }
-
-    setCartItems((prev) => prev.map((item) => (isSameLine(item) ? draft : item)));
-
-    if (!matched || matched.sku === current.variantSku) return;
+    // One validated server call. It checks the combination exists and has stock, merges into an
+    // existing line if needed, and returns the recomputed cart. The previous remove-then-add
+    // could leave the cart missing the line entirely if the second call failed.
+    const payload =
+      field === 'selectedSize'
+        ? { selectedSize: value, selectedColor: current.selectedColor }
+        : { selectedSize: current.selectedSize, selectedColor: value };
 
     try {
-      const removed = await removeCartItemApi(current.variantSku || current.id);
-      if (removed && removed.success === false) {
-        showCartToast(removed.message || 'Could not change the variant.');
+      const res = await updateCartItemVariantApi(itemId, payload);
+      if (res && res.success === false) {
+        showCartToast(res.message || 'Could not change the variant.');
         return;
       }
-      const added = await addToCartApi({
-        productId: draft.productId || draft._id || draft.id,
-        variantSku: matched.sku,
-        selectedSize: draft.selectedSize,
-        selectedColor: draft.selectedColor,
-        quantity: draft.quantity
-      });
-      if (added && added.success === false) {
-        showCartToast(added.message || 'Could not change the variant.');
-      }
+      applyServerCart(res);
     } catch (err) {
-      console.warn('Cart variant change sync failed:', err);
+      console.warn('Cart variant change failed:', err);
       showCartToast(err?.message || 'Could not change the variant.');
     }
   };
@@ -443,7 +396,12 @@ export function CartProvider({ children }) {
     );
 
     try {
-      await removeCartItemApi(itemId);
+      const res = await removeCartItemApi(itemId);
+      if (res && res.success === false) {
+        showCartToast(res.message || 'Could not remove that item.');
+      } else {
+        applyServerCart(res);
+      }
     } catch (err) {
       console.warn('Backend cart remove failed:', err);
     }
