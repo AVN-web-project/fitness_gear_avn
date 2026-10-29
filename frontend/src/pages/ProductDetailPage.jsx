@@ -20,7 +20,8 @@ import {
   AlertCircle,
   Layers,
   ShoppingBag,
-  ArrowRight
+  ArrowRight,
+  ArrowDown
 } from 'lucide-react';
 import ProductGraphic from '../components/ProductGraphic';
 import SizeChartModal from '../components/SizeChartModal';
@@ -41,11 +42,26 @@ export default function ProductDetailPage({
   const { isAuthenticated, user } = useAuth();
   // All hooks MUST be declared at the top before any conditional returns
   const [selectedSize, setSelectedSize] = useState(
-    product?.sizes ? product.sizes[0] : 'Standard'
+    // Seed from the variants when there is no product-level list. The two can disagree after a size
+    // migration, and a seed matching no variant leaves selectedVariant null — which is how the
+    // SKU line fell back to a stale product-level code.
+    product?.sizes?.length ? product.sizes[0] : (product?.variants?.find((v) => v?.size)?.size || null)
   );
   const [selectedColor, setSelectedColor] = useState(
     product?.colors ? product.colors[0] : { name: 'Crimson Red', hex: '#FF1E27' }
   );
+
+  // The catalogue uses four size conventions and they mean different things: a length
+  // describes the product, a fit letter describes the wearer, a range covers a span of body
+  // sizes, and one-size means there is nothing to choose. Spelling out which one applies stops
+  // a customer reading "18in" as a body measurement, or "M" as a length.
+  const SIZE_CONVENTION_NOTES = {
+    length: 'Sizes are the product length, measured end to end in inches.',
+    apparel: 'Sizes are standard fit letters — choose your usual size.',
+    range: 'Sizes are fit letters. The inch range each one covers is listed in the Size & Fit Guide.',
+    'one-size': 'One size fits most.',
+  };
+  const sizeConventionNote = SIZE_CONVENTION_NOTES[product?.sizeConvention] || '';
   const [selectedPack, setSelectedPack] = useState(
     product?.packQuantityOptions ? product.packQuantityOptions[0] : 'Single Pack'
   );
@@ -325,48 +341,35 @@ export default function ProductDetailPage({
   // The variant currently chosen by the size/colour pickers. Its SKU is what the admin Media
   // tab writes against each image.
   const selectedVariant = useMemo(() => {
-    const all = Array.isArray(product?.variants)
-      ? product.variants
-      : [];
-
+    const all = Array.isArray(product?.variants) ? product.variants : [];
     if (all.length === 0) return null;
 
-    const norm = (value) =>
-      String(value || '').trim().toLowerCase();
+    // Prefer an in-stock/active variant, but never return null while any variant exists.
+    const active = all.filter((v) => v && v.isActive !== false);
+    const pool = active.length > 0 ? active : all;
 
-    const colourName =
-      typeof selectedColor === 'string'
-        ? selectedColor
-        : selectedColor?.name;
+    const norm = (s) => String(s || '').trim().toLowerCase();
+    const colourName = typeof selectedColor === 'string' ? selectedColor : selectedColor?.name;
 
-    const sizeMatches = (variant) => {
+    // A chip can carry a variant's `size` ('Medium') or its `title` ('Medium (Men 7-9 …)').
+    // Comparing only `size` meant a title-carrying chip never matched, and the page silently
+    // stayed on the first variant — price and SKU never changed.
+    const sizeMatches = (v) => {
       if (!selectedSize) return true;
-
-      const selected = norm(selectedSize);
-      const candidates = [
-        norm(variant.size),
-        norm(variant.title),
-      ].filter(Boolean);
-
-      return candidates.some(
-        (value) =>
-          value === selected ||
-          value.startsWith(selected)
+      const s = norm(selectedSize);
+      const candidates = [norm(v.size), norm(v.title)].filter(Boolean);
+      return (
+        candidates.some((c) => c === s) ||
+        candidates.some((c) => c.startsWith(s) || s.startsWith(c))
       );
     };
+    const colourMatches = (v) => !colourName || !v.color || norm(v.color) === norm(colourName);
 
-    const colourMatches = (variant) =>
-      !colourName ||
-      norm(variant.color) === norm(colourName);
-
-    // Match the selected combination, even if unavailable.
-    // Never substitute a sibling variant's SKU.
     return (
-      all.find(
-        (variant) =>
-          sizeMatches(variant) &&
-          colourMatches(variant)
-      ) || null
+      pool.find((v) => sizeMatches(v) && colourMatches(v)) ||
+      pool.find(sizeMatches) ||
+      pool.find(colourMatches) ||
+      pool[0]
     );
   }, [product?.variants, selectedSize, selectedColor]);
 
@@ -428,17 +431,44 @@ export default function ProductDetailPage({
     const allImages = Array.isArray(product?.images) ? product.images : [];
     const sku = selectedVariant?.sku ? String(selectedVariant.sku).trim().toUpperCase() : null;
 
-    const scoped = allImages.filter((img) => {
-      const tags = Array.isArray(img?.variantSkus)
+    // Images are keyed on the variant's _id, which survives a SKU rename or reformat. Older
+    // documents still carry SKU strings, so both are matched.
+    const variantKey = selectedVariant?.id ? String(selectedVariant.id) : null;
+    const idsOf = (img) => (Array.isArray(img?.variantIds) ? img.variantIds.map((x) => String(x)) : []);
+    const skusOf = (img) =>
+      Array.isArray(img?.variantSkus)
         ? img.variantSkus.map((x) => String(x || '').trim().toUpperCase()).filter(Boolean)
         : [];
-      if (tags.length === 0) return true;      // common image — always visible
-      return sku ? tags.includes(sku) : false; // variant image — only for that variant
+
+    const scoped = allImages.filter((img) => {
+      const ids = idsOf(img);
+      const tags = skusOf(img);
+      if (ids.length === 0 && tags.length === 0) return true; // shared image — always visible
+      if (variantKey && ids.includes(variantKey)) return true;
+      return sku ? tags.includes(sku) : false;                // legacy SKU-keyed image
     });
+
+    // Lead with the image the admin marked primary for this variant, so switching variant opens
+    // the gallery on that variant's own shot rather than the product's first shared image.
+    const primaryForSku = (img) => {
+      const ids = Array.isArray(img?.primaryForIds) ? img.primaryForIds.map((x) => String(x)) : [];
+      if (variantKey && ids.includes(variantKey)) return true;
+      return (
+        Array.isArray(img?.primaryFor) &&
+        img.primaryFor.some((x) => String(x || '').trim().toUpperCase() === sku)
+      );
+    };
+
+    const ordered = sku
+      ? [
+          ...scoped.filter((img) => primaryForSku(img)),
+          ...scoped.filter((img) => !primaryForSku(img)),
+        ]
+      : scoped;
 
     // If narrowing leaves nothing (e.g. every image is scoped to another variant), fall back
     // to the full set so the customer never sees an empty gallery.
-    const usable = (scoped.length > 0 ? scoped : allImages).filter((img) => img?.url);
+    const usable = (ordered.length > 0 ? ordered : allImages).filter((img) => img?.url);
     if (usable.length > 0) {
       return usable.map((img, i) => ({
         id: img._id || `img-${i}`,
@@ -983,7 +1013,7 @@ export default function ProductDetailPage({
                 {typeof product.category === 'object' ? product.category?.name : product.category}
               </span>
               <span className="text-[11px] text-[var(--text-sub)] font-semibold font-mono bg-white/5 px-2 py-0.5 rounded">
-                SKU: {selectedVariant?.sku || product.sku || '—'}
+                SKU: {selectedVariant?.sku || '—'}
               </span>
               {product.ageGenderTag && (
                 <span className="text-[10px] font-bold text-gray-400 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700">
@@ -1018,16 +1048,27 @@ export default function ProductDetailPage({
 
           {/* Pricing Block */}
           <div className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-1">
-            <div className="flex items-baseline gap-3">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              {/* Both prices share one type size; the MRP is distinguished by the strike-through
+                  and the muted colour rather than by being smaller. */}
               <span className="text-3xl sm:text-4xl font-extrabold font-heading text-[var(--text-main)]">
                 ₹{currentPrice}
               </span>
-              <span className="text-sm font-semibold text-[var(--text-sub)] line-through">
-                M.R.P.: ₹{compareAt}
-              </span>
-              <span className="text-xs font-extrabold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-500/30">
-                SAVE {discountPercent}%
-              </span>
+              {compareAt > currentPrice && (
+                <span className="text-3xl sm:text-4xl font-semibold font-heading text-[var(--text-sub)] line-through">
+                  ₹{compareAt}
+                </span>
+              )}
+              {discountPercent > 0 && (
+                <span
+                  className="inline-flex items-center gap-0.5 text-sm font-extrabold text-emerald-400"
+                  title={`Price dropped ${discountPercent}%`}
+                  aria-label={`Price dropped ${discountPercent} percent`}
+                >
+                  <ArrowDown className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
+                  {discountPercent}%
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-[var(--text-sub)] font-medium">
               Inclusive of all taxes & GST invoice available
@@ -1104,6 +1145,12 @@ export default function ProductDetailPage({
                   </button>
                 ))}
               </div>
+
+              {sizeConventionNote && (
+                <p className="text-[11px] leading-relaxed text-[var(--text-sub)]">
+                  {sizeConventionNote}
+                </p>
+              )}
             </div>
           )}
 

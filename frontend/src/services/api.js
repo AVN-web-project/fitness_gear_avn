@@ -52,6 +52,9 @@ export function getAuthHeaders() {
 export function normalizeProduct(p) {
   if (!p) return null;
   const pSlug = p.slug || p.id || '';
+  // Local data is only consulted for products that come from the local catalogue itself.
+  // For anything the API returns, inheriting hardcoded fields (images, specs, ratings) is what
+  // made live products render as though the storefront had fallen back to local data.
   const localMatch = LOCAL_PRODUCTS.find(
     (lp) => lp.slug === pSlug || lp.id === pSlug || lp.name.toLowerCase() === (p.name || '').toLowerCase()
   );
@@ -61,8 +64,28 @@ export function normalizeProduct(p) {
     ? p.category.name.toUpperCase()
     : (typeof p.category === 'string' ? p.category.toUpperCase() : (localMatch?.category || 'EQUIPMENT'));
 
-  const price = p.variants?.[0]?.price ?? p.price ?? localMatch?.price ?? 0;
-  const compareAtPrice = p.variants?.[0]?.compareAtPrice ?? p.compareAtPrice ?? localMatch?.compareAtPrice ?? 0;
+  // The catalogue is product-wise: one card per product, so its price has to represent the whole
+  // product. It takes the cheapest variant a customer can actually buy — using variants[0] could
+  // land on an inactive variant, which is how a card and the PDP ended up quoting different
+  // numbers for the same product. The PDP stays variant-wise and overrides this per selection.
+  const variantList = Array.isArray(p.variants) ? p.variants : [];
+  const buyableVariants = variantList.filter((v) => v && v.isActive !== false && v.isAvailable !== false);
+  const pricePool = buyableVariants.length > 0 ? buyableVariants : variantList;
+  const priceSource = pricePool.reduce(
+    (min, v) => (Number(v?.price) < Number(min?.price) ? v : min),
+    pricePool[0] || null
+  );
+
+  const price = priceSource?.price ?? p.price ?? localMatch?.price ?? 0;
+  const compareAtPrice = priceSource?.compareAtPrice ?? p.compareAtPrice ?? localMatch?.compareAtPrice ?? 0;
+
+  // A product can span several prices across its variants, so the catalogue card shows the range
+  // it covers rather than implying one price for every combination.
+  const priceValues = pricePool
+    .map((v) => Number(v?.price))
+    .filter((n) => Number.isFinite(n) && n >= 0);
+  const priceMin = priceValues.length > 0 ? Math.min(...priceValues) : price;
+  const priceMax = priceValues.length > 0 ? Math.max(...priceValues) : price;
 
   return {
     ...localMatch,
@@ -78,6 +101,8 @@ export function normalizeProduct(p) {
     description: p.description || localMatch?.description || '',
     price,
     compareAtPrice,
+    priceMin,
+    priceMax,
     image: resolveMediaUrl(primaryImage),
     webpImage: resolveMediaUrl(p.webpImage || localMatch?.webpImage || primaryImage),
     imageLight: resolveMediaUrl(p.imageLight || localMatch?.imageLight || primaryImage),
@@ -253,8 +278,12 @@ export async function fetchProducts(category = '', search = '') {
     const queryParams = new URLSearchParams();
     if (category && category !== 'ALL PRODUCTS') queryParams.append('category', category);
     if (search) queryParams.append('search', search);
+    // The products endpoint pages at 20 by default. Without an explicit limit the storefront only
+    // ever saw the first 20 products, so anything beyond that silently fell back to the local
+    // catalogue — which is why a variant added in the database could be invisible on the PDP.
+    queryParams.append('limit', '100');
 
-    const url = `${API_BASE_URL}/products${queryParams.toString() ? `?${queryParams}` : ''}`;
+    const url = `${API_BASE_URL}/products?${queryParams.toString()}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
@@ -335,11 +364,22 @@ export async function fetchCategoryBySlugApi(slug) {
 /**
  * Fetch active cart items and calculations from backend API
  */
+/**
+ * Every cart endpoint returns the same envelope, but the mutations were handing back the raw
+ * `{ success, data: { cart } }` while fetchCart unwrapped it. Callers then had to know which was
+ * which, and getting it wrong failed silently. This normalises all of them to `{ success, cart }`.
+ */
+function unwrapCart(res) {
+  if (!res) return { success: false, message: 'No response from the cart service.' };
+  const cart = res?.data?.cart || res?.cart || (res?.data && Array.isArray(res.data.items) ? res.data : null);
+  return { ...res, success: res.success !== false, cart: cart || null };
+}
+
 export async function fetchCart(couponCode = '') {
   try {
     const queryParams = couponCode ? `?couponCode=${encodeURIComponent(couponCode)}` : '';
     const res = await apiFetch(`/cart${queryParams}`);
-    return res?.data?.cart || res?.data || null;
+    return unwrapCart(res).cart;
   } catch (error) {
     console.warn('Cart API fetch failed:', error.message);
     return null;
@@ -351,10 +391,10 @@ export async function fetchCart(couponCode = '') {
  */
 export async function addToCartApi(itemData) {
   try {
-    return await apiFetch('/cart/items', {
+    return unwrapCart(await apiFetch('/cart/items', {
       method: 'POST',
       body: JSON.stringify(itemData)
-    });
+    }));
   } catch (error) {
     console.warn('Add to cart API failed:', error.message);
     return { success: false, message: error.message };
@@ -366,10 +406,10 @@ export async function addToCartApi(itemData) {
  */
 export async function updateCartItemApi(itemId, updateData) {
   try {
-    return await apiFetch(`/cart/items/${encodeURIComponent(itemId)}`, {
+    return unwrapCart(await apiFetch(`/cart/items/${encodeURIComponent(itemId)}`, {
       method: 'PATCH',
       body: JSON.stringify(updateData)
-    });
+    }));
   } catch (error) {
     console.warn('Update cart API failed:', error.message);
     return { success: false, message: error.message };
@@ -379,11 +419,27 @@ export async function updateCartItemApi(itemId, updateData) {
 /**
  * Remove an item from the backend cart
  */
+/**
+ * Move an existing line onto a different size/colour. Validated server-side: the combination must
+ * exist and have stock, and it merges into an existing line rather than duplicating it.
+ */
+export async function updateCartItemVariantApi(itemId, { selectedSize, selectedColor }) {
+  try {
+    return unwrapCart(await apiFetch(`/cart/items/${encodeURIComponent(itemId)}/variant`, {
+      method: 'PATCH',
+      body: JSON.stringify({ selectedSize, selectedColor })
+    }));
+  } catch (error) {
+    console.warn('Update cart variant API failed:', error.message);
+    return { success: false, message: error.message };
+  }
+}
+
 export async function removeCartItemApi(itemId) {
   try {
-    return await apiFetch(`/cart/items/${encodeURIComponent(itemId)}`, {
+    return unwrapCart(await apiFetch(`/cart/items/${encodeURIComponent(itemId)}`, {
       method: 'DELETE'
-    });
+    }));
   } catch (error) {
     console.warn('Remove cart item API failed:', error.message);
     return { success: false, message: error.message };
@@ -395,9 +451,9 @@ export async function removeCartItemApi(itemId) {
  */
 export async function clearCartApi() {
   try {
-    return await apiFetch('/cart', {
+    return unwrapCart(await apiFetch('/cart', {
       method: 'DELETE'
-    });
+    }));
   } catch (error) {
     console.warn('Clear cart API failed:', error.message);
     return { success: false, message: error.message };
