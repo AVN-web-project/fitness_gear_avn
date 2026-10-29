@@ -278,13 +278,19 @@ export function CartProvider({ children }) {
     // that SKU, the quantity went onto whatever was already in the cart instead of creating a
     // second line. A miss must stay a miss.
     const variantList = Array.isArray(product.variants) ? product.variants : [];
+    // Exact match only. `v.title?.includes(size)` matched on a substring, so selecting "M"
+    // could pick "Medium  Stealth Black" when "M  Stealth Red" was asked for — the line that
+    // landed in the cart was a different variant from the one on screen.
+    const norm = (x) => String(x || '').trim().toLowerCase();
+    const sizeOf = (v) => norm(v.size) || norm(v.title);
+    const bySize = (v) => !size || sizeOf(v) === norm(size);
     const matchedVariant =
       variantList.find(
-        (v) =>
-          v.isActive !== false &&
-          (!v.size || !size || v.size === size || v.title?.includes(size)) &&
-          (!v.color || !color || v.color === color || v.title?.includes(color))
-      ) || null;
+        (v) => v.isActive !== false && bySize(v) && color && v.color && norm(v.color) === norm(color)
+      ) ||
+      variantList.find((v) => v.isActive !== false && bySize(v) && !v.color) ||
+      null;
+
 
     const variantSku = product.variantSku || matchedVariant?.sku || '';
 
