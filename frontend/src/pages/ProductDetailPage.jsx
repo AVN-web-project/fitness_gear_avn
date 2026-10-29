@@ -373,6 +373,36 @@ export default function ProductDetailPage({
     );
   }, [product?.variants, selectedSize, selectedColor]);
 
+  // Specs live on the variant now: a 79in wrap and a 90in wrap have different dimensions. The
+  // product-level list is only a fallback for products whose specs have not been migrated yet.
+  const specPairs = (() => {
+    const fromVariant = (selectedVariant?.specifications || []).filter((sp) => sp?.key);
+    if (fromVariant.length) return fromVariant;
+    return (product?.specs || []).map((sp, i) => ({ key: `Feature ${i + 1}`, value: sp }));
+  })();
+
+  // careInstructions is a string on the product, not an array. The Usage & Care tab called
+  // `.map` on it directly, and optional chaining does not help there — `?.` guards null and
+  // undefined, but a string simply has no `.map`, so the tab threw as soon as it was opened.
+  // Split it into lines, and fall back to the defaults when there is nothing stored.
+  // The Overview cards are product-level only. They must never read variant specs: a variant's
+  // "Length: 79 inches" describes one size, not the product, and it changed with the selection.
+  // If the product has no product-level specs, the cards simply do not render.
+  const overviewSpecs = product?.specs || [];
+
+  const careList = (() => {
+    const raw = product?.careInstructions;
+    const list = Array.isArray(raw)
+      ? raw
+      : String(raw || '')
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean);
+    return list.length
+      ? list
+      : ['Hand wash cold with mild detergent.', 'Air dry flat in shade. Do not tumble dry.'];
+  })();
+
   // The pickers initialise once at mount, before the API responds, so they can hold a size or
   // colour that the loaded product doesn't have — every lookup then misses and the price stays
   // on the product-level fallback until a refresh remounts the page. Re-sync when the product
@@ -1462,7 +1492,7 @@ export default function ProductDetailPage({
         <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] overflow-x-auto pb-1 scrollbar-none" role="tablist">
           {[
             { id: 'overview', label: 'OVERVIEW' },
-            { id: 'specs', label: 'TECHNICAL SPECS' },
+            { id: 'specs', label: 'DETAILED SPECIFICATIONS' },
             { id: 'usage', label: 'USAGE & CARE' },
             { id: 'reviews', label: `VERIFIED REVIEWS (${reviewsList.length})` }
           ].map((tab) => (
@@ -1491,14 +1521,17 @@ export default function ProductDetailPage({
                 <h3 className="text-xl font-sans font-black italic uppercase text-[var(--text-main)]">
                   ENGINEERED FOR HEAVY ATHLETES
                 </h3>
-                <p className="text-sm text-[var(--text-sub)] leading-relaxed max-w-3xl">
-                  {product.description}
+                {/* The full description from the admin's General Info tab. `whitespace-pre-line`
+                    keeps the line breaks the admin typed — without it a multi-paragraph
+                    description collapsed into one run-on block. */}
+                <p className="text-sm text-[var(--text-sub)] leading-relaxed max-w-3xl whitespace-pre-line">
+                  {product.description || product.tagline || ''}
                 </p>
               </div>
 
               {/* Feature Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-                {product.specs?.map((spec, i) => (
+                {overviewSpecs.map((spec, i) => (
                   <div
                     key={i}
                     className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--border-subtle)] space-y-2 hover:border-[#FF1E27]/50 transition-colors"
@@ -1519,28 +1552,32 @@ export default function ProductDetailPage({
           {activeTab === 'specs' && (
             <div className="space-y-6 animate-fade-in">
               <h3 className="text-xl font-sans font-black italic uppercase text-[var(--text-main)]">
-                DETAILED TECHNICAL SPECIFICATIONS
+                DETAILED SPECIFICATIONS
               </h3>
 
               <div className="overflow-x-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)]">
                 <table className="w-full text-left text-xs sm:text-sm">
                   <tbody className="divide-y divide-[var(--border-subtle)]">
-                    {product.fullSpecs ? (
-                      Object.entries(product.fullSpecs).map(([key, val]) => (
-                        <tr key={key} className="hover:bg-[var(--border-subtle)]/40 transition-colors">
+                    {specPairs.length > 0 ? (
+                      specPairs.map((spec, idx) => (
+                        <tr key={idx} className="hover:bg-[var(--border-subtle)]/40 transition-colors">
+                          <td className="p-4 font-bold text-[#FF1E27] uppercase font-heading w-1/3 border-r border-[var(--border-subtle)]">
+                            {spec.key}
+                          </td>
+                          <td className="p-4 text-[var(--text-main)] font-medium">
+                            {spec.value}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      Object.entries(product.fullSpecs || {}).map(([key, val]) => (
+                        <tr key={key}>
                           <td className="p-4 font-bold text-[#FF1E27] uppercase font-heading w-1/3 border-r border-[var(--border-subtle)]">
                             {key}
                           </td>
                           <td className="p-4 text-[var(--text-main)] font-medium">
                             {val}
                           </td>
-                        </tr>
-                      ))
-                    ) : (
-                      product.specs?.map((spec, idx) => (
-                        <tr key={idx}>
-                          <td className="p-4 font-bold text-[#FF1E27]">Feature {idx + 1}</td>
-                          <td className="p-4 text-[var(--text-main)]">{spec}</td>
                         </tr>
                       ))
                     )}
@@ -1579,14 +1616,9 @@ export default function ProductDetailPage({
                     <span>WASHING & LONGEVITY</span>
                   </h4>
                   <ul className="space-y-2 text-xs text-[var(--text-sub)] pl-4 list-disc leading-relaxed">
-                    {product.careInstructions?.map((ins, i) => (
+                    {careList.map((ins, i) => (
                       <li key={i}>{ins}</li>
-                    )) || (
-                        <>
-                          <li>Hand wash cold with mild detergent.</li>
-                          <li>Air dry flat in shade. Do not tumble dry.</li>
-                        </>
-                      )}
+                    ))}
                   </ul>
                 </div>
               </div>

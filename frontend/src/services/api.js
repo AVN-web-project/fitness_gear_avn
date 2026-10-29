@@ -59,6 +59,12 @@ export function normalizeProduct(p) {
     (lp) => lp.slug === pSlug || lp.id === pSlug || lp.name.toLowerCase() === (p.name || '').toLowerCase()
   );
 
+  // The local catalogue hardcodes SKUs (AVN-KW-79, AVN-WB-10, AVN-AS-04-BLK-S …). Spreading it
+  // as a base meant a live product inherited one of those whenever the API had no top-level sku,
+  // so the storefront displayed a code that no longer exists in the database. SKUs and variants
+  // come from the backend only; everything else may still fall back to the local copy.
+  const { sku: _localSku, variants: _localVariants, ...localDefaults } = localMatch || {};
+
   const primaryImage = p.image || p.images?.[0]?.url || null;
   const categoryStr = typeof p.category === 'object' && p.category?.name
     ? p.category.name.toUpperCase()
@@ -88,7 +94,7 @@ export function normalizeProduct(p) {
   const priceMax = priceValues.length > 0 ? Math.max(...priceValues) : price;
 
   return {
-    ...localMatch,
+    ...localDefaults,
     ...p,
     _id: p._id || localMatch?._id,
     id: p.slug || p._id || localMatch?.id,
@@ -116,7 +122,7 @@ export function normalizeProduct(p) {
     reviewsCount: p.ratingsCount ?? p.reviewsCount ?? localMatch?.reviewsCount ?? 100,
     stockQuantity: p.totalStock ?? p.stockQuantity ?? (p.variants?.reduce((sum, v) => sum + (v.stockQuantity || 0), 0)) ?? localMatch?.stockQuantity ?? 10,
     status: (p.status || 'Active').charAt(0).toUpperCase() + (p.status || 'Active').slice(1).toLowerCase(),
-    sizes: p.sizes || (p.variants ? [...new Set(p.variants.map((v) => v.size || v.title).filter(Boolean))] : localMatch?.sizes) || ['Standard'],
+    sizes: p.sizes || (p.variants ? [...new Set(p.variants.map((v) => v.size || v.title).filter(Boolean))] : localMatch?.sizes) || [],
     // One chip per COLOUR, not one per variant. With a full size x colour matrix this list used to
     // repeat each colour once per size — four chips reading "Black, Red, Black, Red" — because
     // sizes deduped with a Set while colours did not. The hex now comes from the local catalogue
@@ -147,12 +153,18 @@ export function normalizeProduct(p) {
       price: v.price || price,
       compareAtPrice: v.compareAtPrice || compareAtPrice,
       stockQuantity: v.stockQuantity || 10,
-    })) : (localMatch?.variants || []),
+    })) : [],
+    // Specs are per-variant now, read straight off the selected variant by the PDP. This list is
+    // the legacy product-level shape, kept only so an un-migrated product still renders. It must
+    // not fall back to the local catalogue: those specs are hardcoded and describe products that
+    // no longer exist in the database.
     specs: (Array.isArray(p.specifications) && p.specifications.length > 0)
       ? p.specifications.map((s) => typeof s === 'string' ? s : `${s.key}: ${s.value}`)
-      : (localMatch?.specs || []),
+      : [],
     fullSpecs: p.fullSpecs || localMatch?.fullSpecs || {},
-    careInstructions: p.careInstructions || localMatch?.careInstructions || [],
+    // A string, always — the admin writes a multi-line block. Defaulting to [] made the field an
+    // array for some products and a string for others, which is what crashed the Usage & Care tab.
+    careInstructions: p.careInstructions || localMatch?.careInstructions || '',
     reviews: p.reviews || localMatch?.reviews || [],
   };
 }
