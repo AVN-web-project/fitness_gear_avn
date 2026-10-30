@@ -29,6 +29,18 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { fetchProductReviewsApi, submitReviewApi, markReviewHelpfulApi, fetchMyOrdersApi, resolveMediaUrl } from '../services/api';
 
+const SocialBrandIcon = ({ network }) => {
+  const paths = {
+    whatsapp: <><path d="M20 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-4.3A8.5 8.5 0 1 1 20 11.5Z" /><path d="M8 7.5c.2-.5.5-.5.8-.5h.6c.2 0 .4.1.5.4l.7 1.7c.1.2.1.4-.1.6l-.5.6c.7 1.2 1.7 2.2 3 2.8l.5-.6c.2-.2.4-.2.7-.1l1.6.7c.3.1.4.3.3.6-.2.8-.9 1.4-1.7 1.5-2.1.2-6.2-3.1-6.7-5.8-.1-.7.1-1.5.3-1.9Z" /></>,
+    instagram: <><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" /></>,
+    snapchat: <path d="M12 3.2c-2.8 0-4.8 2-4.8 5v2.1c0 .7-.5 1.2-1.2 1.5l-1.1.4c-.5.2-.5.8 0 1.1.7.5 1.5.8 2.3.9.4 1.2 1.4 2.1 2.6 2.6-.2.6-.8 1.1-1.5 1.2-.3.1-.3.5 0 .6.9.3 1.8.2 2.6-.1.4.9 1.2 1.4 2.1 1.4s1.7-.5 2.1-1.4c.8.3 1.7.4 2.6.1.3-.1.3-.5 0-.6-.7-.1-1.3-.6-1.5-1.2 1.2-.5 2.2-1.4 2.6-2.6.8-.1 1.6-.4 2.3-.9.5-.3.5-.9 0-1.1l-1.1-.4c-.7-.3-1.2-.8-1.2-1.5V8.2c0-3-2-5-4.8-5Z" />,
+    facebook: <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.6 1.7-1.6h1.7V3.8c-.3 0-1.4-.1-2.6-.1-2.6 0-4.4 1.6-4.4 4.5V10H7v3h2.9v8h3.6Z" fill="currentColor" stroke="none" />,
+    telegram: <path d="m21 4-3 16-6-4-3 2 .8-4.5L18 7l-9.2 5.5L4 11l17-7Z" />,
+    x: <path d="m4 4 6.2 7.4L4.4 20H7l4.4-6.2L16.6 20H20l-6.5-7.8L19.6 4H17l-4.1 5.7L8 4H4Z" fill="currentColor" stroke="none" />,
+  };
+  return paths[network] ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-5 w-5" aria-hidden="true">{paths[network]}</svg> : null;
+};
+
 export default function ProductDetailPage({
   product,
   allProducts = [],
@@ -86,6 +98,7 @@ export default function ProductDetailPage({
   // Wishlist & Share
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   // Pincode checker state
   const [pincode, setPincode] = useState('');
@@ -372,6 +385,55 @@ export default function ProductDetailPage({
       pool[0]
     );
   }, [product?.variants, selectedSize, selectedColor]);
+
+  const getColorVariantImage = (color) => {
+    const colorName = typeof color === 'string' ? color : color?.name;
+    const norm = (value) => String(value || '').trim().toLowerCase();
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    const images = Array.isArray(product?.images) ? product.images : [];
+
+    const colorVariants = variants.filter(
+      (variant) => norm(variant?.color) === norm(colorName)
+    );
+    const sizeVariant = colorVariants.find(
+      (variant) => norm(variant?.size) === norm(selectedSize)
+    );
+    const variant = sizeVariant || colorVariants.find((item) => item?.isActive !== false) || colorVariants[0];
+
+    if (!variant) return resolveMediaUrl(product?.image);
+
+    const variantId = String(variant.id || variant._id || '');
+    const variantSku = String(variant.sku || '').trim().toUpperCase();
+    const matchesVariant = (image) => {
+      const ids = Array.isArray(image?.variantIds)
+        ? image.variantIds.map((id) => String(id))
+        : [];
+      const skus = Array.isArray(image?.variantSkus)
+        ? image.variantSkus.map((sku) => String(sku || '').trim().toUpperCase())
+        : [];
+
+      return (ids.length === 0 && skus.length === 0)
+        || ids.includes(variantId)
+        || skus.includes(variantSku);
+    };
+    const isPrimaryForVariant = (image) => {
+      const primaryIds = Array.isArray(image?.primaryForIds)
+        ? image.primaryForIds.map((id) => String(id))
+        : [];
+      const primarySkus = Array.isArray(image?.primaryFor)
+        ? image.primaryFor.map((sku) => String(sku || '').trim().toUpperCase())
+        : [];
+
+      return primaryIds.includes(variantId) || primarySkus.includes(variantSku);
+    };
+
+    const availableImages = images.filter((image) => image?.url && matchesVariant(image));
+    const primaryImage = availableImages.find(isPrimaryForVariant)
+      || availableImages.find((image) => image.isPrimary)
+      || availableImages[0];
+
+    return resolveMediaUrl(primaryImage?.url || product?.image);
+  };
 
   // Specs live on the variant now: a 79in wrap and a 90in wrap have different dimensions. The
   // product-level list is only a fallback for products whose specs have not been migrated yet.
@@ -746,9 +808,61 @@ export default function ProductDetailPage({
 
   // Handle Share Click
   const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href);
-    setShareCopied(true);
-    setTimeout(() => setShareCopied(false), 2500);
+    setIsShareOpen(true);
+    setShareCopied(false);
+  };
+
+  const getShareDetails = () => ({
+    url: window.location.href,
+    text: `Check out ${product?.name || 'this product'} on AVN Fitness`,
+  });
+
+  const copyShareLink = async () => {
+    const { url } = getShareDetails();
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 2500);
+    } catch {
+      setShareCopied(false);
+    }
+  };
+
+  const handleSocialShare = async (network) => {
+    const { url, text } = getShareDetails();
+    const encodedUrl = encodeURIComponent(url);
+    const encodedText = encodeURIComponent(text);
+    const shareUrls = {
+      whatsapp: `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
+      facebook: `https://m.me/?link=${encodedUrl}`,
+      x: `https://twitter.com/messages/compose?text=${encodedText}%20${encodedUrl}`,
+      telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
+      email: `mailto:?subject=${encodeURIComponent(product?.name || 'AVN Fitness product')}&body=${encodedText}%20${encodedUrl}`,
+    };
+
+    if (network === 'copy') {
+      await copyShareLink();
+      return;
+    }
+
+    if (network === 'native' && navigator.share) {
+      await navigator.share({ title: product?.name || 'AVN Fitness product', text, url });
+      return;
+    }
+
+    if (network === 'instagram' || network === 'snapchat') {
+      await copyShareLink();
+      window.open(
+        network === 'instagram' ? 'https://www.instagram.com/direct/inbox/' : 'https://web.snapchat.com/',
+        '_blank',
+        'noopener,noreferrer'
+      );
+      return;
+    }
+
+    if (shareUrls[network]) {
+      window.open(shareUrls[network], '_blank', 'noopener,noreferrer,width=640,height=640');
+    }
   };
 
   // Handle Review Submission
@@ -1115,28 +1229,32 @@ export default function ProductDetailPage({
 
           {/* Color Variant Selector */}
           {product.colors && product.colors.length > 0 && (
-            <div className="space-y-2.5">
-              <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider flex items-center justify-between">
-                <span>COLOR OPTION:</span>
-                <span className="text-[#FF1E27] font-sans text-xs">{selectedColor.name}</span>
-              </label>
-              <div className="flex items-center gap-3">
+            <div>
+              <div className="flex flex-wrap items-start gap-3">
                 {product.colors.map((color) => (
                   <button
                     key={color.name}
                     onClick={() => setSelectedColor(color)}
                     aria-label={`Select color ${color.name}`}
                     aria-selected={selectedColor.name === color.name}
-                    className={`group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${selectedColor.name === color.name
+                    className={`group flex w-[100px] flex-col items-center gap-1 rounded-xl border p-1 text-xs font-bold transition-all cursor-pointer ${selectedColor.name === color.name
                       ? 'border-[#FF1E27] bg-[#FF1E27]/10 text-[var(--text-main)] shadow-md'
-                      : 'border-[var(--border-subtle)] bg-[var(--bg-main)] text-[var(--text-sub)] hover:border-gray-500'
+                      : 'border-[var(--border-subtle)] bg-transparent text-[var(--text-sub)] hover:border-gray-500'
                       }`}
                   >
-                    <span
-                      className="w-4 h-4 rounded-full border border-white/20 shrink-0 shadow-inner"
-                      style={{ backgroundColor: color.hex }}
-                    />
-                    <span>{color.name}</span>
+                    <span className="h-24 w-24 overflow-hidden rounded-lg bg-transparent">
+                      <img
+                        src={getColorVariantImage(color)}
+                        alt={color.name}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                        onError={(event) => {
+                          event.currentTarget.style.visibility = 'hidden';
+                        }}
+                      />
+                    </span>
+                    <span className="w-full whitespace-normal break-words text-center leading-4">{color.name}</span>
                   </button>
                 ))}
               </div>
@@ -1148,7 +1266,7 @@ export default function ProductDetailPage({
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider">
-                  SELECT SIZE / SPEC:
+                  SELECT SIZE :
                 </label>
                 <button
                   onClick={() => setIsSizeChartOpen(true)}
@@ -1255,6 +1373,64 @@ export default function ProductDetailPage({
                   +
                 </button>
               </div>
+
+              {isShareOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                  role="presentation"
+                  onClick={() => setIsShareOpen(false)}
+                >
+                  <div
+                    className="w-full max-w-sm rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-main)] p-5 shadow-2xl"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="share-product-title"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 id="share-product-title" className="font-heading text-sm font-extrabold uppercase tracking-wider text-[var(--text-main)]">
+                        Share Product
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => setIsShareOpen(false)}
+                        className="rounded-full p-1.5 text-[var(--text-sub)] transition-colors hover:bg-white/10 hover:text-[var(--text-main)]"
+                        aria-label="Close share options"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        ['whatsapp', 'WhatsApp', 'bg-[#25D366]'],
+                        ['instagram', 'Instagram', 'bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#FCAF45]'],
+                        ['snapchat', 'Snapchat', 'bg-[#FFFC00] text-black'],
+                        ['facebook', 'Messenger', 'bg-[#1877F2]'],
+                        ['x', 'X Chat', 'bg-black border border-white/20'],
+                        ['telegram', 'Telegram', 'bg-[#229ED9]'],
+                        ['email', 'Email', 'bg-slate-600'],
+                        ['copy', shareCopied ? 'Copied' : 'Copy link', 'bg-slate-700'],
+                        ...(navigator.share ? [['native', 'More', 'bg-[#FF1E27]']] : []),
+                      ].map(([network, label, colorClass]) => (
+                        <button
+                          key={network}
+                          type="button"
+                          onClick={() => handleSocialShare(network)}
+                          className="flex flex-col items-center gap-2 rounded-xl border border-[var(--border-subtle)] p-3 text-[10px] font-bold uppercase tracking-wide text-[var(--text-main)] transition-transform hover:-translate-y-0.5 hover:border-[#FF1E27]"
+                        >
+                          <span className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold ${colorClass}`}>
+                            {['whatsapp', 'instagram', 'snapchat', 'facebook', 'x', 'telegram'].includes(network)
+                              ? <SocialBrandIcon network={network} />
+                              : network === 'copy' ? '↗' : network === 'native' ? '•••' : null}
+                          </span>
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1328,7 +1504,7 @@ export default function ProductDetailPage({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsWishlisted(!isWishlisted)}
-                className={`flex-1 py-2.5 px-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${isWishlisted ? 'text-[#FF1E27] border-red-500/40 bg-red-500/5' : 'text-[var(--text-sub)] hover:text-white'
+                className={`flex-1 py-2.5 px-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${isWishlisted ? 'text-[#FF1E27] border-red-500/40 bg-red-500/5' : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
                   }`}
                 aria-label="Add product to wishlist"
               >
@@ -1338,7 +1514,7 @@ export default function ProductDetailPage({
 
               <button
                 onClick={handleShare}
-                className="flex-1 py-2.5 px-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] text-xs font-bold text-[var(--text-sub)] hover:text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] text-xs font-bold text-[var(--text-sub)] hover:text-[var(--text-main)] flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 aria-label="Share product details link"
               >
                 <Share2 className="w-4 h-4" />
@@ -1365,9 +1541,9 @@ export default function ProductDetailPage({
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-[#FF1E27] text-white font-bold text-xs uppercase font-heading transition-colors cursor-pointer"
+                className="shrink-0 px-4 py-2.5 rounded-xl bg-[#FF1E27] hover:bg-[#d9141c] text-white font-bold text-xs uppercase font-heading transition-colors cursor-pointer shadow-sm"
               >
-                CHECK
+                CHECK DELIVERY
               </button>
             </form>
 
@@ -1900,10 +2076,10 @@ export default function ProductDetailPage({
               : 'bg-[#0D0E12] border-zinc-800 shadow-[0_20px_70px_rgba(0,0,0,0.85)]'
               }`}
             style={{
-              width: 'min(92vw, 720px)',
-              height: 'min(85vh, 720px)',
-              maxWidth: '720px',
-              maxHeight: '720px',
+                width: 'min(94vw, 800px)',
+                height: 'min(90vh, 800px)',
+                maxWidth: '800px',
+                maxHeight: '800px',
               flexShrink: 0,
               transform: 'none',
             }}
@@ -1945,7 +2121,7 @@ export default function ProductDetailPage({
                   transition: isDraggingLightbox ? 'none' : 'transform 0.12s cubic-bezier(0.2, 0, 0, 1)',
                   cursor: lightboxZoom > 1 ? (isDraggingLightbox ? 'grabbing' : 'grab') : 'zoom-in',
                 }}
-                className="w-full h-full flex items-center justify-center p-8 sm:p-12 pointer-events-none"
+                className="w-full h-full flex items-center justify-center p-3 sm:p-5 pointer-events-none"
               >
                 <img
                   src={
@@ -1957,7 +2133,7 @@ export default function ProductDetailPage({
                   }
                   alt={currentGalleryItem?.label || product.name}
                   draggable={false}
-                  className="max-w-full max-h-full object-contain select-none pointer-events-none drop-shadow-sm"
+                  className="relative -top-5 sm:-top-6 max-w-full max-h-full object-contain select-none pointer-events-none"
                 />
               </div>
             </div>
@@ -1982,14 +2158,18 @@ export default function ProductDetailPage({
                         setActiveGalleryIndex(idx);
                         handleResetZoom();
                       }}
+                      onMouseEnter={() => {
+                        setActiveGalleryIndex(idx);
+                        handleResetZoom();
+                      }}
                       role="tab"
                       aria-selected={isActive}
                       title={item.label}
                       className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none focus:outline-none ${isActive
-                        ? 'border-[#FF1E27] bg-[#FF1E27]/15 shadow-[0_0_12px_rgba(255,30,39,0.35)] ring-1 ring-[#FF1E27]'
+                        ? 'border-[#FF1E27] bg-transparent'
                         : isOppositeLight
-                          ? 'border-zinc-200/90 bg-white/80 hover:bg-white hover:border-zinc-300 text-zinc-700 shadow-sm'
-                          : 'border-zinc-700/80 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-300 shadow-sm'
+                          ? 'border-zinc-300/90 bg-transparent hover:border-zinc-400 text-zinc-700'
+                          : 'border-zinc-700/80 bg-transparent hover:border-zinc-500 text-zinc-300'
                         }`}
                     >
                       {/* Mini Thumbnail */}
@@ -2000,11 +2180,6 @@ export default function ProductDetailPage({
                           className="w-full h-full object-contain pointer-events-none"
                         />
                       </div>
-                      {/* Angle Tab Label */}
-                      <span className={`text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wide whitespace-nowrap ${isActive ? 'text-[#FF1E27]' : isOppositeLight ? 'text-zinc-800' : 'text-zinc-200'
-                        }`}>
-                        {item.label}
-                      </span>
                     </button>
                   );
                 })}
