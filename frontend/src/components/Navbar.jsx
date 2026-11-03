@@ -109,10 +109,10 @@ export default function Navbar({
 
   return (
     <>
-      {/* Mobile Light Theme: Fixed, Static 90% Opaque with no border line; Dark Theme: Exact original sticky scroll */}
+      {/* Keep the announcement strip in normal flow on mobile for both themes. */}
       <header className={`z-40 w-full transition-all duration-300 isolate ${
         isLightTheme
-          ? 'fixed lg:sticky top-0 bg-[var(--bg-main)]/90 backdrop-blur-md border-b-0 shadow-none ' +
+          ? 'sticky top-0 bg-[var(--bg-main)]/90 backdrop-blur-md border-b-0 shadow-none ' +
             (activeView === 'home' && !isScrolled
               ? 'lg:bg-transparent lg:border-transparent lg:backdrop-blur-none lg:shadow-none'
               : 'lg:bg-[var(--bg-navbar)] lg:backdrop-blur-md lg:border-b lg:border-[var(--border-subtle)] lg:shadow-sm')

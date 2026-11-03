@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import AnnouncementStrip from './components/AnnouncementStrip';
 import HomePage from './pages/HomePage';
 import Footer from './components/Footer';
 import CartPage from './pages/CartPage';
@@ -115,6 +116,7 @@ function AppContent() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('avn-theme') || 'dark';
   });
+  const [announcementVisible, setAnnouncementVisible] = useState(true);
 
   const cart = useCart();
 
@@ -663,7 +665,15 @@ function AppContent() {
 
       
 
-      <main className="flex-1 space-y-1 lg:space-y-4">
+      <main className="relative flex-1 space-y-1 lg:space-y-4">
+        {activeView === 'home' && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
+            <div className="pointer-events-auto">
+              <AnnouncementStrip onVisibilityChange={setAnnouncementVisible} />
+            </div>
+          </div>
+        )}
+
         {activeView === 'checkout' ? (
           <CheckoutPage
             checkoutData={checkoutData}
@@ -982,6 +992,7 @@ function AppContent() {
             onAddToCart={cart.addToCart}
             onSelectProduct={handleSelectProductForPdp}
             isMobileView={isMobileView}
+            announcementVisible={announcementVisible}
           />
         )}
       </main>

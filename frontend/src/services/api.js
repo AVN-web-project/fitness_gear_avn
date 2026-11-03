@@ -82,13 +82,30 @@ export function normalizeProduct(p) {
     pricePool[0] || null
   );
 
-  const price = priceSource?.price ?? p.price ?? localMatch?.price ?? 0;
+  // Occasion discount. Layered ON TOP of the base discount: the base is the gap between
+  // compareAtPrice and price and is not touched here. The percentage is applied to every price
+  // this client shows so the card, the PDP and the cart all agree — the cart and checkout apply
+  // the same percentage server-side.
+  //
+  // The floor mirrors the server (MIN_PRODUCT_PRICE): the backend already clamps the percentage
+  // against the product's cheapest variant, so this never binds, but a stale cached product
+  // should still never render below ₹200.
+  const festiveDiscountPercent = Math.max(0, Math.min(90, Number(p.festiveDiscountPercent) || 0));
+  const MIN_PRODUCT_PRICE = 100;
+  const applyFestive = (value) => {
+    const base = Number(value) || 0;
+    if (festiveDiscountPercent <= 0) return Math.round(base);
+    return Math.max(MIN_PRODUCT_PRICE, Math.round(base * (1 - festiveDiscountPercent / 100)));
+  };
+
+  const rawPrice = priceSource?.price ?? p.price ?? localMatch?.price ?? 0;
+  const price = applyFestive(rawPrice);
   const compareAtPrice = priceSource?.compareAtPrice ?? p.compareAtPrice ?? localMatch?.compareAtPrice ?? 0;
 
   // A product can span several prices across its variants, so the catalogue card shows the range
   // it covers rather than implying one price for every combination.
   const priceValues = pricePool
-    .map((v) => Number(v?.price))
+    .map((v) => applyFestive(v?.price))
     .filter((n) => Number.isFinite(n) && n >= 0);
   const priceMin = priceValues.length > 0 ? Math.min(...priceValues) : price;
   const priceMax = priceValues.length > 0 ? Math.max(...priceValues) : price;
@@ -109,6 +126,12 @@ export function normalizeProduct(p) {
     compareAtPrice,
     priceMin,
     priceMax,
+    festiveDiscountPercent,
+    // Base discount only, for the admin/debug views that need the two separated.
+    baseDiscountPercent:
+      compareAtPrice > rawPrice && compareAtPrice > 0
+        ? Math.round(((compareAtPrice - rawPrice) / compareAtPrice) * 100)
+        : 0,
     image: resolveMediaUrl(primaryImage),
     webpImage: resolveMediaUrl(p.webpImage || localMatch?.webpImage || primaryImage),
     imageLight: resolveMediaUrl(p.imageLight || localMatch?.imageLight || primaryImage),
@@ -150,7 +173,9 @@ export function normalizeProduct(p) {
       ...v,
       id: v._id || v.sku,
       name: v.title || v.name || `${p.name} - ${v.size || v.color || 'Standard'}`,
-      price: v.price || price,
+      // Same reduction as the product-level price; `rawPrice` as the fallback so a variant with
+      // no price of its own is not discounted twice.
+      price: applyFestive(v.price || rawPrice),
       compareAtPrice: v.compareAtPrice || compareAtPrice,
       stockQuantity: v.stockQuantity || 10,
     })) : [],

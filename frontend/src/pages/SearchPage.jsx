@@ -619,8 +619,22 @@ export default function SearchPage({
                         </div>
 
                         <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-[var(--border-subtle)] gap-4">
-                          <div className="text-left sm:text-right">
-                            <div className="text-lg font-black font-heading text-[#FF1E27]">{product.price}</div>
+                          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2">
+                            {/* Price group — the compare-at price was missing from this layout
+                                entirely, so a discounted product looked like it had no original price. */}
+                            <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                              <span className="text-lg font-black font-heading text-[#FF1E27]">₹{product.price}</span>
+                              {product.compareAtPrice && (
+                                <span className="text-lg text-[var(--text-sub)] line-through font-medium">₹{product.compareAtPrice}</span>
+                              )}
+                            </div>
+                            {/* Sale pill — the list layout had no discount line at all, so the occasion
+                                discount was invisible here. */}
+                            {product.festiveDiscountPercent > 0 && (
+                              <span className="shrink-0 rounded-full border border-[var(--text-main)]/40 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--text-main)] font-heading">
+                                Sale
+                              </span>
+                            )}
                           </div>
 
 
@@ -717,11 +731,23 @@ export default function SearchPage({
                             <span className="text-[10px] text-[var(--text-sub)] font-medium">({product.reviewsCount})</span>
                           </div>
 
-                          {/* Price Display */}
-                          <div className="flex items-baseline gap-2 pt-1">
-                            <span className="text-base font-black font-heading text-[#FF1E27]">₹{product.price}</span>
-                            {product.compareAtPrice && (
-                              <span className="text-xs text-[var(--text-sub)] line-through font-medium">₹{product.compareAtPrice}</span>
+                          {/* Price Display — prices on the left, the Sale pill pinned to the right
+                              edge so it lines up across every card in the row. */}
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                              <span className="text-base font-black font-heading text-[#FF1E27]">₹{product.price}</span>
+                              {product.compareAtPrice && (
+                                <span className="text-base text-[var(--text-sub)] line-through font-medium">₹{product.compareAtPrice}</span>
+                              )}
+                            </div>
+                            {/* Sale pill — only while an occasion discount runs on this product.
+                                Monochrome outline: border and text both follow --text-main, so it reads
+                                white on the dark card and near-black on the light one with no theme
+                                branching, and it doesn't compete with the red price beside it. */}
+                            {product.festiveDiscountPercent > 0 && (
+                              <span className="shrink-0 rounded-full border border-[var(--text-main)]/40 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--text-main)] font-heading">
+                                Sale
+                              </span>
                             )}
                           </div>
                         </div>

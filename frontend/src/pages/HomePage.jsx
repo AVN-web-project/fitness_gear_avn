@@ -1,6 +1,5 @@
 
 import React from 'react';
-import AnnouncementStrip from '../components/AnnouncementStrip';
 import Hero from '../components/Hero';
 import FeatureBar from '../components/FeatureBar';
 import Bestsellers from '../components/Bestsellers';
@@ -14,17 +13,17 @@ export default function HomePage({
   onNavigateWhyAvn,
   onAddToCart,
   onSelectProduct,
-  isMobileView
+  isMobileView,
+  announcementVisible
 }) {
-return (
-  <>
-      <AnnouncementStrip />
-
+  return (
+    <div>
       <Hero
         onExploreClick={onExploreClick}
         onNavigateWhyAvn={onNavigateWhyAvn}
         theme={theme}
         isMobileView={isMobileView}
+        announcementVisible={announcementVisible}
       />
 
       <FeatureBar isMobileView={isMobileView} />
@@ -43,6 +42,6 @@ return (
         onNavigateWhyAvn={onNavigateWhyAvn}
         isMobileView={isMobileView}
       />
-    </>
+    </div>
   );
 }
