@@ -1,4 +1,6 @@
+
 import React from 'react';
+import AnnouncementStrip from '../components/AnnouncementStrip';
 import Hero from '../components/Hero';
 import FeatureBar from '../components/FeatureBar';
 import Bestsellers from '../components/Bestsellers';
@@ -14,15 +16,19 @@ export default function HomePage({
   onSelectProduct,
   isMobileView
 }) {
-  return (
-    <>
+return (
+  <>
+      <AnnouncementStrip />
+
       <Hero
         onExploreClick={onExploreClick}
         onNavigateWhyAvn={onNavigateWhyAvn}
         theme={theme}
         isMobileView={isMobileView}
       />
+
       <FeatureBar isMobileView={isMobileView} />
+
       <Bestsellers
         products={products}
         theme={theme}
@@ -32,7 +38,11 @@ export default function HomePage({
         onNavigateSearch={onExploreClick}
         isMobileView={isMobileView}
       />
-      <WhyChoose onNavigateWhyAvn={onNavigateWhyAvn} isMobileView={isMobileView} />
+
+      <WhyChoose
+        onNavigateWhyAvn={onNavigateWhyAvn}
+        isMobileView={isMobileView}
+      />
     </>
   );
 }

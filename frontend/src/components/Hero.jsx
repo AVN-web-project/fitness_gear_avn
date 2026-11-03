@@ -93,7 +93,7 @@ export default function Hero({ onExploreClick, onNavigateWhyAvn, theme }) {
   const scrollRatio = Math.min(1, Math.max(0, scrollY / 300));
 
   return (
-    <section id="home" className={`relative min-h-[88dvh] lg:min-h-screen ${isLight ? 'pt-[80px] sm:pt-24 lg:-mt-20 lg:pt-24 xl:pt-28' : '-mt-20 pt-20 sm:pt-24 lg:pt-24 xl:pt-28'} pb-6 sm:pb-8 lg:pb-16 flex items-start lg:items-center overflow-hidden bg-[var(--bg-main)]`}>
+    <section id="home" className={`relative min-h-[88dvh] lg:min-h-screen ${isLight ? 'pt-[80px] sm:pt-24 lg:-mt-20 lg:pt-24 xl:pt-28' : '-mt-20 pt-20 sm:pt-24 lg:pt-24 xl:pt-28'} pb-6 sm:pb-8 lg:pb-16 flex items-start lg:items-start overflow-hidden bg-[var(--bg-main)]`}>
       {/* 1. Background Layer */}
       {isLight ? (
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-[var(--bg-main)]">

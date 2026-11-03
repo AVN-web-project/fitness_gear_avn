@@ -328,25 +328,55 @@ export default function ProductDetailPage({
   }, [targetProdId, user?._id]);
 
   // Stock & Availability Evaluation
-  const maxStock = product?.stockQuantity || product?.stockCount || 10;
+  // Product-level availability only. Variant stock is handled by isComboUnavailable below, which
+  // knows which variant is selected — this flag cannot, and `|| 10` used to hide a genuine 0.
+  const maxStock = Number(product?.stockQuantity ?? product?.stockCount ?? 0);
   const isProductActive = product?.status ? product.status === 'Active' : product?.inStock !== false;
   const isPurchasingDisabled = !isProductActive || maxStock <= 0;
 
   // Whether the exact size/colour combination the customer picked is purchasable. `selectedVariant`
   // cannot answer this: it deliberately falls back to another active variant, so an unavailable
   // combination would inherit a sibling's stock and look buyable.
+  // The exact variant for the chosen size and colour, or null when that combination does not
+  // exist. Single source of truth for "can this be bought": the button state, the guard, and the
+  // SKU handed to the cart all read this.
+  //
+  // It used to be three separate rules — a strict comparison in isComboUnavailable, a
+  // prefix-tolerant one in selectedVariant, and a third inside CartContext. They could disagree,
+  // so an impossible pair could keep an enabled button while the cart resolved a different
+  // variant, and the page could show one price while the cart held another.
+  const exactVariant = useMemo(() => {
+    const all = Array.isArray(product?.variants) ? product.variants : [];
+    if (all.length === 0) return null;
+
+    const norm = (x) => String(x || '').trim().toLowerCase();
+    const colourName = typeof selectedColor === 'string' ? selectedColor : selectedColor?.name;
+
+    const active = all.filter((v) => v && v.isActive !== false);
+    const sizeMatches = (v) =>
+      !selectedSize || norm(v.size) === norm(selectedSize) || norm(v.title) === norm(selectedSize);
+
+    // Pass 1: the exact pair. The variant must carry a colour, otherwise a colour-less sibling
+    // would win over the colour actually picked.
+    const exact = active.filter(
+      (v) => sizeMatches(v) && colourName && v.color && norm(v.color) === norm(colourName)
+    );
+    // Pass 2: variants with no colour axis at all, which apply to every colour.
+    const colourless = active.filter((v) => sizeMatches(v) && !v.color);
+
+    // Where duplicates exist (same size and colour on two rows), prefer the one with stock.
+    const pick = (list) => list.find((v) => (Number(v.stockQuantity) || 0) > 0) || list[0] || null;
+
+    return pick(exact) || pick(colourless) || null;
+  }, [product?.variants, selectedSize, selectedColor]);
+
+  // Unavailable when there is no such combination, or the one that exists has no stock.
   const isComboUnavailable = useMemo(() => {
     const all = Array.isArray(product?.variants) ? product.variants : [];
     if (all.length === 0) return false;
-    const colourName = typeof selectedColor === 'string' ? selectedColor : selectedColor?.name;
-    const combo = all.filter(
-      (v) =>
-        (!selectedSize || (v.size || v.title) === selectedSize) &&
-        (!colourName || !v.color || v.color === colourName)
-    );
-    if (combo.length === 0) return true;
-    return !combo.some((v) => v.isActive !== false && (Number(v.stockQuantity) || 0) > 0);
-  }, [product?.variants, selectedSize, selectedColor]);
+    if (!exactVariant) return true;
+    return (Number(exactVariant.stockQuantity) || 0) <= 0;
+  }, [product?.variants, exactVariant]);
 
   const isPurchaseBlocked = isPurchasingDisabled || isComboUnavailable;
 
@@ -356,6 +386,11 @@ export default function ProductDetailPage({
   const selectedVariant = useMemo(() => {
     const all = Array.isArray(product?.variants) ? product.variants : [];
     if (all.length === 0) return null;
+
+    // When the selection resolves exactly, that is the variant to display — the same one the
+    // guard allows and the cart will receive. The fallbacks below exist only so the page never
+    // renders a null price for a selection that doesn't correspond to anything.
+    if (exactVariant) return exactVariant;
 
     // Prefer an in-stock/active variant, but never return null while any variant exists.
     const active = all.filter((v) => v && v.isActive !== false);
@@ -384,7 +419,7 @@ export default function ProductDetailPage({
       pool.find(colourMatches) ||
       pool[0]
     );
-  }, [product?.variants, selectedSize, selectedColor]);
+  }, [product?.variants, selectedSize, selectedColor, exactVariant]);
 
   const getColorVariantImage = (color) => {
     const colorName = typeof color === 'string' ? color : color?.name;
@@ -753,6 +788,9 @@ export default function ProductDetailPage({
     const qtyToAdd = inCartQty > 0 ? 1 : Math.max(1, Number(quantity) || 1);
     onAddToCart({
       ...product,
+      // Hand the resolved SKU over explicitly. Without it the cart re-resolves the variant with
+      // its own rules and can land on a different one.
+      variantSku: exactVariant?.sku,
       selectedSize,
       selectedColor: typeof selectedColor === 'string' ? selectedColor : selectedColor?.name,
       selectedPack,
@@ -766,6 +804,7 @@ export default function ProductDetailPage({
 
     onAddToCart({
       ...product,
+      variantSku: exactVariant?.sku,
       selectedSize,
       selectedColor: selectedColor.name,
       selectedPack,
@@ -1213,6 +1252,14 @@ export default function ProductDetailPage({
                   {discountPercent}%
                 </span>
               )}
+              {selectedVariant?.showDiscountNote && selectedVariant?.discountNote?.trim() && (
+                <span
+                  className="inline-flex max-w-full items-center rounded-[50%] bg-amber-100 px-4 py-2 text-center text-[11px] font-bold leading-tight text-amber-900 dark:bg-amber-300/15 dark:text-amber-200"
+                  title={selectedVariant.discountNote}
+                >
+                  {selectedVariant.discountNote}
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-[var(--text-sub)] font-medium">
               Inclusive of all taxes & GST invoice available
@@ -1440,9 +1487,21 @@ export default function ProductDetailPage({
 
 
             {isPurchaseBlocked ? (
-              <div className="w-full py-4 px-6 rounded-xl border border-gray-700 bg-gray-800/40 text-center">
-                <span className="text-xs font-bold font-heading uppercase tracking-wider text-gray-400">
+              <div className="w-full py-4 px-6 rounded-xl border border-gray-700 bg-gray-800/40 text-center space-y-1">
+                <span className="text-xs font-bold font-heading uppercase tracking-wider text-gray-400 block">
                   Item Unavailable
+                </span>
+                {/* Distinguish the two reasons. Without this the customer cannot tell an
+                    impossible size/colour pair from a product that is simply out of stock. */}
+                <span className="text-[11px] text-gray-500 block">
+                  {/* Three distinct reasons, in order of specificity. Reading these off
+                      isPurchasingDisabled was wrong: it only knows product-level stock, so a
+                      sold-out variant fell through to the "try another" wording. */}
+                  {!isProductActive
+                    ? 'This product is currently unavailable.'
+                    : !exactVariant
+                      ? 'This size and colour combination is not available — try another.'
+                      : 'This variant is currently out of stock.'}
                 </span>
               </div>
             ) : (
@@ -1450,15 +1509,16 @@ export default function ProductDetailPage({
                 {/* Add to Cart */}
                 <button
                   onClick={handleAddToCart}
-                  disabled={isPurchasingDisabled}
-                  className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all ${isPurchasingDisabled
+                  disabled={isPurchaseBlocked}
+                  className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all ${isPurchaseBlocked
                     ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
                     : 'btn-cart-inward-glow cursor-pointer'
                     }`}
                 >
-                  {isPurchasingDisabled ? (
-                    <span>UNAVAILABLE</span>
-                  ) : inCartQty > 0 ? (
+                  {/* No "UNAVAILABLE" branch here: this button only renders when
+                      isPurchaseBlocked is false, and that flag already includes
+                      isPurchasingDisabled, so the label could never be reached. */}
+                  {inCartQty > 0 ? (
                     <>
                       <ShoppingCart className="w-5 h-5" />
                       <span>Added {inCartQty} {inCartQty === 1 ? 'item' : 'items'}</span>
@@ -1474,8 +1534,8 @@ export default function ProductDetailPage({
                 {/* Buy Now */}
                 <button
                   onClick={handleBuyNow}
-                  disabled={isPurchasingDisabled}
-                  className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-colors ${isPurchasingDisabled
+                  disabled={isPurchaseBlocked}
+                  className={`flex-1 py-4 px-6 rounded-xl font-bold font-heading text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-colors ${isPurchaseBlocked
                     ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
                     : 'bg-white hover:bg-gray-100 text-black cursor-pointer'
                     }`}
