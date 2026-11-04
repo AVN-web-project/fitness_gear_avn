@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import AnnouncementStrip from './components/AnnouncementStrip';
 import HomePage from './pages/HomePage';
 import Footer from './components/Footer';
 import CartPage from './pages/CartPage';
@@ -23,7 +22,7 @@ import AboutUsPage from './pages/AboutUsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PRODUCTS as LOCAL_PRODUCTS } from './data/products';
 import { CartProvider, useCart } from './context/CartContext';
-import { fetchProducts, fetchCategoriesApi } from './services/api';
+import { fetchProductsWithStatus, fetchCategoriesApi } from './services/api';
 
 const ROUTE_FOR_VIEW = {
   home: '/',
@@ -116,7 +115,6 @@ function AppContent() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('avn-theme') || 'dark';
   });
-  const [announcementVisible, setAnnouncementVisible] = useState(true);
 
   const cart = useCart();
 
@@ -354,22 +352,18 @@ function AppContent() {
   useEffect(() => {
     let isMounted = true;
     const loadLiveCatalog = async () => {
-      try {
-        const [liveCatalog, liveCategories] = await Promise.all([
-          fetchProducts(),
-          fetchCategoriesApi(),
-        ]);
-        if (isMounted) {
-          if (Array.isArray(liveCatalog) && liveCatalog.length > 0) {
-            setProducts(liveCatalog);
-            setIsBackendConnected(true);
-          }
-          if (Array.isArray(liveCategories) && liveCategories.length > 0) {
-            setCategories(liveCategories);
-          }
-        }
-      } catch (err) {
-        console.warn('Backend catalog fetch failed, using offline fallback catalog:', err);
+      const [catalogResult, liveCategories] = await Promise.all([
+        fetchProductsWithStatus(),
+        fetchCategoriesApi(),
+      ]);
+
+      if (!isMounted) return;
+
+      setProducts(catalogResult.products);
+      setIsBackendConnected(catalogResult.isBackendConnected);
+
+      if (Array.isArray(liveCategories)) {
+        setCategories(liveCategories);
       }
     };
     loadLiveCatalog();
@@ -379,6 +373,7 @@ function AppContent() {
   }, []);
 
   const [currentPdpProduct, setCurrentPdpProduct] = useState(null);
+  const [initialVariant, setInitialVariant] = useState(null);
   const [checkoutData, setCheckoutData] = useState(() => {
     if (route.view !== 'checkout') return null;
     const items = cart.cartItems || [];
@@ -506,8 +501,9 @@ function AppContent() {
     }
   }, [activeView, isInitializing, location, navigate, user]);
 
-  const handleSelectProductForPdp = (product) => {
+  const handleSelectProductForPdp = (product, variant = null) => {
     setCurrentPdpProduct(product);
+    setInitialVariant(variant);
     setActiveView('pdp', { productSlug: product.slug || product.id || product._id });
     setQuickViewProduct(null);
     setIsSearchOpen(false);
@@ -623,8 +619,8 @@ function AppContent() {
     : 'fixed bottom-6 right-6 z-50 bg-[var(--bg-card-solid)] border border-[#FF1E27]/50 text-white px-5 py-3 rounded-xl shadow-lg font-bold text-xs font-heading flex items-center justify-between gap-2';
 
   return (
-    <div className={mainContainerClasses}>
-      <Navbar
+        <div className={mainContainerClasses}>
+                <Navbar
         categories={categories}
         cartCount={cart.totalCartCount}
         onOpenCart={handleNavigateCart}
@@ -665,15 +661,7 @@ function AppContent() {
 
       
 
-      <main className="relative flex-1 space-y-1 lg:space-y-4">
-        {activeView === 'home' && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-30">
-            <div className="pointer-events-auto">
-              <AnnouncementStrip onVisibilityChange={setAnnouncementVisible} />
-            </div>
-          </div>
-        )}
-
+      <main className="flex-1 space-y-1 pt-[var(--avn-mobile-navbar-height,80px)] lg:space-y-4 lg:pt-0">
         {activeView === 'checkout' ? (
           <CheckoutPage
             checkoutData={checkoutData}
@@ -955,20 +943,21 @@ function AppContent() {
             isMobileView={isMobileView}
           />
         ) : activeView === 'pdp' && activePdpProduct ? (
-          <ProductDetailPage
-            product={activePdpProduct}
-            allProducts={products}
-            onBack={handleNavigateHome}
-            onAddToCart={cart.addToCart}
-            onSelectProduct={handleSelectProductForPdp}
-            onOpenCart={handleNavigateCart}
-            onNavigateCart={handleNavigateCart}
-            cartCount={cart.totalCartCount}
-            currentUser={user}
-            onNavigateAuth={handleNavigateAuth}
-            theme={theme}
-            isMobileView={isMobileView}
-          />
+        <ProductDetailPage
+          product={activePdpProduct}
+          allProducts={products}
+          initialVariant={initialVariant}
+          onBack={handleNavigateHome}
+          onAddToCart={cart.addToCart}
+          onSelectProduct={handleSelectProductForPdp}
+          onOpenCart={handleNavigateCart}
+          onNavigateCart={handleNavigateCart}
+          cartCount={cart.totalCartCount}
+          currentUser={user}
+          onNavigateAuth={handleNavigateAuth}
+          theme={theme}
+          isMobileView={isMobileView}
+        />
         ) : (
           activeView === 'not-found' || (activeView === 'pdp' && !activePdpProduct) ? (
             <section className="min-h-[50vh] flex flex-col items-center justify-center gap-4 px-6 text-center">
@@ -992,7 +981,6 @@ function AppContent() {
             onAddToCart={cart.addToCart}
             onSelectProduct={handleSelectProductForPdp}
             isMobileView={isMobileView}
-            announcementVisible={announcementVisible}
           />
         )}
       </main>

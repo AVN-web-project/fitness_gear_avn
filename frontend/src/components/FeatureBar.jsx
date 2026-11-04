@@ -54,7 +54,7 @@ export default function FeatureBar() {
   ];
 
   return (
-    <section className="-mt-6 sm:-mt-8 lg:-mt-10 relative z-20 py-4 px-6 sm:px-10 lg:px-16 xl:px-20 max-w-[1536px] mx-auto">
+    <section className="mt-[3px] sm:-mt-8 lg:-mt-10 relative z-20 py-2 sm:py-4 px-6 sm:px-10 lg:px-16 xl:px-20 max-w-[1536px] mx-auto">
       {/* Mobile View (< 640px): Individual Feature Cards with Individual Red Corner Borders */}
       <div className="grid grid-cols-1 gap-4 sm:hidden">
         {features.map((feature, index) => (

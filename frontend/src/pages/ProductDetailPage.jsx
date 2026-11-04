@@ -44,6 +44,7 @@ const SocialBrandIcon = ({ network }) => {
 export default function ProductDetailPage({
   product,
   allProducts = [],
+  initialVariant = null,
   onAddToCart,
   onSelectProduct,
   onOpenCart,
@@ -62,6 +63,18 @@ export default function ProductDetailPage({
   const [selectedColor, setSelectedColor] = useState(
     product?.colors ? product.colors[0] : { name: 'Crimson Red', hex: '#FF1E27' }
   );
+
+  const requestedVariant = useMemo(() => {
+  if (!initialVariant?.sku || !Array.isArray(product?.variants)) {
+    return null;
+  }
+
+  return product.variants.find(
+    (variant) =>
+      String(variant?.sku || '').trim().toLowerCase() ===
+      String(initialVariant.sku).trim().toLowerCase()
+  ) || null;
+}, [product?.id, product?.variants, initialVariant?.sku]);
 
   // The catalogue uses four size conventions and they mean different things: a length
   // describes the product, a fit letter describes the wearer, a range covers a span of body
@@ -212,8 +225,12 @@ export default function ProductDetailPage({
       // unavailable variant (Stealth Black / Medium) regardless of what was selected before.
       const allVariants = Array.isArray(product.variants) ? product.variants : [];
       const seedVariant =
-        allVariants.find((v) => v.isActive !== false && (Number(v.stockQuantity) || 0) > 0) ||
-        allVariants[0];
+        requestedVariant ||
+        product?.variants?.find(
+          (v) => v && v.isActive !== false && (Number(v.stockQuantity) || 0) > 0
+        ) ||
+        product?.variants?.[0] ||
+        null;
 
       const seedSize =
         (product.sizes || []).find((sz) => sz === seedVariant?.size) ||
@@ -1309,7 +1326,7 @@ export default function ProductDetailPage({
           )}
 
           {/* Size Variant Selector */}
-          {product.sizes && product.sizes.length > 0 && (
+          {((product.sizes && product.sizes.length > 0) || product.sizeGuide?.rows?.length > 0) && (
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-extrabold font-heading text-[var(--text-main)] uppercase tracking-wider">
@@ -2114,7 +2131,7 @@ export default function ProductDetailPage({
       <SizeChartModal
         isOpen={isSizeChartOpen}
         onClose={() => setIsSizeChartOpen(false)}
-        category={product.category}
+        product={product}
       />
 
       {/* Interactive Lightbox Pop-up with Opposite Theme Background */}

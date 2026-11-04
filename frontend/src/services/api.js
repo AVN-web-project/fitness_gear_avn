@@ -5,6 +5,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 // Backend origin (API base without the /api/v1 suffix) — the host that serves /uploads.
 const MEDIA_BASE_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 
+function shouldUseLocalFallback(error) {
+  return !error.status || error.status >= 500;
+}
+
 /**
  * Resolve a backend image path to a fully-qualified URL served by the backend.
  *  - absolute (http/https/data/blob)       -> returned unchanged
@@ -51,24 +55,11 @@ export function getAuthHeaders() {
  */
 export function normalizeProduct(p) {
   if (!p) return null;
-  const pSlug = p.slug || p.id || '';
-  // Local data is only consulted for products that come from the local catalogue itself.
-  // For anything the API returns, inheriting hardcoded fields (images, specs, ratings) is what
-  // made live products render as though the storefront had fallen back to local data.
-  const localMatch = LOCAL_PRODUCTS.find(
-    (lp) => lp.slug === pSlug || lp.id === pSlug || lp.name.toLowerCase() === (p.name || '').toLowerCase()
-  );
-
-  // The local catalogue hardcodes SKUs (AVN-KW-79, AVN-WB-10, AVN-AS-04-BLK-S …). Spreading it
-  // as a base meant a live product inherited one of those whenever the API had no top-level sku,
-  // so the storefront displayed a code that no longer exists in the database. SKUs and variants
-  // come from the backend only; everything else may still fall back to the local copy.
-  const { sku: _localSku, variants: _localVariants, ...localDefaults } = localMatch || {};
 
   const primaryImage = p.image || p.images?.[0]?.url || null;
   const categoryStr = typeof p.category === 'object' && p.category?.name
     ? p.category.name.toUpperCase()
-    : (typeof p.category === 'string' ? p.category.toUpperCase() : (localMatch?.category || 'EQUIPMENT'));
+    : (typeof p.category === 'string' ? p.category.toUpperCase() : '');
 
   // The catalogue is product-wise: one card per product, so its price has to represent the whole
   // product. It takes the cheapest variant a customer can actually buy — using variants[0] could
@@ -98,9 +89,9 @@ export function normalizeProduct(p) {
     return Math.max(MIN_PRODUCT_PRICE, Math.round(base * (1 - festiveDiscountPercent / 100)));
   };
 
-  const rawPrice = priceSource?.price ?? p.price ?? localMatch?.price ?? 0;
+  const rawPrice = priceSource?.price ?? p.price ?? 0;
   const price = applyFestive(rawPrice);
-  const compareAtPrice = priceSource?.compareAtPrice ?? p.compareAtPrice ?? localMatch?.compareAtPrice ?? 0;
+  const compareAtPrice = priceSource?.compareAtPrice ?? p.compareAtPrice ?? 0;
 
   // A product can span several prices across its variants, so the catalogue card shows the range
   // it covers rather than implying one price for every combination.
@@ -111,17 +102,16 @@ export function normalizeProduct(p) {
   const priceMax = priceValues.length > 0 ? Math.max(...priceValues) : price;
 
   return {
-    ...localDefaults,
     ...p,
-    _id: p._id || localMatch?._id,
-    id: p.slug || p._id || localMatch?.id,
-    productId: p._id || p.slug || localMatch?.id,
-    slug: p.slug || localMatch?.slug,
-    name: p.name || localMatch?.name,
+    _id: p._id,
+    id: p.slug || p._id,
+    productId: p._id || p.slug,
+    slug: p.slug,
+    name: p.name || '',
     category: categoryStr,
-    tagline: p.tagline || localMatch?.tagline || '',
-    badge: p.badge || localMatch?.badge || '',
-    description: p.description || localMatch?.description || '',
+    tagline: p.tagline || '',
+    badge: p.badge || '',
+    description: p.description || '',
     price,
     compareAtPrice,
     priceMin,
@@ -133,19 +123,25 @@ export function normalizeProduct(p) {
         ? Math.round(((compareAtPrice - rawPrice) / compareAtPrice) * 100)
         : 0,
     image: resolveMediaUrl(primaryImage),
-    webpImage: resolveMediaUrl(p.webpImage || localMatch?.webpImage || primaryImage),
-    imageLight: resolveMediaUrl(p.imageLight || localMatch?.imageLight || primaryImage),
+    webpImage: resolveMediaUrl(p.webpImage || primaryImage),
+    imageLight: resolveMediaUrl(p.imageLight || primaryImage),
     images: (p.images && p.images.length > 0
       ? p.images
-      : (localMatch?.images || [{ url: primaryImage, altText: p.name, isPrimary: true }])
+      : (primaryImage ? [{ url: primaryImage, altText: p.name, isPrimary: true }] : [])
     ).map((img) => (typeof img === 'string'
       ? { url: resolveMediaUrl(img), altText: p.name, isPrimary: false }
       : { ...img, url: resolveMediaUrl(img?.url) })),
-    rating: p.ratingsAverage ?? p.rating ?? localMatch?.rating ?? 4.8,
-    reviewsCount: p.ratingsCount ?? p.reviewsCount ?? localMatch?.reviewsCount ?? 100,
-    stockQuantity: p.totalStock ?? p.stockQuantity ?? (p.variants?.reduce((sum, v) => sum + (v.stockQuantity || 0), 0)) ?? localMatch?.stockQuantity ?? 10,
+    rating: p.ratingsAverage ?? p.rating ?? 0,
+    reviewsCount: p.ratingsCount ?? p.reviewsCount ?? 0,
+    stockQuantity: p.totalStock ?? p.stockQuantity ?? (Array.isArray(p.variants)
+      ? p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)
+      : 0),
     status: (p.status || 'Active').charAt(0).toUpperCase() + (p.status || 'Active').slice(1).toLowerCase(),
-    sizes: p.sizes || (p.variants ? [...new Set(p.variants.map((v) => v.size || v.title).filter(Boolean))] : localMatch?.sizes) || [],
+    sizes: [...new Set(
+  (p.variants || [])
+    .map(v => v.size)
+    .filter(Boolean)
+)],
     // One chip per COLOUR, not one per variant. With a full size x colour matrix this list used to
     // repeat each colour once per size — four chips reading "Black, Red, Black, Red" — because
     // sizes deduped with a Set while colours did not. The hex now comes from the local catalogue
@@ -156,18 +152,15 @@ export function normalizeProduct(p) {
           .filter((v) => v.color)
           .map((v) => {
             const name = String(v.color).trim();
-            const known = (localMatch?.colors || []).find(
-              (c) => String(c.name || '').toLowerCase() === name.toLowerCase()
-            );
             return [
               name.toLowerCase(),
-              { name, hex: known?.hex || COLOR_HEX[name.toUpperCase()] || '#6B7280' },
+              { name, hex: COLOR_HEX[name.toUpperCase()] || '#6B7280' },
             ];
           })
       ).values()];
       // Nothing derivable (no variants, or variants without a colour) — fall back rather than
       // render zero chips.
-      return derived.length ? derived : (localMatch?.colors || [{ name: 'Crimson Red', hex: '#FF1E27' }]);
+      return derived;
     })(),
     variants: (p.variants && p.variants.length > 0) ? p.variants.map((v) => ({
       ...v,
@@ -177,7 +170,7 @@ export function normalizeProduct(p) {
       // no price of its own is not discounted twice.
       price: applyFestive(v.price || rawPrice),
       compareAtPrice: v.compareAtPrice || compareAtPrice,
-      stockQuantity: v.stockQuantity || 10,
+      stockQuantity: Number(v.stockQuantity ?? 0),
     })) : [],
     // Specs are per-variant now, read straight off the selected variant by the PDP. This list is
     // the legacy product-level shape, kept only so an un-migrated product still renders. It must
@@ -186,11 +179,12 @@ export function normalizeProduct(p) {
     specs: (Array.isArray(p.specifications) && p.specifications.length > 0)
       ? p.specifications.map((s) => typeof s === 'string' ? s : `${s.key}: ${s.value}`)
       : [],
-    fullSpecs: p.fullSpecs || localMatch?.fullSpecs || {},
+    fullSpecs: p.fullSpecs || {},
+    sizeGuide: p.sizeGuide || null,
     // A string, always — the admin writes a multi-line block. Defaulting to [] made the field an
     // array for some products and a string for others, which is what crashed the Usage & Care tab.
-    careInstructions: p.careInstructions || localMatch?.careInstructions || '',
-    reviews: p.reviews || localMatch?.reviews || [],
+    careInstructions: p.careInstructions || '',
+    reviews: p.reviews || [],
   };
 }
 
@@ -308,9 +302,11 @@ export async function fetchSearchProducts(filters = {}) {
 }
 
 /**
- * Fetch all products from backend API with optional category/search filters
+ * Fetch products from the backend.
+ * A successful empty response means MongoDB has no products.
+ * Local products are used only when the backend request fails.
  */
-export async function fetchProducts(category = '', search = '') {
+export async function fetchProductsWithStatus(category = '', search = '') {
   try {
     const queryParams = new URLSearchParams();
     if (category && category !== 'ALL PRODUCTS') queryParams.append('category', category);
@@ -322,17 +318,49 @@ export async function fetchProducts(category = '', search = '') {
 
     const url = `${API_BASE_URL}/products?${queryParams.toString()}`;
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    const rawProducts = data.data?.products || (Array.isArray(data.data) ? data.data : []);
-    if (rawProducts.length > 0) {
-      return rawProducts.map(normalizeProduct);
+    if (!response.ok) {
+      const error = new Error(`HTTP error! status: ${response.status}`);
+      error.status = response.status;
+      throw error;
     }
-    return LOCAL_PRODUCTS;
+    const data = await response.json();
+    const rawProducts = Array.isArray(data?.data?.products)
+      ? data.data.products
+      : Array.isArray(data?.data)
+        ? data.data
+        : null;
+
+    if (!rawProducts) {
+      throw new Error('Unexpected products API response format.');
+    }
+
+    return {
+      products: rawProducts.map(normalizeProduct).filter(Boolean),
+      isBackendConnected: true,
+    };
   } catch (error) {
-    console.warn('Backend API unavailable, using local product data fallback:', error.message);
-    return LOCAL_PRODUCTS;
+    if (!shouldUseLocalFallback(error)) {
+      console.error('Backend product request failed:', error.message);
+      return {
+        products: [],
+        isBackendConnected: true,
+      };
+    }
+
+    console.warn('Backend unavailable. Using local offline catalogue:', error.message);
+    return {
+      products: LOCAL_PRODUCTS,
+      isBackendConnected: false,
+    };
   }
+}
+
+/**
+ * Backward-compatible helper for existing callers that expect an array.
+ */
+export async function fetchProducts(category = '', search = '') {
+  const result = await fetchProductsWithStatus(category, search);
+  return result.products;
 }
 
 /**
@@ -341,12 +369,25 @@ export async function fetchProducts(category = '', search = '') {
 export async function fetchProductById(idOrSlug) {
   try {
     const response = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(idOrSlug)}`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const error = new Error(`HTTP error! status: ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
     const data = await response.json();
     const raw = data.data?.product || data.data;
     return normalizeProduct(raw);
   } catch (error) {
-    console.warn(`Backend API failed to fetch product ${idOrSlug}:`, error.message);
+    if (error.status === 404) {
+      return null;
+    }
+
+    if (!shouldUseLocalFallback(error)) {
+      console.error(`Backend rejected product request ${idOrSlug}:`, error.message);
+      return null;
+    }
+
+    console.warn(`Backend unavailable while fetching product ${idOrSlug}:`, error.message);
     const local = LOCAL_PRODUCTS.find((p) => p.slug === idOrSlug || p.id === idOrSlug);
     return local || null;
   }

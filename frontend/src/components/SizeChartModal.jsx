@@ -2,10 +2,35 @@ import React from 'react';
 import { X, Ruler, CheckCircle2 } from 'lucide-react';
 import Button from './Button';
 
-export default function SizeChartModal({ isOpen, onClose, category }) {
+export default function SizeChartModal({ isOpen, onClose, product }) {
   if (!isOpen) return null;
 
-  const catUpper = (typeof category === 'object' ? category?.name : category || '').toUpperCase();
+  const sizeGuide = product?.sizeGuide || {};
+  const measurementType = sizeGuide.measurementType === 'shaker' || sizeGuide.measurementType === 'bottle'
+    ? 'shaker'
+    : 'supportGear';
+  const rows = Array.isArray(sizeGuide.rows) ? sizeGuide.rows : [];
+  const unit = sizeGuide.unit || 'cm';
+  const volumeUnit = sizeGuide.volumeUnit || 'ml';
+
+  const columns = measurementType === 'shaker'
+      ? [
+          ['height', 'Height'],
+          ['diameter', 'Diameter'],
+          ['weight', `Weight`],
+          ['material', 'Material'],
+        ]
+      : [
+          ['fit', 'Fit / Circumference'],
+          ['length', 'Length'],
+          ['width', 'Width'],
+          ['height', 'Height'],
+          ['weight', 'Weight'],
+        ];
+
+  const title = measurementType === 'shaker' ? 'SHAKER MEASUREMENTS' : 'SUPPORT GEAR SIZE GUIDE';
+
+  const optionHeading = measurementType === 'shaker' ? 'Volume Option' : 'Size';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
@@ -19,7 +44,7 @@ export default function SizeChartModal({ isOpen, onClose, category }) {
             </div>
             <div>
               <h3 className="text-lg font-sans font-black italic uppercase tracking-wide">
-                SIZE & FIT GUIDE
+                {title}
               </h3>
               <p className="text-xs text-[var(--text-sub)]">
                 Find your perfect gear dimensions for maximum performance
@@ -34,56 +59,51 @@ export default function SizeChartModal({ isOpen, onClose, category }) {
           </button>
         </div>
 
-        {/* Size Table */}
+        {/* Product measurement table */}
         <div className="space-y-4">
           <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)]">
             <table className="w-full text-left text-xs">
               <thead className="bg-red-500/10 text-[#FF1E27] font-heading font-extrabold uppercase border-b border-[var(--border-subtle)]">
                 <tr>
-                  <th className="p-3">Size Variant</th>
-                  <th className="p-3">Length / Circumference</th>
-                  <th className="p-3">Recommended Use</th>
+                  <th className="p-3">{optionHeading}</th>
+                  {columns.map(([, label]) => <th key={label} className="p-3">{label}</th>)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-subtle)] font-medium text-[var(--text-sub)]">
-                {catUpper.includes('KNEE') || catUpper.includes('ELBOW') ? (
-                  <>
-                    <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
-                      <td className="p-3 font-bold text-[var(--text-main)]">Standard (79") / Medium</td>
-                      <td className="p-3">Knee: 79" | Elbow: 10"-12"</td>
-                      <td className="p-3">Daily heavy training & hyper-mobility</td>
-                    </tr>
-                    <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
-                      <td className="p-3 font-bold text-[var(--text-main)]">XL Heavy (90") / Large</td>
-                      <td className="p-3">Knee: 90" | Elbow: 12"-14"</td>
-                      <td className="p-3">Powerlifting competitions & maximum rebound</td>
-                    </tr>
-                  </>
-                ) : (
-                  <>
-                    <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
-                      <td className="p-3 font-bold text-[var(--text-main)]">18-Inch Competition</td>
-                      <td className="p-3">45 cm (18 Inches)</td>
-                      <td className="p-3 font-semibold text-[#FF1E27]">IPF Legal Competition Grade</td>
-                    </tr>
-                    <tr className="hover:bg-[var(--border-subtle)]/40 transition-colors">
-                      <td className="p-3 font-bold text-[var(--text-main)]">24-Inch Heavy Duty</td>
-                      <td className="p-3">60 cm (24 Inches)</td>
-                      <td className="p-3">Maximum wrist locking for 200kg+ Bench</td>
-                    </tr>
-                  </>
+                {rows.map((row, index) => (
+                  <tr key={`${row.size || row.volume || 'option'}-${index}`} className="hover:bg-[var(--border-subtle)]/40 transition-colors">
+                    <td className="p-3 font-bold text-[var(--text-main)]">
+                      {measurementType === 'shaker'
+                        ? `${row.volume || row.size || '-'} ${row.volumeUnit || volumeUnit}`.trim()
+                        : row.size || '-'}
+                    </td>
+                    {columns.map(([field]) => (
+                      <td key={field} className="p-3">
+                        {row[field] || '-'}{field !== 'material' && row[field] && field !== 'weight' ? ` ${unit}` : ''}
+                        {field === 'weight' && row[field] ? ` ${row.weightUnit || 'g'}` : ''}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={columns.length + 1} className="p-6 text-center">
+                      Measurement details are not available for this product yet.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Measuring Tip */}
-          <div className="p-3.5 bg-red-500/5 rounded-xl border border-red-500/20 text-xs text-[var(--text-sub)] flex items-start gap-2.5">
+          {sizeGuide.notes && (
+            <div className="p-3.5 bg-red-500/5 rounded-xl border border-red-500/20 text-xs text-[var(--text-sub)] flex items-start gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-[#FF1E27] shrink-0 mt-0.5" />
             <p>
-              <strong className="text-[var(--text-main)]">Pro Tip:</strong> Measure circumference directly across your joint while flexed. If you are between sizes, choose the larger size for maximum wrapping overlap.
+              <strong className="text-[var(--text-main)]">Additional details:</strong> {sizeGuide.notes}
             </p>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Action button */}

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home, History, PackageCheck, MapPin, ChevronDown, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
+import AnnouncementStrip from './AnnouncementStrip';
 
 export default function Navbar({
   categories = [],
@@ -28,6 +29,7 @@ export default function Navbar({
   const { user, isAuthenticated, logout } = useAuth();
   const [activeNav, setActiveNav] = useState('HOME');
   const [isScrolled, setIsScrolled] = useState(false);
+  const headerRef = useRef(null);
 
   const currentLogo = theme === 'light' ? logoRedBlack : logoWhite;
 
@@ -38,6 +40,26 @@ export default function Navbar({
     handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return undefined;
+
+    const updateNavbarHeight = () => {
+      document.documentElement.style.setProperty('--avn-mobile-navbar-height', `${header.offsetHeight}px`);
+    };
+
+    updateNavbarHeight();
+    const resizeObserver = new ResizeObserver(updateNavbarHeight);
+    resizeObserver.observe(header);
+    window.addEventListener('resize', updateNavbarHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateNavbarHeight);
+      document.documentElement.style.removeProperty('--avn-mobile-navbar-height');
+    };
   }, []);
 
       const navItems = [
@@ -109,19 +131,32 @@ export default function Navbar({
 
   return (
     <>
-      {/* Keep the announcement strip in normal flow on mobile for both themes. */}
-      <header className={`z-40 w-full transition-all duration-300 isolate ${
+      {/* Keep both themes fixed on mobile; retain each theme's existing desktop scroll styling. */}
+      <header ref={headerRef} className={`z-40 w-full transition-all duration-300 isolate ${
         isLightTheme
-          ? 'sticky top-0 bg-[var(--bg-main)]/90 backdrop-blur-md border-b-0 shadow-none ' +
+          ? 'fixed lg:sticky top-0 bg-[var(--bg-main)]/90 backdrop-blur-md border-b-0 shadow-none ' +
             (activeView === 'home' && !isScrolled
               ? 'lg:bg-transparent lg:border-transparent lg:backdrop-blur-none lg:shadow-none'
               : 'lg:bg-[var(--bg-navbar)] lg:backdrop-blur-md lg:border-b lg:border-[var(--border-subtle)] lg:shadow-sm')
-          : 'sticky top-0 ' +
+          : 'fixed lg:sticky top-0 ' +
             ((activeView === 'home' || activeView === 'search') && !isScrolled
               ? 'bg-transparent border-b border-transparent backdrop-blur-none shadow-none'
               : 'bg-[var(--bg-navbar)] backdrop-blur-md border-b border-[var(--border-subtle)] shadow-sm')
-      }`}>
-        <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 h-20 flex items-center justify-between">
+            }`}>
+              {/* Inside the header, not above it: on the mobile light theme the header is `fixed`, so a
+                  strip rendered as a sibling would sit in normal flow and be covered the moment the page
+                  scrolls. As a child it travels with the header, sticky or fixed. */}
+              <div
+  className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out ${
+    isScrolled
+      ? 'max-h-0 opacity-0'
+      : 'max-h-8 opacity-100'
+  }`}
+>
+  <AnnouncementStrip />
+</div>
+
+              <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 h-15 flex items-center justify-between">
 
           {/* Left Mobile Menu Hamburger + Logo Stack */}
           <div className="flex items-center gap-3">

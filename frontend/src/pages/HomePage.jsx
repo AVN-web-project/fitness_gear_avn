@@ -13,17 +13,15 @@ export default function HomePage({
   onNavigateWhyAvn,
   onAddToCart,
   onSelectProduct,
-  isMobileView,
-  announcementVisible
+  isMobileView
 }) {
-  return (
-    <div>
-      <Hero
+return (
+    <>
+        <Hero
         onExploreClick={onExploreClick}
         onNavigateWhyAvn={onNavigateWhyAvn}
         theme={theme}
         isMobileView={isMobileView}
-        announcementVisible={announcementVisible}
       />
 
       <FeatureBar isMobileView={isMobileView} />
@@ -42,6 +40,6 @@ export default function HomePage({
         onNavigateWhyAvn={onNavigateWhyAvn}
         isMobileView={isMobileView}
       />
-    </div>
+    </>
   );
 }

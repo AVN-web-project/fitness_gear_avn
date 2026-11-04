@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 
-const heroSectionClass = 'relative lg:min-h-screen -mt-20 pt-20 sm:pt-24 lg:pt-24 xl:pt-28 pb-6 sm:pb-8 lg:pb-16 flex items-start lg:items-center overflow-hidden bg-[var(--bg-main)]';
-const heroImageClass = 'hero-mobile-edge-fade w-full h-full lg:w-[960px] lg:h-[720px] object-contain object-center lg:object-right origin-center lg:origin-right scale-100 lg:scale-100 xl:scale-100 translate-y-0 lg:translate-x-0 xl:translate-x-0 transform-gpu transition-all duration-700';
-const heroContentClass = 'relative z-20 max-w-[1536px] mx-auto px-5 sm:px-10 lg:px-16 xl:px-20 w-full';
-const heroSubtitleClass = 'pt-[28vh] xs:pt-[30vh] sm:pt-[35vh] lg:pt-0 space-y-4 sm:space-y-6';
-
-export default function Hero({ onExploreClick, onNavigateWhyAvn, theme, announcementVisible = true }) {
+export default function Hero({ onExploreClick, onNavigateWhyAvn, theme }) {
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const heroImageRef = useRef(null);
@@ -68,9 +63,8 @@ export default function Hero({ onExploreClick, onNavigateWhyAvn, theme, announce
       const coverWidth = renderedWidth * scaleX;
       const imageHeight = renderedHeight * scaleY;
       const topCoverHeight = imageHeight * 0.4;
-      const bottomCoverHeight = imageHeight * 0.4;
+      const bottomCoverHeight = imageHeight * 0.3;
       const topEdgeBleed = 2;
-      const bottomEdgeBleed = 2;
 
       [cover, bottomCover].forEach((element) => {
         element.style.left = `${coverLeft}px`;
@@ -79,7 +73,7 @@ export default function Hero({ onExploreClick, onNavigateWhyAvn, theme, announce
       cover.style.top = `${coverTop - topEdgeBleed}px`;
       cover.style.height = `${topCoverHeight + topEdgeBleed}px`;
       bottomCover.style.top = `${coverTop + imageHeight - bottomCoverHeight}px`;
-      bottomCover.style.height = `${bottomCoverHeight + bottomEdgeBleed}px`;
+      bottomCover.style.height = `${bottomCoverHeight}px`;
     };
 
     updateCover();
@@ -99,7 +93,7 @@ export default function Hero({ onExploreClick, onNavigateWhyAvn, theme, announce
   const scrollRatio = Math.min(1, Math.max(0, scrollY / 300));
 
   return (
-    <section className={`${heroSectionClass} min-h-0`} id="home">
+    <section id="home" className={`relative min-h-[calc(90dvh-var(--avn-mobile-navbar-height,80px))] lg:min-h-screen ${isLight ? 'pt-[3px] sm:pt-[3px] lg:-mt-20 lg:pt-24 xl:pt-28' : 'mt-0 pt-[3px] sm:pt-[3px] lg:-mt-20 lg:pt-24 xl:pt-28'} pb-0 sm:pb-0 lg:pb-16 flex items-start lg:items-center overflow-hidden bg-[var(--bg-main)]`}>
       {/* 1. Background Layer */}
       {isLight ? (
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-[var(--bg-main)]">
@@ -112,12 +106,12 @@ export default function Hero({ onExploreClick, onNavigateWhyAvn, theme, announce
           <div className="hidden lg:block absolute inset-0 bg-gradient-to-b from-[var(--bg-main)] via-transparent to-[var(--bg-main)]/80 pointer-events-none z-[1]" />
 
           {/* Light Theme Hero Stage Image: Full Unclipped Background on Mobile, Locked Stage on Desktop */}
-          <div className="absolute inset-0 lg:left-auto lg:top-0 lg:bottom-0 hero-stage-anchor w-full flex items-center justify-center lg:justify-end pointer-events-none overflow-visible lg:overflow-hidden z-10 lg:[mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.4)_2%,black_5%,black_100%),linear-gradient(to_bottom,transparent_0%,black_4%,black_94%,transparent_100%)] lg:[-webkit-mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.4)_2%,black_5%,black_100%),linear-gradient(to_bottom,transparent_0%,black_4%,black_94%,transparent_100%)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]">
+          <div className="absolute inset-x-0 top-0 bottom-[20%] lg:left-auto lg:top-0 lg:bottom-0 hero-stage-anchor w-full flex items-center justify-center lg:justify-end pointer-events-none overflow-visible lg:overflow-hidden z-10 lg:[mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.4)_2%,black_5%,black_100%),linear-gradient(to_bottom,transparent_0%,black_4%,black_94%,transparent_100%)] lg:[-webkit-mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.4)_2%,black_5%,black_100%),linear-gradient(to_bottom,transparent_0%,black_4%,black_94%,transparent_100%)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]">
             <img
               ref={heroImageRef}
               src="/avn-hero-light-3.png"
               alt="AVN Hero Light Stage & Logo"
-              className={`${heroImageClass} opacity-100 mix-blend-multiply filter contrast-[1.06] saturate-[1.06] pointer-events-none`}
+              className="hero-mobile-edge-fade w-full h-full lg:w-[960px] lg:h-[720px] object-contain object-center lg:object-right origin-center lg:origin-right scale-100 lg:scale-100 xl:scale-100 translate-y-0 lg:translate-x-0 xl:translate-x-0 transform-gpu opacity-100 mix-blend-multiply filter contrast-[1.06] saturate-[1.06] transition-all duration-700 pointer-events-none"
             />
             <div ref={heroCoverRef} className="hero-mobile-cover hero-mobile-cover-top" />
             <div ref={heroBottomCoverRef} className="hero-mobile-cover hero-mobile-cover-bottom lg:hidden" />
@@ -131,12 +125,12 @@ export default function Hero({ onExploreClick, onNavigateWhyAvn, theme, announce
           <div className="relative w-full h-full">
 
             {/* Base Layer: 3D Stage & Athlete Overlay (Full Unclipped Background on Mobile, Locked Stage on Desktop) */}
-            <div className="absolute inset-0 lg:left-auto lg:top-0 lg:bottom-0 hero-stage-anchor w-full flex items-center justify-center lg:justify-end pointer-events-none overflow-visible lg:overflow-hidden z-0 lg:[mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_85%,transparent_99%)] lg:[-webkit-mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_65%,transparent_98%)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]">
+            <div className="absolute inset-x-0 top-0 bottom-[20%] lg:left-auto lg:top-0 lg:bottom-0 hero-stage-anchor w-full flex items-center justify-center lg:justify-end pointer-events-none overflow-visible lg:overflow-hidden z-0 lg:[mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_85%,transparent_99%)] lg:[-webkit-mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_100%),linear-gradient(to_bottom,black_0%,black_65%,transparent_98%)] lg:[mask-composite:intersect] lg:[-webkit-mask-composite:source-in]">
               <img
                 ref={heroImageRef}
                 src="/avn-hero-4.png"
                 alt="AVN Hero Stage & Logo"
-                className={`${heroImageClass} opacity-100 filter brightness-[1.05] contrast-[1.08] saturate-[1.12]`}
+                className="hero-mobile-edge-fade w-full h-full lg:w-[960px] lg:h-[720px] object-contain object-center lg:object-right origin-center lg:origin-right scale-100 lg:scale-100 xl:scale-100 translate-y-0 lg:translate-x-0 xl:translate-x-0 transform-gpu opacity-100 filter brightness-[1.05] contrast-[1.08] saturate-[1.12] transition-all duration-700"
               />
             </div>
 
@@ -154,7 +148,9 @@ export default function Hero({ onExploreClick, onNavigateWhyAvn, theme, announce
       )}
 
       {/* 2. Hero Content Overlay */}
-      <div className={`${heroContentClass} ${announcementVisible ? 'pt-[88px] sm:pt-[100px]' : 'pt-0 sm:pt-1'} lg:pt-0`}>
+      <div
+        className="relative z-20 max-w-[1536px] mx-auto px-5 sm:px-10 lg:px-16 xl:px-20 w-full pt-0 sm:pt-1 lg:pt-0"
+      >
         <div className="max-w-xl lg:max-w-[490px] xl:max-w-[570px] space-y-4 sm:space-y-6 text-left">
           <div>
             <p className="font-sans text-[11px] sm:text-[12px] font-extrabold tracking-[3px] text-[#FF1E27] uppercase pl-1 sm:pl-1.5 pb-1 sm:pb-0">
@@ -171,7 +167,7 @@ export default function Hero({ onExploreClick, onNavigateWhyAvn, theme, announce
           </div>
 
           {/* Subtitle & Buttons: Positioned cleanly below the stage on mobile, normal stacked spacing on desktop */}
-          <div className={heroSubtitleClass}>
+          <div className=" z-30 pt-[28vh] xs:pt-[35vh] sm:pt-[38vh] lg:pt-0 space-y-4 sm:space-y-6">
             <p className="text-[var(--text-sub)] text-sm sm:text-base md:text-lg leading-[1.7] sm:leading-relaxed lg:leading-relaxed font-normal max-w-lg lg:max-w-md xl:max-w-lg">
               Premium gear for lifters, athletes and everyday warriors.<br className="hidden sm:block" />
               Engineered for comfort. Built for performance.
