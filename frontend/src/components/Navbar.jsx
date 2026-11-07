@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home, History, PackageCheck, MapPin, ChevronDown, LogOut } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, ArrowRight, Sun, Moon, User, Home, History, PackageCheck, MapPin, ChevronDown, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logoWhite from '../assets/logo-transparent.png';
 import logoRedBlack from '../assets/logo-red-black.png';
@@ -35,10 +35,18 @@ export default function Navbar({
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 40);
+      const scrollY = window.scrollY;
+
+      setIsScrolled((previous) => {
+        if (!previous && scrollY > 60) return true;
+        if (previous && scrollY < 20) return false;
+        return previous;
+      });
     };
+
     handleScroll();
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -62,7 +70,7 @@ export default function Navbar({
     };
   }, []);
 
-      const navItems = [
+  const navItems = [
     { label: 'HOME', href: '#home' },
     { label: 'ABOUT', href: '#about' },
     { label: 'PRODUCTS', href: '#products' },
@@ -71,7 +79,7 @@ export default function Navbar({
     { label: 'CONTACT', href: '#contact' }
   ];
 
-    const handleOrderHistoryClick = (e) => {
+  const handleOrderHistoryClick = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setMobileMenuOpen(false);
     if (onNavigateOrders) {
@@ -82,41 +90,41 @@ export default function Navbar({
   };
 
   const handleNavClick = (label, href) => {
-  setActiveNav(label);
+    setActiveNav(label);
 
-  // Sections render with the home page, so retry briefly until the target exists
-  const scrollToSection = (attempts = 12) => {
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
-    if (attempts > 0) setTimeout(() => scrollToSection(attempts - 1), 60);
-  };
+    // Sections render with the home page, so retry briefly until the target exists
+    const scrollToSection = (attempts = 12) => {
+      const element = document.querySelector(href);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      if (attempts > 0) setTimeout(() => scrollToSection(attempts - 1), 60);
+    };
 
-  if (label === 'HOME' && onNavigateHome) {
-    onNavigateHome();
-  } else if (label === 'PRODUCTS' && onNavigateSearch) {
-    onNavigateSearch();
-  } else if (label === 'WHY AVN' && onNavigateWhyAvn) {
-    onNavigateWhyAvn();
-  } else if (label === 'ABOUT' && onNavigateAbout) {
-    onNavigateAbout();
-  } else if (label === 'CONTACT') {
-    if (onNavigateContact) {
-      onNavigateContact();
-    } else {
-      scrollToSection();
-    }
-  } else {
-    if (activeView !== 'home' && onNavigateHome) {
+    if (label === 'HOME' && onNavigateHome) {
       onNavigateHome();
-      scrollToSection();
+    } else if (label === 'PRODUCTS' && onNavigateSearch) {
+      onNavigateSearch();
+    } else if (label === 'WHY AVN' && onNavigateWhyAvn) {
+      onNavigateWhyAvn();
+    } else if (label === 'ABOUT' && onNavigateAbout) {
+      onNavigateAbout();
+    } else if (label === 'CONTACT') {
+      if (onNavigateContact) {
+        onNavigateContact();
+      } else {
+        scrollToSection();
+      }
     } else {
-      scrollToSection();
+      if (activeView !== 'home' && onNavigateHome) {
+        onNavigateHome();
+        scrollToSection();
+      } else {
+        scrollToSection();
+      }
     }
-  }
-};
+  };
 
 
   const handleCartClick = () => {
@@ -132,31 +140,29 @@ export default function Navbar({
   return (
     <>
       {/* Keep both themes fixed on mobile; retain each theme's existing desktop scroll styling. */}
-      <header ref={headerRef} className={`z-40 w-full transition-all duration-300 isolate ${
-        isLightTheme
-          ? 'fixed lg:sticky top-0 bg-[var(--bg-main)]/90 backdrop-blur-md border-b-0 shadow-none ' +
-            (activeView === 'home' && !isScrolled
-              ? 'lg:bg-transparent lg:border-transparent lg:backdrop-blur-none lg:shadow-none'
-              : 'lg:bg-[var(--bg-navbar)] lg:backdrop-blur-md lg:border-b lg:border-[var(--border-subtle)] lg:shadow-sm')
-          : 'fixed lg:sticky top-0 ' +
-            ((activeView === 'home' || activeView === 'search') && !isScrolled
-              ? 'bg-transparent border-b border-transparent backdrop-blur-none shadow-none'
-              : 'bg-[var(--bg-navbar)] backdrop-blur-md border-b border-[var(--border-subtle)] shadow-sm')
-            }`}>
-              {/* Inside the header, not above it: on the mobile light theme the header is `fixed`, so a
+      <header ref={headerRef} className={`z-40 w-full transition-colors duration-300 isolate ${isLightTheme
+        ? 'fixed lg:sticky top-0 bg-[var(--bg-main)]/90 backdrop-blur-md border-b-0 shadow-none ' +
+        (activeView === 'home' && !isScrolled
+          ? 'lg:bg-transparent lg:border-transparent lg:backdrop-blur-none lg:shadow-none'
+          : 'lg:bg-[var(--bg-navbar)] lg:backdrop-blur-md lg:border-b lg:border-[var(--border-subtle)] lg:shadow-sm')
+        : 'fixed lg:sticky top-0 ' +
+        ((activeView === 'home' || activeView === 'search') && !isScrolled
+          ? 'bg-transparent border-b border-transparent backdrop-blur-none shadow-none'
+          : 'bg-[var(--bg-navbar)] backdrop-blur-md border-b border-[var(--border-subtle)] shadow-sm')
+        }`}>
+        {/* Inside the header, not above it: on the mobile light theme the header is `fixed`, so a
                   strip rendered as a sibling would sit in normal flow and be covered the moment the page
                   scrolls. As a child it travels with the header, sticky or fixed. */}
-              <div
-  className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out ${
-    isScrolled
-      ? 'max-h-0 opacity-0'
-      : 'max-h-8 opacity-100'
-  }`}
->
-  <AnnouncementStrip />
-</div>
+        <div
+          className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out ${isScrolled
+            ? 'max-h-0 opacity-0'
+            : 'max-h-8 opacity-100'
+            }`}
+        >
+          <AnnouncementStrip />
+        </div>
 
-              <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 h-15 flex items-center justify-between">
+        <div className="max-w-[1536px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 h-15 flex items-center justify-between">
 
           {/* Left Mobile Menu Hamburger + Logo Stack */}
           <div className="flex items-center gap-3">
@@ -209,11 +215,10 @@ export default function Navbar({
                     e.preventDefault();
                     handleNavClick(item.label, item.href);
                   }}
-                  className={`relative px-4 py-2.5 transition-all duration-300 uppercase whitespace-nowrap ${
-                    isActive
-                      ? 'text-[var(--text-main)] font-extrabold'
-                      : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-bold'
-                  }`}
+                  className={`relative px-4 py-2.5 transition-colors duration-300 uppercase whitespace-nowrap ${isActive
+                    ? 'text-[var(--text-main)] font-extrabold'
+                    : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-bold'
+                    }`}
                 >
                   <span className="relative z-10 text-xs sm:text-sm tracking-widest font-heading">
                     {item.label}
@@ -278,32 +283,103 @@ export default function Navbar({
                   onMouseEnter={() => setProfileDropdownOpen(true)}
                 >
                   <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card-solid)] shadow-2xl p-2.5 opacity-100 z-50">
-                  {user ? (
-                    <>
-                      {/* User Info Header */}
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProfileDropdownOpen(false);
-                          if (onOpenAccount) onOpenAccount();
-                        }}
-                        className="p-3 border-b border-[var(--border-subtle)] space-y-0.5 cursor-pointer hover:bg-[#FF1E27]/5 rounded-xl transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-black font-heading text-[var(--text-main)] uppercase">
-                            {user.name || user.fullName || 'ATHLETE'}
+                    {user ? (
+                      <>
+                        {/* User Info Header */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProfileDropdownOpen(false);
+                            if (onOpenAccount) onOpenAccount();
+                          }}
+                          className="p-3 border-b border-[var(--border-subtle)] space-y-0.5 cursor-pointer hover:bg-[#FF1E27]/5 rounded-xl transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-black font-heading text-[var(--text-main)] uppercase">
+                              {user.name || user.fullName || 'ATHLETE'}
+                            </p>
+                            <span className="text-[9px] font-extrabold uppercase font-heading bg-[#FF1E27]/10 text-[#FF1E27] border border-[#FF1E27]/30 px-1.5 py-0.5 rounded">
+                              {user.tier || 'MEMBER'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-[var(--text-sub)] font-medium">
+                            {user.email}
                           </p>
-                          <span className="text-[9px] font-extrabold uppercase font-heading bg-[#FF1E27]/10 text-[#FF1E27] border border-[#FF1E27]/30 px-1.5 py-0.5 rounded">
-                            {user.tier || 'MEMBER'}
-                          </span>
                         </div>
-                        <p className="text-[10px] text-[var(--text-sub)] font-medium">
-                          {user.email}
-                        </p>
-                      </div>
 
-                      {/* Navigation Items */}
-                      <div className="py-1 space-y-0.5">
+                        {/* Navigation Items */}
+                        <div className="py-1 space-y-0.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProfileDropdownOpen(false);
+                              if (onOpenAccount) onOpenAccount();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
+                          >
+                            <User className="w-4 h-4 text-[#FF1E27]" />
+                            <span>My Profile</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProfileDropdownOpen(false);
+                              if (onNavigateAddresses) onNavigateAddresses();
+                              else if (onOpenAccount) onOpenAccount();
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <MapPin className="w-4 h-4 text-[#FF1E27]" />
+                              <span>Saved Addresses</span>
+                            </div>
+                            <span className="text-[10px] font-extrabold bg-[#FF1E27]/10 text-[#FF1E27] px-1.5 py-0.5 rounded-full">
+                              Manage
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProfileDropdownOpen(false);
+                              if (onNavigateOrders) onNavigateOrders();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
+                          >
+                            <PackageCheck className="w-4 h-4 text-[#FF1E27]" />
+                            <span>Orders & Returns</span>
+                          </button>
+                        </div>
+
+                        {/* Sign Out Action */}
+                        <div className="pt-1 border-t border-[var(--border-subtle)]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProfileDropdownOpen(false);
+                              logout();
+                              if (onSignOut) onSignOut();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-4 text-center space-y-3">
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-black font-heading text-[var(--text-main)] uppercase tracking-wider">GUEST ATHLETE</h4>
+                          <p className="text-[10px] text-[var(--text-sub)] leading-relaxed">
+                            Sign in to track orders, manage addresses, and view your profile.
+                          </p>
+                        </div>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -311,83 +387,12 @@ export default function Navbar({
                             setProfileDropdownOpen(false);
                             if (onOpenAccount) onOpenAccount();
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
+                          className="w-full py-2.5 rounded-xl bg-[#FF1E27] hover:bg-red-600 text-white text-xs font-black font-heading uppercase tracking-wider transition-colors cursor-pointer"
                         >
-                          <User className="w-4 h-4 text-[#FF1E27]" />
-                          <span>My Profile</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setProfileDropdownOpen(false);
-                            if (onNavigateAddresses) onNavigateAddresses();
-                            else if (onOpenAccount) onOpenAccount();
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <MapPin className="w-4 h-4 text-[#FF1E27]" />
-                            <span>Saved Addresses</span>
-                          </div>
-                          <span className="text-[10px] font-extrabold bg-[#FF1E27]/10 text-[#FF1E27] px-1.5 py-0.5 rounded-full">
-                            Manage
-                          </span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setProfileDropdownOpen(false);
-                            if (onNavigateOrders) onNavigateOrders();
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-main)] hover:bg-[#FF1E27]/10 hover:text-[#FF1E27] transition-colors cursor-pointer text-left"
-                        >
-                          <PackageCheck className="w-4 h-4 text-[#FF1E27]" />
-                          <span>Orders & Returns</span>
+                          SIGN IN / REGISTER
                         </button>
                       </div>
-
-                      {/* Sign Out Action */}
-                      <div className="pt-1 border-t border-[var(--border-subtle)]">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setProfileDropdownOpen(false);
-                            logout();
-                            if (onSignOut) onSignOut();
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <span>Sign Out</span>
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-4 text-center space-y-3">
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-black font-heading text-[var(--text-main)] uppercase tracking-wider">GUEST ATHLETE</h4>
-                        <p className="text-[10px] text-[var(--text-sub)] leading-relaxed">
-                          Sign in to track orders, manage addresses, and view your profile.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProfileDropdownOpen(false);
-                          if (onOpenAccount) onOpenAccount();
-                        }}
-                        className="w-full py-2.5 rounded-xl bg-[#FF1E27] hover:bg-red-600 text-white text-xs font-black font-heading uppercase tracking-wider transition-colors cursor-pointer"
-                      >
-                        SIGN IN / REGISTER
-                      </button>
-                    </div>
-                  )}
+                    )}
                   </div>
                 </div>
               )}
@@ -453,11 +458,10 @@ export default function Navbar({
                       setMobileMenuOpen(false);
                       handleNavClick(item.label, item.href);
                     }}
-                    className={`text-sm font-extrabold uppercase font-heading tracking-wider py-2 px-3 rounded-lg transition-colors ${
-                      activeNav === item.label
-                        ? 'bg-[#FF1E27] text-white shadow-md'
-                        : 'text-[var(--text-main)] hover:bg-[var(--border-subtle)] hover:text-[#FF1E27]'
-                    }`}
+                    className={`text-sm font-extrabold uppercase font-heading tracking-wider py-2 px-3 rounded-lg transition-colors ${activeNav === item.label
+                      ? 'bg-[#FF1E27] text-white shadow-md'
+                      : 'text-[var(--text-main)] hover:bg-[var(--border-subtle)] hover:text-[#FF1E27]'
+                      }`}
                   >
                     {item.label}
                   </a>
@@ -496,11 +500,10 @@ export default function Navbar({
               if (onNavigateHome) onNavigateHome();
               setActiveNav('HOME');
             }}
-            className={`flex flex-col items-center justify-center space-y-1 transition-colors cursor-pointer ${
-              activeView === 'home'
-                ? 'text-[#FF1E27] font-extrabold'
-                : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
-            }`}
+            className={`flex flex-col items-center justify-center space-y-1 transition-colors cursor-pointer ${activeView === 'home'
+              ? 'text-[#FF1E27] font-extrabold'
+              : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
+              }`}
           >
             <Home className="w-5 h-5" />
             <span className="text-[10px] tracking-wider uppercase font-heading">Home</span>
@@ -511,11 +514,10 @@ export default function Navbar({
             onClick={() => {
               if (onOpenAccount) onOpenAccount();
             }}
-            className={`flex flex-col items-center justify-center space-y-1 relative cursor-pointer transition-colors ${
-              activeView === 'profile' || activeView === 'auth' || activeView === 'order-history'
-                ? 'text-[#FF1E27] font-extrabold'
-                : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
-            }`}
+            className={`flex flex-col items-center justify-center space-y-1 relative cursor-pointer transition-colors ${activeView === 'profile' || activeView === 'auth' || activeView === 'order-history'
+              ? 'text-[#FF1E27] font-extrabold'
+              : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
+              }`}
           >
             <User className="w-5 h-5" />
             <span className="text-[10px] tracking-wider uppercase font-heading">Profile</span>
@@ -527,11 +529,10 @@ export default function Navbar({
               if (onNavigateSearch) onNavigateSearch();
               else if (onOpenSearch) onOpenSearch();
             }}
-            className={`flex flex-col items-center justify-center space-y-1 transition-colors cursor-pointer ${
-              activeView === 'search'
-                ? 'text-[#FF1E27] font-extrabold'
-                : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
-            }`}
+            className={`flex flex-col items-center justify-center space-y-1 transition-colors cursor-pointer ${activeView === 'search'
+              ? 'text-[#FF1E27] font-extrabold'
+              : 'text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium'
+              }`}
           >
             <Search className="w-5 h-5" />
             <span className="text-[10px] tracking-wider uppercase font-heading">Search</span>

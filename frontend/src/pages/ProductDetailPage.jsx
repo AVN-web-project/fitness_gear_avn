@@ -480,9 +480,9 @@ export default function ProductDetailPage({
     };
 
     const availableImages = images.filter((image) => image?.url && matchesVariant(image));
-    const primaryImage = availableImages.find(isPrimaryForVariant)
-      || availableImages.find((image) => image.isPrimary)
-      || availableImages[0];
+          // No global primary: the variant's own primary image, else the first one that matches.
+          const primaryImage = availableImages.find(isPrimaryForVariant)
+            || availableImages[0];
 
     return resolveMediaUrl(primaryImage?.url || product?.image);
   };

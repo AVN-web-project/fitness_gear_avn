@@ -67,7 +67,7 @@ export default function SearchPage({
       q: params.get("q") || "",
       category: params.get("category") || "ALL PRODUCTS",
       ageGroup: params.get("ageGroup") || "ALL",
-      gender: params.get("gender") || "ALL",
+      // gender: params.get("gender") || "ALL",
       minPrice: params.get("minPrice") || "",
       maxPrice: params.get("maxPrice") || "",
       discount: params.get("discount") === "true",
@@ -88,7 +88,7 @@ export default function SearchPage({
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(
     initialUrlState.ageGroup,
   );
-  const [selectedGender, setSelectedGender] = useState(initialUrlState.gender);
+  const [selectedGender, setSelectedGender] = useState(/*initialUrlState.gender*/ "ALL");
   const [minPrice, setMinPrice] = useState(initialUrlState.minPrice);
   const [maxPrice, setMaxPrice] = useState(initialUrlState.maxPrice);
   const [discountOnly, setDiscountOnly] = useState(initialUrlState.discount);
@@ -141,7 +141,7 @@ export default function SearchPage({
       q: searchQuery,
       category: selectedCategory,
       ageGroup: selectedAgeGroup,
-      gender: selectedGender,
+      // gender: selectedGender,
       minPrice,
       maxPrice,
       discount: discountOnly,
@@ -155,7 +155,7 @@ export default function SearchPage({
     searchQuery,
     selectedCategory,
     selectedAgeGroup,
-    selectedGender,
+    // selectedGender,
     minPrice,
     maxPrice,
     discountOnly,
@@ -173,7 +173,7 @@ export default function SearchPage({
     setSearchQuery(params.q);
     setSelectedCategory(params.category);
     setSelectedAgeGroup(params.ageGroup);
-    setSelectedGender(params.gender);
+    // setSelectedGender(params.gender);
     setMinPrice(params.minPrice);
     setMaxPrice(params.maxPrice);
     setDiscountOnly(params.discount);
@@ -213,6 +213,54 @@ export default function SearchPage({
       .toLowerCase()
       .includes("wearable");
 
+  // Resolve the image assigned to this exact variant. The admin image gallery can
+  // associate an image with variant IDs/SKUs and mark one as primary for that variant.
+  const getVariantPrimaryImage = (parent, variant) => {
+    const variantId = String(variant?._id || variant?.id || "");
+    const variantSku = String(variant?.sku || variant?.variantSku || "")
+      .trim()
+      .toUpperCase();
+    const gallery = Array.isArray(parent?.images) ? parent.images : [];
+
+    const matchesVariant = (image) => {
+      const ids = Array.isArray(image?.variantIds)
+        ? image.variantIds.map((id) => String(id))
+        : [];
+      const skus = Array.isArray(image?.variantSkus)
+        ? image.variantSkus.map((sku) => String(sku || "").trim().toUpperCase())
+        : [];
+
+      // Images with no variant association are shared product images.
+      return (ids.length === 0 && skus.length === 0) ||
+        (variantId && ids.includes(variantId)) ||
+        (variantSku && skus.includes(variantSku));
+    };
+
+    const isPrimaryForVariant = (image) => {
+      const primaryIds = Array.isArray(image?.primaryForIds)
+        ? image.primaryForIds.map((id) => String(id))
+        : [];
+      const primarySkus = Array.isArray(image?.primaryFor)
+        ? image.primaryFor.map((sku) => String(sku || "").trim().toUpperCase())
+        : [];
+      return (variantId && primaryIds.includes(variantId)) ||
+        (variantSku && primarySkus.includes(variantSku));
+    };
+
+    const applicableImages = gallery.filter((image) => image?.url && matchesVariant(image));
+    const selectedGalleryImage =
+      applicableImages.find(isPrimaryForVariant) ||
+      applicableImages.find((image) => image.isPrimary) ||
+      applicableImages[0];
+
+    const variantImage = variant?.image ||
+      (Array.isArray(variant?.images)
+        ? (typeof variant.images[0] === "string" ? variant.images[0] : variant.images[0]?.url)
+        : "");
+
+    return variantImage || selectedGalleryImage?.url || parent?.image || "";
+  };
+
   const fallbackResult = useMemo(() => {
     const products = activeProductsSource.filter(
       (p) => !["discontinued"].includes(String(p.status || "").toLowerCase()),
@@ -220,8 +268,8 @@ export default function SearchPage({
     const baseList = products.flatMap((parent) => {
       const variants = Array.isArray(parent.variants)
         ? parent.variants.filter(
-            (variant) => variant && variant.isActive !== false,
-          )
+          (variant) => variant && variant.isActive !== false,
+        )
         : [];
 
       if (!variants.length) {
@@ -256,11 +304,8 @@ export default function SearchPage({
           stockQuantity: Number(
             variant.stockQuantity ?? variant.stock ?? parent.stockQuantity ?? 0,
           ),
-          image:
-            variant.image ||
-            (Array.isArray(variant.images) ? variant.images[0] : "") ||
-            parent.image,
-          imageLight: variant.imageLight || parent.imageLight,
+          image: getVariantPrimaryImage(parent, variant),
+          imageLight: getVariantPrimaryImage(parent, variant) || variant.imageLight || parent.imageLight,
           imageType: variant.imageType || parent.imageType,
         };
       });
@@ -268,21 +313,21 @@ export default function SearchPage({
 
     const searchMatchedList = searchQuery.trim()
       ? (() => {
-          const phrase = searchQuery.trim().toLowerCase().replace(/\s+/g, " ");
+        const phrase = searchQuery.trim().toLowerCase().replace(/\s+/g, " ");
 
-          return baseList.filter((item) => {
-            const p = item.parentProduct;
-            const catName =
-              typeof p.category === "object" ? p.category?.name : p.category;
+        return baseList.filter((item) => {
+          const p = item.parentProduct;
+          const catName =
+            typeof p.category === "object" ? p.category?.name : p.category;
 
-            // Search the product name as a complete phrase.
-            const productName = String(p.name || "")
-              .toLowerCase()
-              .replace(/\s+/g, " ");
+          // Search the product name as a complete phrase.
+          const productName = String(p.name || "")
+            .toLowerCase()
+            .replace(/\s+/g, " ");
 
-            return productName.includes(phrase);
-          });
-        })()
+          return productName.includes(phrase);
+        });
+      })()
       : baseList;
 
     const applyFilters = (source, excludedFacet = "") => {
@@ -294,13 +339,22 @@ export default function SearchPage({
         !["ALL", "ALL PRODUCTS"].includes(selectedCategory.toUpperCase())
       ) {
         result = result.filter((item) => {
-          const category =
-            typeof item.parentProduct.category === "object"
-              ? item.parentProduct.category?.name
-              : item.parentProduct.category;
+          const catObj = item.parentProduct.category;
+          const catName =
+            typeof catObj === "object"
+              ? catObj?.name
+              : catObj;
+          const catSlug =
+            typeof catObj === "object"
+              ? catObj?.slug
+              : "";
+          const target = String(selectedCategory || "").trim().toUpperCase();
+          const targetNorm = target.replace(/-/g, " ");
+
           return (
-            String(category || "").toUpperCase() ===
-            selectedCategory.toUpperCase()
+            String(catName || "").trim().toUpperCase() === target ||
+            (catSlug && String(catSlug).trim().toUpperCase() === target) ||
+            (catSlug && String(catSlug).trim().replace(/-/g, " ").toUpperCase() === targetNorm)
           );
         });
       }
@@ -314,16 +368,16 @@ export default function SearchPage({
         });
       }
 
-      if (excludedFacet !== "gender" && selectedGender !== "ALL") {
-        result = result.filter((item) => {
-          const gender = String(item.parentProduct.gender || "").toUpperCase();
-          return (
-            !gender ||
-            gender === selectedGender.toUpperCase() ||
-            gender === "UNISEX"
-          );
-        });
-      }
+      // if (excludedFacet !== "gender" && selectedGender !== "ALL") {
+      //   result = result.filter((item) => {
+      //     const gender = String(item.parentProduct.gender || "").toUpperCase();
+      //     return (
+      //       !gender ||
+      //       gender === selectedGender.toUpperCase() ||
+      //       gender === "UNISEX"
+      //     );
+      //   });
+      // }
 
       if (minPrice !== "") {
         const minP = Number(minPrice);
@@ -350,8 +404,8 @@ export default function SearchPage({
           const actual = wearable
             ? normalizeSize(item.selectedSize)
             : String(item.selectedSize || "")
-                .trim()
-                .toLowerCase();
+              .trim()
+              .toLowerCase();
           return actual === wanted;
         });
       }
@@ -392,7 +446,7 @@ export default function SearchPage({
 
     const categoryItems = applyFilters(searchMatchedList, "category");
     const ageItems = applyFilters(searchMatchedList, "ageGroup");
-    const genderItems = applyFilters(searchMatchedList, "gender");
+    // const genderItems = applyFilters(searchMatchedList, "gender");
     const sizeItems = applyFilters(searchMatchedList, "size");
     const colorItems = applyFilters(searchMatchedList, "color");
 
@@ -405,13 +459,46 @@ export default function SearchPage({
       ageItems,
       (product) => product.ageGroup,
     );
-    const genderCounts = countProductValues(
-      genderItems,
-      (product) => product.gender,
+    // const genderCounts = countProductValues(
+    //   genderItems,
+    //   (product) => product.gender,
+    // );
+    const isHydrationCategory = (cat) => {
+      if (!cat) return false;
+      const str = String(typeof cat === "object" ? cat?.name || cat?.slug : cat).toLowerCase();
+      return str.includes("hydration") || str.includes("shaker");
+    };
+
+    const isHydrationActive = Boolean(
+      isHydrationCategory(selectedCategory) ||
+      (searchQuery.trim() && (
+        /hydration|shaker|bottle/i.test(searchQuery) ||
+        searchMatchedCategories.some(isHydrationCategory)
+      ))
     );
+
+    const isVolumeSize = (sizeStr) => {
+      if (!sizeStr) return false;
+      return /^\d+\s*(ml|l|oz|cl)$/i.test(String(sizeStr).trim());
+    };
+
+    const isItemHydration = (item) => {
+      const cat = item.parentProduct?.category;
+      return isHydrationCategory(cat) || isVolumeSize(item.selectedSize);
+    };
+
     const availableSizes = [
       ...new Set(
         sizeItems
+          .filter((item) => {
+            const isHydration = isItemHydration(item);
+            if (isHydration) {
+              // Only include Hydration & Shakers sizes if category is selected or search is related
+              return isHydrationActive;
+            }
+            // If Hydration & Shakers category is specifically selected, don't show non-hydration sizes
+            return !isHydrationCategory(selectedCategory);
+          })
           .map((item) => item.selectedSize)
           .filter(Boolean)
           .map(normalizeSize),
@@ -454,12 +541,13 @@ export default function SearchPage({
       limit,
       facets: {
         categories: categoryCounts,
+        totalProducts: uniqueProducts(categoryItems).length,
         priceRange: {
           min: list.length ? Math.min(...list.map((item) => item.price)) : 0,
           max: list.length ? Math.max(...list.map((item) => item.price)) : 0,
         },
         ageGroups: ageGroupCounts,
-        genders: genderCounts,
+        // genders: genderCounts,
         colors: availableColors,
         sizes: availableSizes,
       },
@@ -473,7 +561,7 @@ export default function SearchPage({
     searchQuery,
     selectedCategory,
     selectedAgeGroup,
-    selectedGender,
+    // selectedGender,
     minPrice,
     maxPrice,
     discountOnly,
@@ -482,6 +570,39 @@ export default function SearchPage({
     sortMode,
     currentPage,
   ]);
+
+  const allCategories = useMemo(() => {
+    const list = ["ALL PRODUCTS"];
+    const seen = new Set();
+
+    const addCat = (cat) => {
+      if (!cat) return;
+      const name = typeof cat === "object" ? cat?.name : cat;
+      if (!name) return;
+      const trimmed = String(name).trim();
+      const upper = trimmed.toUpperCase();
+      if (!upper || upper === "ALL" || upper === "ALL PRODUCTS" || seen.has(upper)) return;
+      seen.add(upper);
+      list.push(upper);
+    };
+
+    // 1. Dynamic categories fetched from API / propCategories
+    if (Array.isArray(propCategories) && propCategories.length > 0) {
+      propCategories.forEach(addCat);
+    }
+
+    // 2. Categories present on active products
+    if (Array.isArray(activeProductsSource) && activeProductsSource.length > 0) {
+      activeProductsSource.forEach((p) => {
+        if (p?.category) addCat(p.category);
+      });
+    }
+
+    // 3. Fallback default categories
+    LOCAL_CATEGORIES.forEach(addCat);
+
+    return list;
+  }, [propCategories, activeProductsSource]);
 
   const searchMatchedCategories = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -492,24 +613,43 @@ export default function SearchPage({
       (p) => !["discontinued"].includes(String(p.status || "").toLowerCase()),
     );
 
-    return [
+    const matched = [
       ...new Set(
         products
           .filter((product) => {
             const productName = String(product.name || "")
               .toLowerCase()
               .replace(/\s+/g, " ");
+            const catName =
+              typeof product.category === "object"
+                ? product.category?.name
+                : product.category;
 
-            return productName.includes(phrase);
+            return (
+              productName.includes(phrase) ||
+              String(catName || "").toLowerCase().replace(/\s+/g, " ").includes(phrase)
+            );
           })
           .map((product) => {
             const category = product.category;
-            return typeof category === "object" ? category?.name : category;
+            const name = typeof category === "object" ? category?.name : category;
+            return name ? String(name).trim().toUpperCase() : "";
           })
-          .filter(Boolean),
+          .filter((upper) => {
+            return upper && upper !== "ALL" && upper !== "ALL PRODUCTS";
+          }),
       ),
     ];
+
+    return matched;
   }, [searchQuery, activeProductsSource]);
+
+  const displayedCategories = useMemo(() => {
+    if (searchQuery.trim()) {
+      return searchMatchedCategories;
+    }
+    return allCategories;
+  }, [searchQuery, searchMatchedCategories, allCategories]);
 
   const activeResult = fallbackResult;
   const productsList = Array.isArray(activeResult?.data)
@@ -519,12 +659,28 @@ export default function SearchPage({
   const totalPagesCount = activeResult?.totalPages ?? 1;
   const facetCounts = activeResult?.facets || {};
 
+  const getCategoryCount = (catName) => {
+    if (!catName || catName.toUpperCase() === "ALL PRODUCTS" || catName.toUpperCase() === "ALL") {
+      return facetCounts.totalProducts ?? totalProductsCount;
+    }
+    const targetUpper = String(catName).trim().toUpperCase();
+    if (facetCounts.categories?.[catName] !== undefined) {
+      return facetCounts.categories[catName];
+    }
+    for (const [k, v] of Object.entries(facetCounts.categories || {})) {
+      if (String(k).trim().toUpperCase() === targetUpper) {
+        return v;
+      }
+    }
+    return 0;
+  };
+
   // Handlers for quick actions
   const handleResetFilters = () => {
     setSearchQuery("");
     setSelectedCategory("ALL PRODUCTS");
     setSelectedAgeGroup("ALL");
-    setSelectedGender("ALL");
+    // setSelectedGender("ALL");
     setMinPrice("");
     setMaxPrice("");
     setDiscountOnly(false);
@@ -536,16 +692,11 @@ export default function SearchPage({
 
   const handleCategorySelect = (cat) => {
     setSelectedCategory(cat);
+    setSelectedSize("");
     setCurrentPage(1);
   };
 
-  const popularKeywords = [
-    "Knee Wrap",
-    "Wrist Wrap",
-    "Lifting Straps",
-    "Lever Belt",
-    "Yoga Belt",
-  ];
+
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300">
@@ -583,7 +734,7 @@ export default function SearchPage({
             {/* Subtitle Text (Below Search Input Bar) */}
             <p className="text-xs sm:text-sm text-[var(--text-sub)] max-w-xl font-medium leading-relaxed">
               Compound multi-attribute filtering across categories, age groups,
-              gender specs, price bounds, and active discounts.
+              {/* gender specs, */}price bounds, and active discounts.
             </p>
           </div>
         </div>
@@ -626,7 +777,7 @@ export default function SearchPage({
               </span>
             )}
 
-            {selectedGender && selectedGender !== "ALL" && (
+            {/* {selectedGender && selectedGender !== "ALL" && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
                 Gender: {selectedGender}
                 <X
@@ -634,7 +785,7 @@ export default function SearchPage({
                   onClick={() => setSelectedGender("ALL")}
                 />
               </span>
-            )}
+            )} */}
 
             {selectedSize && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[#FF1E27]/40 text-xs font-bold text-[#FF1E27]">
@@ -687,20 +838,20 @@ export default function SearchPage({
 
             {(selectedCategory !== "ALL PRODUCTS" ||
               selectedAgeGroup !== "ALL" ||
-              selectedGender !== "ALL" ||
+              // selectedGender !== "ALL" ||
               minPrice !== "" ||
               maxPrice !== "" ||
               discountOnly ||
               selectedSize ||
               selectedColor ||
               searchQuery) && (
-              <button
-                onClick={handleResetFilters}
-                className="text-xs font-bold text-[var(--text-sub)] hover:text-[#FF1E27] flex items-center gap-1 underline underline-offset-4 cursor-pointer ml-1"
-              >
-                <RotateCcw className="w-3 h-3" /> Reset All
-              </button>
-            )}
+                <button
+                  onClick={handleResetFilters}
+                  className="text-xs font-bold text-[var(--text-sub)] hover:text-[#FF1E27] flex items-center gap-1 underline underline-offset-4 cursor-pointer ml-1"
+                >
+                  <RotateCcw className="w-3 h-3" /> Reset All
+                </button>
+              )}
           </div>
 
           {/* Right Sorting & Layout Toggle Controls */}
@@ -730,22 +881,20 @@ export default function SearchPage({
             <div className="flex items-center bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl p-1">
               <button
                 onClick={() => setViewLayout("grid")}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  viewLayout === "grid"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewLayout === "grid"
                     ? "bg-[#FF1E27] text-white shadow-sm"
                     : "text-[var(--text-sub)] hover:text-[var(--text-main)]"
-                }`}
+                  }`}
                 title="Grid View"
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewLayout("list")}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  viewLayout === "list"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewLayout === "list"
                     ? "bg-[#FF1E27] text-white shadow-sm"
                     : "text-[var(--text-sub)] hover:text-[var(--text-main)]"
-                }`}
+                  }`}
                 title="List View"
               >
                 <List className="w-4 h-4" />
@@ -778,36 +927,35 @@ export default function SearchPage({
                   Category
                 </h4>
                 <div className="space-y-1.5">
-                  {(searchQuery.trim()
-                    ? searchMatchedCategories
-                    : LOCAL_CATEGORIES
-                  ).map((cat) => {
-                    const isSelected =
-                      selectedCategory.toUpperCase() === cat.toUpperCase();
+                  {displayedCategories.length > 0 ? (
+                    displayedCategories.map((cat) => {
+                      const isSelected =
+                        selectedCategory.toUpperCase() === cat.toUpperCase();
 
-                    const count =
-                      cat === "ALL PRODUCTS"
-                        ? LOCAL_PRODUCTS.length
-                        : facetCounts.categories?.[cat] || 0;
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => handleCategorySelect(cat)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold font-heading transition-all cursor-pointer ${
-                          isSelected
-                            ? "bg-[#FF1E27] text-white shadow-md"
-                            : "text-[var(--text-sub)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-main)]"
-                        }`}
-                      >
-                        <span className="truncate">{cat}</span>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${isSelected ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-sub)]"}`}
+                      const count = getCategoryCount(cat);
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => handleCategorySelect(cat)}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold font-heading uppercase tracking-wider transition-all cursor-pointer ${isSelected
+                              ? "bg-[#FF1E27] text-white shadow-md"
+                              : "text-[var(--text-sub)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-main)]"
+                            }`}
                         >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span className="truncate">{cat}</span>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${isSelected ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-sub)]"}`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-[var(--text-sub)] italic py-1">
+                      No matching categories
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -824,11 +972,10 @@ export default function SearchPage({
                         setSelectedAgeGroup(age);
                         setCurrentPage(1);
                       }}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
-                        selectedAgeGroup === age
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${selectedAgeGroup === age
                           ? "bg-[#FF1E27] text-white shadow-sm"
                           : "bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]"
-                      }`}
+                        }`}
                     >
                       {age}
                     </button>
@@ -836,8 +983,8 @@ export default function SearchPage({
                 </div>
               </div>
 
-              {/* 3. Target Gender Filter */}
-              <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
+              {/* 3. Target Gender Filter — commented out */}
+              {/* <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
                 <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">
                   Gender
                 </h4>
@@ -859,28 +1006,33 @@ export default function SearchPage({
                     </button>
                   ))}
                 </div>
-              </div>
+              </div> */}
 
               {/* 4. Size Filter */}
-              <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
-                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">
-                  Size
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {(facetCounts.sizes || []).map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => {
-                        setSelectedSize(selectedSize === size ? "" : size);
-                        setCurrentPage(1);
-                      }}
-                      className={`min-w-10 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${selectedSize === size ? "bg-[#FF1E27] text-white shadow-sm" : "bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]"}`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+              {facetCounts.sizes && facetCounts.sizes.length > 0 && (
+                <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
+                  <h4 className="text-xs font-black text-[var(--text-sub)] uppercase tracking-wider">
+                    Size
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {facetCounts.sizes.map((size) => {
+                      const isMatch = (selectedSize || "").toUpperCase() === (size || "").toUpperCase();
+                      return (
+                        <button
+                          key={size}
+                          onClick={() => {
+                            setSelectedSize(isMatch ? "" : size);
+                            setCurrentPage(1);
+                          }}
+                          className={`min-w-10 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${isMatch ? "bg-[#FF1E27] text-white shadow-sm" : "bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]"}`}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* 5. Color Filter */}
               <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
@@ -1017,12 +1169,12 @@ export default function SearchPage({
                   };
                   const discountPercent =
                     product.compareAtPrice &&
-                    product.compareAtPrice > product.price
+                      product.compareAtPrice > product.price
                       ? Math.round(
-                          ((product.compareAtPrice - product.price) /
-                            product.compareAtPrice) *
-                            100,
-                        )
+                        ((product.compareAtPrice - product.price) /
+                          product.compareAtPrice) *
+                        100,
+                      )
                       : null;
 
                   if (viewLayout === "list") {
@@ -1130,11 +1282,10 @@ export default function SearchPage({
                                     e.stopPropagation();
                                     onAddToCart(addVariantToCart);
                                   }}
-                                  className={`px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md transition-all ${
-                                    isOutOfStock
+                                  className={`px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md transition-all ${isOutOfStock
                                       ? "opacity-50 cursor-not-allowed bg-slate-700 text-white"
                                       : "btn-glow-red"
-                                  }`}
+                                    }`}
                                 >
                                   {isOutOfStock ? (
                                     <span>OUT OF STOCK</span>
@@ -1266,11 +1417,10 @@ export default function SearchPage({
                                 e.stopPropagation();
                                 onAddToCart(addVariantToCart);
                               }}
-                              className={`w-full py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${
-                                isOutOfStock
+                              className={`w-full py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${isOutOfStock
                                   ? "opacity-50 cursor-not-allowed bg-slate-700"
                                   : "btn-glow-red"
-                              }`}
+                                }`}
                             >
                               {isOutOfStock ? (
                                 <span>OUT OF STOCK</span>
@@ -1319,11 +1469,10 @@ export default function SearchPage({
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`w-9 h-9 rounded-xl text-xs font-extrabold font-heading transition-all cursor-pointer ${
-                          currentPage === pageNum
+                        className={`w-9 h-9 rounded-xl text-xs font-extrabold font-heading transition-all cursor-pointer ${currentPage === pageNum
                             ? "bg-[#FF1E27] text-white shadow-sm"
                             : "bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)]"
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </button>
@@ -1377,25 +1526,27 @@ export default function SearchPage({
                 <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">
                   Category
                 </h4>
-                {(searchQuery.trim()
-                  ? searchMatchedCategories
-                  : LOCAL_CATEGORIES
-                ).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      handleCategorySelect(cat);
-                      setMobileFilterOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold ${
-                      selectedCategory.toUpperCase() === cat.toUpperCase()
-                        ? "bg-[#FF1E27] text-white"
-                        : "text-[var(--text-sub)] hover:bg-[var(--border-subtle)]"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {displayedCategories.length > 0 ? (
+                  displayedCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        handleCategorySelect(cat);
+                        setMobileFilterOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold font-heading uppercase tracking-wider ${selectedCategory.toUpperCase() === cat.toUpperCase()
+                          ? "bg-[#FF1E27] text-white"
+                          : "text-[var(--text-sub)] hover:bg-[var(--border-subtle)]"
+                        }`}
+                    >
+                      {cat}
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-xs text-[var(--text-sub)] italic py-1">
+                    No matching categories
+                  </p>
+                )}
               </div>
 
               {/* Mobile Age Group */}
@@ -1411,11 +1562,10 @@ export default function SearchPage({
                         setSelectedAgeGroup(age);
                         setCurrentPage(1);
                       }}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold text-center ${
-                        selectedAgeGroup === age
+                      className={`px-3 py-2 rounded-xl text-xs font-bold text-center ${selectedAgeGroup === age
                           ? "bg-[#FF1E27] text-white"
                           : "bg-[var(--bg-main)] text-[var(--text-sub)]"
-                      }`}
+                        }`}
                     >
                       {age}
                     </button>
@@ -1423,8 +1573,8 @@ export default function SearchPage({
                 </div>
               </div>
 
-              {/* Mobile Gender */}
-              <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
+              {/* Mobile Gender — commented out */}
+              {/* <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
                 <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">
                   Gender
                 </h4>
@@ -1446,28 +1596,33 @@ export default function SearchPage({
                     </button>
                   ))}
                 </div>
-              </div>
+              </div> */}
 
               {/* Mobile Size */}
-              <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
-                <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">
-                  Size
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {(facetCounts.sizes || []).map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => {
-                        setSelectedSize(selectedSize === size ? "" : size);
-                        setCurrentPage(1);
-                      }}
-                      className={`px-3 py-2 rounded-lg text-xs font-bold ${selectedSize === size ? "bg-[#FF1E27] text-white" : "bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)]"}`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+              {facetCounts.sizes && facetCounts.sizes.length > 0 && (
+                <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">
+                  <h4 className="text-xs font-black text-[var(--text-sub)] uppercase">
+                    Size
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {facetCounts.sizes.map((size) => {
+                      const isMatch = (selectedSize || "").toUpperCase() === (size || "").toUpperCase();
+                      return (
+                        <button
+                          key={size}
+                          onClick={() => {
+                            setSelectedSize(isMatch ? "" : size);
+                            setCurrentPage(1);
+                          }}
+                          className={`px-3 py-2 rounded-lg text-xs font-bold ${isMatch ? "bg-[#FF1E27] text-white" : "bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[var(--text-sub)]"}`}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Mobile Color */}
               <div className="space-y-2 pt-4 border-t border-[var(--border-subtle)]">

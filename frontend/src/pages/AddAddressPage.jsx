@@ -1,6 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, ArrowLeft, CheckCircle2, Home, Briefcase, Building, Navigation, Loader2 } from 'lucide-react';
-import Button from '../components/Button';
+import React, { useState, useEffect } from "react";
+import {
+  MapPin,
+  ArrowLeft,
+  CheckCircle2,
+  Home,
+  Briefcase,
+  Building,
+  Navigation,
+  Loader2,
+} from "lucide-react";
+import Button from "../components/Button";
 
 export default function AddAddressPage({
   userAddress,
@@ -8,35 +17,35 @@ export default function AddAddressPage({
   onCancel,
   theme,
   isMobileView,
-  isCheckoutMode = false
+  isCheckoutMode = false,
 }) {
   const [formData, setFormData] = useState({
     id: userAddress?.id || null,
-    fullName: userAddress?.fullName || '',
-    phone: userAddress?.phone || '',
-    flatNo: userAddress?.flatNo || '',
-    houseNo: userAddress?.houseNo || '',
-    street: userAddress?.street || '',
-    city: userAddress?.city || '',
-    state: userAddress?.state || 'Maharashtra',
-    pincode: userAddress?.pincode || '',
-    type: userAddress?.type || 'Home',
-    isDefault: userAddress?.isDefault || false
+    fullName: userAddress?.fullName || "",
+    phone: userAddress?.phone || "",
+    flatNo: userAddress?.flatNo || "",
+    houseNo: userAddress?.houseNo || "",
+    street: userAddress?.street || "",
+    city: userAddress?.city || "",
+    state: userAddress?.state || "",
+    pincode: userAddress?.pincode || "",
+    type: userAddress?.type || "Home",
+    isDefault: userAddress?.isDefault || false,
   });
 
-      useEffect(() => {
+  useEffect(() => {
     setFormData({
       id: userAddress?.id || null,
-      fullName: userAddress?.fullName || '',
-      phone: userAddress?.phone || '',
-      flatNo: userAddress?.flatNo || '',
-      houseNo: userAddress?.houseNo || '',
-      street: userAddress?.street || '',
-      city: userAddress?.city || '',
-      state: userAddress?.state || 'Maharashtra',
-      pincode: userAddress?.pincode || '',
-      type: userAddress?.type || 'Home',
-      isDefault: userAddress?.isDefault || false
+      fullName: userAddress?.fullName || "",
+      phone: userAddress?.phone || "",
+      flatNo: userAddress?.flatNo || "",
+      houseNo: userAddress?.houseNo || "",
+      street: userAddress?.street || "",
+      city: userAddress?.city || "",
+      state: userAddress?.state || "",
+      pincode: userAddress?.pincode || "",
+      type: userAddress?.type || "Home",
+      isDefault: userAddress?.isDefault || false,
     });
   }, [userAddress]);
 
@@ -45,58 +54,71 @@ export default function AddAddressPage({
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
+      alert(
+        "Geolocation is not supported by your browser. Please enter your address manually.",
+      );
       return;
     }
 
     setIsLocating(true);
-    setLocationSuccess(false);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
+
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+          );
+
+          if (!res.ok) {
+            throw new Error("Could not look up this location.");
+          }
+
           const data = await res.json();
           const addr = data.address || {};
-          const detectedCity = addr.city || addr.town || addr.village || addr.suburb || 'Gurugram';
-          const detectedState = addr.state || 'Haryana';
-          const detectedPincode = addr.postcode || '122002';
-          const detectedStreet = addr.road ? `${addr.road}, ${addr.suburb || ''}` : `Sector 43, Golf Course Road (GPS: ${latitude.toFixed(3)})`;
+
+          const detectedCity =
+            addr.city ||
+            addr.town ||
+            addr.village ||
+            addr.municipality ||
+            addr.suburb ||
+            "";
+
+          const detectedStreet = [addr.house_number, addr.road, addr.suburb]
+            .filter(Boolean)
+            .join(", ");
 
           setFormData((prev) => ({
             ...prev,
-            street: detectedStreet,
-            city: detectedCity,
-            state: detectedState,
-            pincode: detectedPincode
+            street: detectedStreet || prev.street,
+            city: detectedCity || prev.city,
+            state: addr.state || prev.state,
+            pincode: addr.postcode || prev.pincode,
           }));
-        } catch (e) {
-          setFormData((prev) => ({
-            ...prev,
-            street: `Sector 43, Golf Course Road (GPS: ${latitude.toFixed(3)})`,
-            city: 'Gurugram',
-            state: 'Haryana',
-            pincode: '122002'
-          }));
+
+          if (detectedStreet || detectedCity || addr.state || addr.postcode) {
+            setLocationSuccess(true);
+            setTimeout(() => setLocationSuccess(false), 4000);
+          } else {
+            alert(
+              "Could not determine address details for this location. Please enter them manually.",
+            );
+          }
+        } catch (error) {
+          alert("Could not retrieve your address. Please enter it manually.");
+        } finally {
+          setIsLocating(false);
         }
-        setIsLocating(false);
-        setLocationSuccess(true);
-        setTimeout(() => setLocationSuccess(false), 4000);
       },
-      (error) => {
-        setFormData((prev) => ({
-          ...prev,
-          street: 'Sector 43, Golf Course Road',
-          city: 'Gurugram',
-          state: 'Haryana',
-          pincode: '122002'
-        }));
+      () => {
         setIsLocating(false);
-        setLocationSuccess(true);
-        setTimeout(() => setLocationSuccess(false), 4000);
+        alert(
+          "Location permission was denied or your location could not be detected. Please enter your address manually.",
+        );
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 10000, enableHighAccuracy: true },
     );
   };
 
@@ -104,12 +126,19 @@ export default function AddAddressPage({
 
   const validate = () => {
     const errs = {};
-    if (!formData.fullName.trim()) errs.fullName = 'Full name is required';
-    if (!formData.phone.trim() || formData.phone.length < 10) errs.phone = 'Valid 10-digit phone number is required';
-    if (!formData.flatNo.trim()) errs.flatNo = 'Flat / Apartment details are required';
-    if (!formData.street.trim()) errs.street = 'Street address / Area is required';
-    if (!formData.city.trim()) errs.city = 'City is required';
-    if (!formData.pincode.trim() || formData.pincode.length < 6) errs.pincode = 'Valid 6-digit Pincode is required';
+    if (!formData.fullName.trim()) errs.fullName = "Full name is required";
+    if (!formData.phone.trim() || formData.phone.length < 10)
+      errs.phone = "Valid 10-digit phone number is required";
+    if (!formData.flatNo.trim())
+      errs.flatNo = "Flat / Apartment details are required";
+    if (!formData.street.trim())
+      errs.street = "Street address / Area is required";
+    if (!formData.city.trim()) errs.city = "City is required";
+    if (!formData.pincode.trim() || formData.pincode.length < 6)
+      errs.pincode = "Valid 6-digit Pincode is required";
+    if (!formData.state.trim()) {
+      errs.state = "State is required";
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -120,7 +149,7 @@ export default function AddAddressPage({
       onSaveAddress({
         ...formData,
         id: userAddress?.id || formData.id || null,
-        isDefault: userAddress?.isDefault ?? formData.isDefault ?? false
+        isDefault: userAddress?.isDefault ?? formData.isDefault ?? false,
       });
     }
   };
@@ -128,25 +157,22 @@ export default function AddAddressPage({
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] py-8 px-4 sm:px-6 lg:px-12 transition-colors duration-300">
       <div className="max-w-2xl mx-auto space-y-6">
-
         {/* Back Button & Header */}
         <div className="flex items-center gap-4">
           {onCancel && (
-            <Button
-              onClick={onCancel}
-              variant="icon"
-              title="Back"
-            >
+            <Button onClick={onCancel} variant="icon" title="Back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           )}
           <div>
             <h1 className="text-2xl sm:text-3xl font-sans font-black italic uppercase tracking-wide text-[var(--text-main)] flex items-center gap-2.5">
               <MapPin className="w-7 h-7 text-[#FF1E27]" />
-              {userAddress ? 'Edit Delivery Address' : 'Add Delivery Address'}
+              {userAddress ? "Edit Delivery Address" : "Add Delivery Address"}
             </h1>
             <p className="text-xs sm:text-sm text-[var(--text-sub)]">
-              {userAddress ? 'Update your shipping details below' : 'Please provide your address to continue with checkout'}
+              {userAddress
+                ? "Update your shipping details below"
+                : "Please provide your address to continue with checkout"}
             </p>
           </div>
         </div>
@@ -191,12 +217,16 @@ export default function AddAddressPage({
         {locationSuccess && (
           <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>✓ Location detected successfully! Address fields auto-filled.</span>
+            <span>
+              ✓ Location detected successfully! Address fields auto-filled.
+            </span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="glass-panel p-6 sm:p-8 rounded-2xl border border-[var(--border-subtle)] space-y-6 shadow-xl">
-          
+        <form
+          onSubmit={handleSubmit}
+          className="glass-panel p-6 sm:p-8 rounded-2xl border border-[var(--border-subtle)] space-y-6 shadow-xl"
+        >
           {/* Address Type Selector */}
           <div className="space-y-2">
             <label className="text-xs font-extrabold uppercase font-heading text-[var(--text-sub)] tracking-wider block">
@@ -204,9 +234,9 @@ export default function AddAddressPage({
             </label>
             <div className="flex items-center gap-3">
               {[
-                { label: 'Home', icon: Home },
-                { label: 'Work', icon: Briefcase },
-                { label: 'Other', icon: Building }
+                { label: "Home", icon: Home },
+                { label: "Work", icon: Briefcase },
+                { label: "Other", icon: Building },
               ].map(({ label, icon: Icon }) => (
                 <button
                   key={label}
@@ -214,8 +244,8 @@ export default function AddAddressPage({
                   onClick={() => setFormData({ ...formData, type: label })}
                   className={`flex-1 py-2.5 px-4 rounded-xl border text-xs font-bold font-heading uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     formData.type === label
-                      ? 'bg-[#FF1E27] text-white border-[#FF1E27] shadow-md'
-                      : 'border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:border-[var(--text-sub)]'
+                      ? "bg-[#FF1E27] text-white border-[#FF1E27] shadow-md"
+                      : "border-[var(--border-subtle)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:border-[var(--text-sub)]"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -235,12 +265,20 @@ export default function AddAddressPage({
                 type="text"
                 placeholder="e.g. Rahul Sharma"
                 value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, fullName: e.target.value })
+                }
                 className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border focus:outline-none transition-colors ${
-                  errors.fullName ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
+                  errors.fullName
+                    ? "border-red-500"
+                    : "border-[var(--border-subtle)] focus:border-[#FF1E27]"
                 }`}
               />
-              {errors.fullName && <p className="text-[11px] text-red-500 font-medium">{errors.fullName}</p>}
+              {errors.fullName && (
+                <p className="text-[11px] text-red-500 font-medium">
+                  {errors.fullName}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -248,20 +286,33 @@ export default function AddAddressPage({
                 Mobile Number *
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--text-sub)] pointer-events-none select-none">+91</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[var(--text-sub)] pointer-events-none select-none">
+                  +91
+                </span>
                 <input
                   type="tel"
                   inputMode="numeric"
                   maxLength={10}
                   placeholder="98765 43210"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+                    })
+                  }
                   className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm pl-[4.5rem] pr-4 py-3 rounded-xl border focus:outline-none transition-colors ${
-                    errors.phone ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
+                    errors.phone
+                      ? "border-red-500"
+                      : "border-[var(--border-subtle)] focus:border-[#FF1E27]"
                   }`}
                 />
               </div>
-              {errors.phone && <p className="text-[11px] text-red-500 font-medium">{errors.phone}</p>}
+              {errors.phone && (
+                <p className="text-[11px] text-red-500 font-medium">
+                  {errors.phone}
+                </p>
+              )}
             </div>
           </div>
 
@@ -275,12 +326,20 @@ export default function AddAddressPage({
                 type="text"
                 placeholder="e.g. Flat 402, 4th Floor"
                 value={formData.flatNo}
-                onChange={(e) => setFormData({ ...formData, flatNo: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, flatNo: e.target.value })
+                }
                 className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border focus:outline-none transition-colors ${
-                  errors.flatNo ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
+                  errors.flatNo
+                    ? "border-red-500"
+                    : "border-[var(--border-subtle)] focus:border-[#FF1E27]"
                 }`}
               />
-              {errors.flatNo && <p className="text-[11px] text-red-500 font-medium">{errors.flatNo}</p>}
+              {errors.flatNo && (
+                <p className="text-[11px] text-red-500 font-medium">
+                  {errors.flatNo}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -291,7 +350,9 @@ export default function AddAddressPage({
                 type="text"
                 placeholder="e.g. Sunshine Heights (Optional)"
                 value={formData.houseNo}
-                onChange={(e) => setFormData({ ...formData, houseNo: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, houseNo: e.target.value })
+                }
                 className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
               />
             </div>
@@ -305,12 +366,20 @@ export default function AddAddressPage({
               type="text"
               placeholder="e.g. MG Road, Sector 45"
               value={formData.street}
-              onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, street: e.target.value })
+              }
               className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border focus:outline-none transition-colors ${
-                errors.street ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
+                errors.street
+                  ? "border-red-500"
+                  : "border-[var(--border-subtle)] focus:border-[#FF1E27]"
               }`}
             />
-            {errors.street && <p className="text-[11px] text-red-500 font-medium">{errors.street}</p>}
+            {errors.street && (
+              <p className="text-[11px] text-red-500 font-medium">
+                {errors.street}
+              </p>
+            )}
           </div>
 
           {/* City, State, Pincode */}
@@ -323,12 +392,20 @@ export default function AddAddressPage({
                 type="text"
                 placeholder="e.g. Mumbai"
                 value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
+                }
                 className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border focus:outline-none transition-colors ${
-                  errors.city ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
+                  errors.city
+                    ? "border-red-500"
+                    : "border-[var(--border-subtle)] focus:border-[#FF1E27]"
                 }`}
               />
-              {errors.city && <p className="text-[11px] text-red-500 font-medium">{errors.city}</p>}
+              {errors.city && (
+                <p className="text-[11px] text-red-500 font-medium">
+                  {errors.city}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -339,9 +416,16 @@ export default function AddAddressPage({
                 type="text"
                 placeholder="e.g. Maharashtra"
                 value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, state: e.target.value })
+                }
                 className="w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border border-[var(--border-subtle)] focus:border-[#FF1E27] focus:outline-none"
               />
+              {errors.state && (
+                <p className="text-[11px] text-red-500 font-medium">
+                  {errors.state}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -352,12 +436,23 @@ export default function AddAddressPage({
                 type="text"
                 placeholder="6-digit Pincode"
                 value={formData.pincode}
-                onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    pincode: e.target.value.replace(/\D/g, "").slice(0, 6),
+                  })
+                }
                 className={`w-full bg-[var(--bg-main)] text-[var(--text-main)] text-sm px-4 py-3 rounded-xl border focus:outline-none transition-colors ${
-                  errors.pincode ? 'border-red-500' : 'border-[var(--border-subtle)] focus:border-[#FF1E27]'
+                  errors.pincode
+                    ? "border-red-500"
+                    : "border-[var(--border-subtle)] focus:border-[#FF1E27]"
                 }`}
               />
-              {errors.pincode && <p className="text-[11px] text-red-500 font-medium">{errors.pincode}</p>}
+              {errors.pincode && (
+                <p className="text-[11px] text-red-500 font-medium">
+                  {errors.pincode}
+                </p>
+              )}
             </div>
           </div>
 
@@ -376,13 +471,16 @@ export default function AddAddressPage({
             <Button
               type="submit"
               variant="primary"
-              className={onCancel ? 'w-2/3 py-4' : 'w-full py-4'}
+              className={onCancel ? "w-2/3 py-4" : "w-full py-4"}
             >
               <CheckCircle2 className="w-5 h-5" />
-              <span>{isCheckoutMode ? 'SAVE ADDRESS & PROCEED TO CHECKOUT' : 'SAVE ADDRESS DETAILS'}</span>
+              <span>
+                {isCheckoutMode
+                  ? "SAVE ADDRESS & PROCEED TO CHECKOUT"
+                  : "SAVE ADDRESS DETAILS"}
+              </span>
             </Button>
           </div>
-
         </form>
       </div>
     </div>

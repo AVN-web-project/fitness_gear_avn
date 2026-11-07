@@ -56,7 +56,54 @@ export function getAuthHeaders() {
 export function normalizeProduct(p) {
   if (!p) return null;
 
-  const primaryImage = p.image || p.images?.[0]?.url || null;
+  // Catalogue card image. Same matching as a cart line, ordered so an image the admin explicitly
+  // made a primary is never skipped:
+  //   1. the primary chosen for the product's first variant
+  //   2. the primary chosen for ANY variant
+  //   3. an image merely scoped to the first variant
+  //   4. the first image
+  // Computed here first so the grid is correct even before the matching `image` virtual ships.
+  const cardImageFor = (product) => {
+    const imgs = Array.isArray(product.images) ? product.images : [];
+    if (imgs.length === 0) return null;
+
+    const variant = (product.variants || [])[0];
+    const sku = String(variant?.sku || '').trim().toUpperCase();
+    const variantId = String(variant?._id || '');
+
+    const asId = (x) => String(x || '').trim();
+    const belongs = (list) =>
+      Array.isArray(list) &&
+      list.some(
+        (x) =>
+          (sku && asId(x).toUpperCase() === sku) ||
+          (variantId && asId(x) === variantId)
+      );
+    const hasPrimary = (img) =>
+      (Array.isArray(img?.primaryForIds) && img.primaryForIds.length > 0) ||
+      (Array.isArray(img?.primaryFor) && img.primaryFor.length > 0);
+
+    const forFirstVariant = imgs.find((i) => belongs(i?.primaryFor) || belongs(i?.primaryForIds));
+    if (forFirstVariant?.url) return forFirstVariant.url;
+
+    const anyPrimary = imgs.find(hasPrimary);
+    if (anyPrimary?.url) return anyPrimary.url;
+
+    const scoped = imgs.find((i) => belongs(i?.variantSkus) || belongs(i?.variantIds));
+    if (scoped?.url) return scoped.url;
+
+    return null;
+  };
+
+  const variantImage = cardImageFor(p);
+  if (String(p?.name || '').toUpperCase().includes('KNEE')) {
+    console.log('[img]', p.name,
+      '| variants[0]:', p.variants?.[0]?.sku, p.variants?.[0]?._id,
+      '| images:', p.images?.map(i => [i.url, i.primaryForIds]),
+      '| chosen:', variantImage);
+  }
+
+  const primaryImage = variantImage || p.image || p.images?.[0]?.url || null;
   const categoryStr = typeof p.category === 'object' && p.category?.name
     ? p.category.name.toUpperCase()
     : (typeof p.category === 'string' ? p.category.toUpperCase() : '');
@@ -124,7 +171,11 @@ export function normalizeProduct(p) {
         : 0,
     image: resolveMediaUrl(primaryImage),
     webpImage: resolveMediaUrl(p.webpImage || primaryImage),
-    imageLight: resolveMediaUrl(p.imageLight || primaryImage),
+    // ProductGraphic shows imageLight on the light theme. That asset is product-level, so it would
+    // override the variant's own picture and make the card disagree with the variant mapping.
+    // Defer to the variant image when one is mapped; keep the light asset only when nothing
+    // variant-specific was chosen.
+    imageLight: resolveMediaUrl(variantImage || p.imageLight || primaryImage),
     images: (p.images && p.images.length > 0
       ? p.images
       : (primaryImage ? [{ url: primaryImage, altText: p.name, isPrimary: true }] : [])
@@ -138,10 +189,10 @@ export function normalizeProduct(p) {
       : 0),
     status: (p.status || 'Active').charAt(0).toUpperCase() + (p.status || 'Active').slice(1).toLowerCase(),
     sizes: [...new Set(
-  (p.variants || [])
-    .map(v => v.size)
-    .filter(Boolean)
-)],
+      (p.variants || [])
+        .map(v => v.size)
+        .filter(Boolean)
+    )],
     // One chip per COLOUR, not one per variant. With a full size x colour matrix this list used to
     // repeat each colour once per size — four chips reading "Black, Red, Black, Red" — because
     // sizes deduped with a Set while colours did not. The hex now comes from the local catalogue
@@ -269,7 +320,7 @@ export async function fetchSearchProducts(filters = {}) {
       queryParams.append('category', filters.category);
     }
     if (filters.ageGroup && filters.ageGroup !== 'ALL') queryParams.append('ageGroup', filters.ageGroup);
-    if (filters.gender && filters.gender !== 'ALL') queryParams.append('gender', filters.gender);
+    // if (filters.gender && filters.gender !== 'ALL') queryParams.append('gender', filters.gender);
     if (filters.minPrice !== undefined && filters.minPrice !== '' && filters.minPrice !== null) {
       queryParams.append('minPrice', filters.minPrice);
     }
