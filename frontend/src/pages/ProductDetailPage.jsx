@@ -873,51 +873,98 @@ export default function ProductDetailPage({
     text: `Check out ${product?.name || 'this product'} on AVN Fitness`,
   });
 
+  // Clipboard API requires HTTPS and can be unavailable in some embedded/mobile browsers.
+  // Keep a textarea fallback so the Copy action still works in those environments.
   const copyShareLink = async () => {
     const { url } = getShareDetails();
+
     try {
-      await navigator.clipboard.writeText(url);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        textarea.remove();
+        if (!copied) throw new Error('Clipboard copy was not permitted');
+      }
+
       setShareCopied(true);
       window.setTimeout(() => setShareCopied(false), 2500);
-    } catch {
+      return true;
+    } catch (error) {
+      console.warn('Unable to copy product link:', error);
       setShareCopied(false);
+      return false;
     }
   };
 
   const handleSocialShare = async (network) => {
     const { url, text } = getShareDetails();
+    const message = `${text} ${url}`;
     const encodedUrl = encodeURIComponent(url);
-    const encodedText = encodeURIComponent(text);
-    const shareUrls = {
-      whatsapp: `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
-      facebook: `https://m.me/?link=${encodedUrl}`,
-      x: `https://twitter.com/messages/compose?text=${encodedText}%20${encodedUrl}`,
-      telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
-      email: `mailto:?subject=${encodeURIComponent(product?.name || 'AVN Fitness product')}&body=${encodedText}%20${encodedUrl}`,
-    };
+    const encodedMessage = encodeURIComponent(message);
 
     if (network === 'copy') {
-      await copyShareLink();
+      const copied = await copyShareLink();
+      if (!copied) window.prompt('Copy this product link:', url);
       return;
     }
 
     if (network === 'native' && navigator.share) {
-      await navigator.share({ title: product?.name || 'AVN Fitness product', text, url });
+      try {
+        await navigator.share({
+          title: product?.name || 'AVN Fitness product',
+          text,
+          url,
+        });
+      } catch (error) {
+        // Closing the native share sheet is a normal user action, not an error.
+        if (error?.name !== 'AbortError') {
+          console.warn('Native product sharing failed:', error);
+        }
+      }
       return;
     }
 
-    if (network === 'instagram' || network === 'snapchat') {
-      await copyShareLink();
-      window.open(
-        network === 'instagram' ? 'https://www.instagram.com/direct/inbox/' : 'https://web.snapchat.com/',
-        '_blank',
-        'noopener,noreferrer'
-      );
-      return;
+    const shareUrls = {
+      whatsapp: `https://wa.me/?text=${encodedMessage}`,
+      // Messenger, Instagram and Snapchat do not expose a supported web URL that
+      // pre-fills a new DM with arbitrary text. Copy first, then open their inbox.
+      facebook: 'https://www.messenger.com/',
+      x: `https://x.com/messages/compose?text=${encodedMessage}`,
+      telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodeURIComponent(text)}`,
+      email: `mailto:?subject=${encodeURIComponent(product?.name || 'AVN Fitness product')}&body=${encodedMessage}`,
+      instagram: 'https://www.instagram.com/direct/inbox/',
+      snapchat: 'https://web.snapchat.com/',
+    };
+
+    const shareUrl = shareUrls[network];
+    if (!shareUrl) return;
+
+    // Open synchronously from the click handler so popup blockers do not reject
+    // the new tab while clipboard permission is being requested.
+    const newWindow = window.open(
+      shareUrl,
+      '_blank',
+      'noopener,noreferrer,width=640,height=640'
+    );
+
+    if (network === 'instagram' || network === 'snapchat' || network === 'facebook') {
+      const copied = await copyShareLink();
+      if (!copied) {
+        window.prompt('Copy this product link and paste it into your chat:', url);
+      }
     }
 
-    if (shareUrls[network]) {
-      window.open(shareUrls[network], '_blank', 'noopener,noreferrer,width=640,height=640');
+    if (!newWindow && network !== 'instagram' && network !== 'snapchat' && network !== 'facebook') {
+      // A blocked popup should not silently make the share button appear broken.
+      window.location.href = shareUrl;
     }
   };
 
@@ -1438,7 +1485,11 @@ export default function ProductDetailPage({
                 </button>
               </div>
 
-              {isShareOpen && (
+
+            </div>
+          )}
+
+          {isShareOpen && (
                 <div
                   className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
                   role="presentation"
@@ -1495,8 +1546,6 @@ export default function ProductDetailPage({
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
           {/* Action CTAs */}
           <div className="space-y-3 pt-2">

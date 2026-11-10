@@ -75,7 +75,7 @@ export default function SearchPage({
       color: params.get("color") || "",
       sort: params.get("sort") || "reviews",
       page: parseInt(params.get("page") || "1", 10) || 1,
-      viewMode: params.get("viewMode") || "grid",
+      viewMode: params.get("viewMode") || (typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches ? "list" : "grid"),
     };
   };
 
@@ -213,54 +213,6 @@ export default function SearchPage({
       .toLowerCase()
       .includes("wearable");
 
-  // Resolve the image assigned to this exact variant. The admin image gallery can
-  // associate an image with variant IDs/SKUs and mark one as primary for that variant.
-  const getVariantPrimaryImage = (parent, variant) => {
-    const variantId = String(variant?._id || variant?.id || "");
-    const variantSku = String(variant?.sku || variant?.variantSku || "")
-      .trim()
-      .toUpperCase();
-    const gallery = Array.isArray(parent?.images) ? parent.images : [];
-
-    const matchesVariant = (image) => {
-      const ids = Array.isArray(image?.variantIds)
-        ? image.variantIds.map((id) => String(id))
-        : [];
-      const skus = Array.isArray(image?.variantSkus)
-        ? image.variantSkus.map((sku) => String(sku || "").trim().toUpperCase())
-        : [];
-
-      // Images with no variant association are shared product images.
-      return (ids.length === 0 && skus.length === 0) ||
-        (variantId && ids.includes(variantId)) ||
-        (variantSku && skus.includes(variantSku));
-    };
-
-    const isPrimaryForVariant = (image) => {
-      const primaryIds = Array.isArray(image?.primaryForIds)
-        ? image.primaryForIds.map((id) => String(id))
-        : [];
-      const primarySkus = Array.isArray(image?.primaryFor)
-        ? image.primaryFor.map((sku) => String(sku || "").trim().toUpperCase())
-        : [];
-      return (variantId && primaryIds.includes(variantId)) ||
-        (variantSku && primarySkus.includes(variantSku));
-    };
-
-    const applicableImages = gallery.filter((image) => image?.url && matchesVariant(image));
-    const selectedGalleryImage =
-      applicableImages.find(isPrimaryForVariant) ||
-      applicableImages.find((image) => image.isPrimary) ||
-      applicableImages[0];
-
-    const variantImage = variant?.image ||
-      (Array.isArray(variant?.images)
-        ? (typeof variant.images[0] === "string" ? variant.images[0] : variant.images[0]?.url)
-        : "");
-
-    return variantImage || selectedGalleryImage?.url || parent?.image || "";
-  };
-
   const fallbackResult = useMemo(() => {
     const products = activeProductsSource.filter(
       (p) => !["discontinued"].includes(String(p.status || "").toLowerCase()),
@@ -304,8 +256,11 @@ export default function SearchPage({
           stockQuantity: Number(
             variant.stockQuantity ?? variant.stock ?? parent.stockQuantity ?? 0,
           ),
-          image: getVariantPrimaryImage(parent, variant),
-          imageLight: getVariantPrimaryImage(parent, variant) || variant.imageLight || parent.imageLight,
+          image:
+            variant.image ||
+            (Array.isArray(variant.images) ? variant.images[0] : "") ||
+            parent.image,
+          imageLight: variant.imageLight || parent.imageLight,
           imageType: variant.imageType || parent.imageType,
         };
       });
@@ -1189,9 +1144,9 @@ export default function SearchPage({
                             color: product.selectedColor,
                           })
                         }
-                        className="glass-panel p-4 rounded-2xl border border-[var(--border-subtle)] hover:border-[#FF1E27]/50 transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-6 group cursor-pointer"
+                        className="glass-panel relative p-3.5 sm:p-4 rounded-[20px] border border-[var(--border-subtle)] bg-gradient-to-br from-white/[0.045] to-transparent hover:border-[#FF1E27]/60 hover:shadow-[0_10px_32px_rgba(255,30,39,0.10)] transition-all duration-300 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-6 group cursor-pointer"
                       >
-                        <div className="flex items-center gap-5 w-full sm:w-auto">
+                        <div className="flex items-center gap-3.5 sm:gap-5 w-full sm:w-auto min-w-0">
                           <div
                             onClick={() =>
                               onSelectProduct(parentProduct, {
@@ -1200,7 +1155,7 @@ export default function SearchPage({
                                 color: product.selectedColor,
                               })
                             }
-                            className="relative w-24 h-24 rounded-xl bg-[var(--bg-main)] overflow-hidden shrink-0 cursor-pointer p-2 flex items-center justify-center border border-[var(--border-subtle)]"
+                            className="relative w-[88px] h-[88px] sm:w-24 sm:h-24 rounded-2xl bg-black/35 overflow-hidden shrink-0 cursor-pointer p-2.5 flex items-center justify-center border border-white/10 shadow-inner"
                           >
                             <ProductGraphic
                               image={product.image}
@@ -1211,9 +1166,9 @@ export default function SearchPage({
                               className="w-full h-full"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#FF1E27] font-heading">
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#FF3942] font-heading line-clamp-1">
                                 {product.category}
                               </span>
                               {product.badge && (
@@ -1230,16 +1185,16 @@ export default function SearchPage({
                                   color: product.selectedColor,
                                 })
                               }
-                              className="text-sm font-extrabold font-heading uppercase text-[var(--text-main)] hover:text-[#FF1E27] transition-colors cursor-pointer"
+                              className="text-[14px] sm:text-[15px] leading-snug font-extrabold font-heading uppercase text-[var(--text-main)] hover:text-[#FF1E27] transition-colors cursor-pointer line-clamp-2"
                             >
-                              {product.name}
+                              {product.name}{product.selectedSize ? ` | ${product.selectedSize}` : ""}
                             </h3>
-                            <p className="text-xs text-[var(--text-sub)] line-clamp-1">
+                            <p className="text-xs sm:text-[13px] text-[var(--text-sub)] line-clamp-1">
                               {product.tagline}
                             </p>
 
                             {/* Rating */}
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-[#FF1E27] pt-1">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-[#FF3942] pt-0.5">
                               <Star className="w-3.5 h-3.5 fill-[#FF1E27] text-[#FF1E27]" />
                               <span>{product.rating}</span>
                               <span className="text-[10px] text-[var(--text-sub)]">
@@ -1249,7 +1204,7 @@ export default function SearchPage({
                           </div>
                         </div>
 
-                        <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-[var(--border-subtle)] gap-4">
+                        <div className="flex flex-row items-center justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t border-white/10 sm:border-t-0 gap-3 sm:flex-col sm:items-end sm:justify-center">
                           <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2">
                             {/* Price group — the compare-at price was missing from this layout
                                 entirely, so a discounted product looked like it had no original price. */}
@@ -1277,12 +1232,17 @@ export default function SearchPage({
                               const qtyInCart = getProductCartQty(product);
                               return (
                                 <button
+                                  type="button"
                                   disabled={isOutOfStock}
+                                  onPointerDown={(e) => e.stopPropagation()}
                                   onClick={(e) => {
+                                    e.preventDefault();
                                     e.stopPropagation();
-                                    onAddToCart(addVariantToCart);
+                                    if (!isOutOfStock && typeof onAddToCart === "function") {
+                                      onAddToCart(addVariantToCart);
+                                    }
                                   }}
-                                  className={`px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading flex items-center gap-2 cursor-pointer shadow-md transition-all ${isOutOfStock
+                                  className={`relative z-10 min-h-11 min-w-[132px] px-4 py-3 rounded-xl text-[11px] sm:text-xs font-extrabold uppercase font-heading whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer touch-manipulation select-none shadow-[0_5px_18px_rgba(255,30,39,0.22)] transition-all active:scale-[0.98] ${isOutOfStock
                                       ? "opacity-50 cursor-not-allowed bg-slate-700 text-white"
                                       : "btn-glow-red"
                                     }`}
@@ -1300,7 +1260,7 @@ export default function SearchPage({
                                   ) : (
                                     <>
                                       <ShoppingBag className="w-4 h-4" />
-                                      <span>ADD TO CART</span>
+                                      <span className="whitespace-nowrap">ADD TO CART</span>
                                     </>
                                   )}
                                 </button>
@@ -1368,7 +1328,7 @@ export default function SearchPage({
                             }
                             className="text-xs font-black font-heading uppercase text-[var(--text-main)] line-clamp-1 hover:text-[#FF1E27] transition-colors cursor-pointer"
                           >
-                            {product.name}
+                            {product.name}{product.selectedSize ? ` | ${product.selectedSize}` : ""}
                           </h3>
 
                           {/* Rating Summary */}
@@ -1412,12 +1372,17 @@ export default function SearchPage({
                           const qtyInCart = getProductCartQty(product);
                           return (
                             <button
+                              type="button"
                               disabled={isOutOfStock}
+                              onPointerDown={(e) => e.stopPropagation()}
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
-                                onAddToCart(addVariantToCart);
+                                if (!isOutOfStock && typeof onAddToCart === "function") {
+                                  onAddToCart(addVariantToCart);
+                                }
                               }}
-                              className={`w-full py-2.5 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all ${isOutOfStock
+                              className={`relative z-10 w-full min-h-11 py-3 px-3 rounded-xl text-xs font-extrabold uppercase font-heading text-white flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation select-none shadow-md transition-all ${isOutOfStock
                                   ? "opacity-50 cursor-not-allowed bg-slate-700"
                                   : "btn-glow-red"
                                 }`}
